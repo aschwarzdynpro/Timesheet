@@ -1,6 +1,6 @@
 # Zeiterfassung – Fachkonzept
 
-Stand: 2026-09-06 (Rev. 3) · Status: Entwurf
+Stand: 2026-09-06 (Rev. 3) · Status: abgestimmt · Phase 1 umgesetzt
 
 ## 1. Ziel
 

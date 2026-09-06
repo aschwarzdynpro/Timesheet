@@ -1,6 +1,6 @@
 # Zeiterfassung – Architekturvorschlag
 
-Stand: 2026-09-06 (Rev. 3) · Status: Entwurf
+Stand: 2026-09-06 (Rev. 3) · Status: abgestimmt · Phase 1 umgesetzt
 
 ## 1. Technologie-Stack
 
@@ -463,7 +463,7 @@ an einer Stelle. Das hält Änderungen lokal.
 
 | Phase | Inhalt | Ergebnis |
 |---|---|---|
-| **1 – Fundament** | Schema, Migrationen, RLS, Auth, Stammdaten: Kunden, Projekte, Tätigkeitsarten, Stundensätze | Daten pflegbar |
+| **1 – Fundament** ✅ | Schema, Migrationen, RLS, Auth, Stammdaten: Kunden, Projekte, Tätigkeitsarten, Stundensätze | umgesetzt, siehe [03-phase-1.md](03-phase-1.md) |
 | **2a – Zeiterfassung** | Wochenraster, Schnelleintrag, Timer, Rundung, Periodenzuordnung, mobile Kernfunktionen | **Ab hier produktiv nutzbar** |
 | **2b – Reisezeit & Spesen** | Tätigkeitsart-Sätze, Spesenarten, Beleg-Upload, Belegfoto mobil | Vollständige Leistungserfassung |
 | **3 – Auswertung** | Views, Dashboard, Woche/Monat/Jahr, Charts, Budgetampel, Arbeitszeitmodell und Auslastung | Zahlen auf Knopfdruck |

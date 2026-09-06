@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink-50:  #f4f6f8;
+  --color-ink-100: #e6eaee;
+  --color-ink-200: #d0d7de;
+  --color-ink-300: #a9b4c0;
+  --color-ink-400: #7c8998;
+  --color-ink-500: #5b6875;
+  --color-ink-600: #414d59;
+  --color-ink-700: #2c3843;
+  --color-ink-800: #1c2530;
+  --color-ink-900: #131a21;
+
+  --color-accent-50:  #eaf2f8;
+  --color-accent-100: #d3e4f0;
+  --color-accent-500: #1e5a87;
+  --color-accent-600: #17486d;
+  --color-accent-700: #123a58;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-ink-50 text-ink-800 antialiased;
+  font-feature-settings: 'tnum' 0;
+}
+
+/* Zahlenspalten laufen sonst optisch auseinander. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

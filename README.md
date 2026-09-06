@@ -6,17 +6,90 @@ kundenindividuell reporten und nach Excel bzw. D365 F&O exportieren.
 
 ## Status
 
-Konzeptphase (Rev. 3) – es ist noch kein Code implementiert.
+**Phase 1 (Fundament) ist umgesetzt.** Das vollständige Datenbankschema samt Logik, RLS,
+Anmeldung und Stammdatenpflege steht. Die Zeiterfassung selbst folgt in Phase 2 —
+ab dann ist die App im Alltag nutzbar.
+
+| Phase | Inhalt | Stand |
+|---|---|---|
+| 1 | Schema, Migrationen, RLS, Auth, Stammdaten | **fertig** |
+| 2a | Wochenraster, Schnelleintrag, Timer | offen |
+| 2b | Reisezeit und Spesen, Beleg-Upload | offen |
+| 3 | Auswertungen, Auslastung | offen |
+| 4 | Export-Profile, Excel | offen |
+| 5 | Perioden-Workflow | offen |
+| 6 | FinOps-Anbindung | offen |
+
+## Einrichten
+
+Voraussetzung: Node 22 und ein Supabase-Projekt (die kostenlose Stufe reicht).
+
+```bash
+npm install
+cp .env.example .env        # URL und publishable Key eintragen
+```
+
+Schema einspielen — entweder mit der Supabase-CLI …
+
+```bash
+supabase link --project-ref <projekt-ref>
+supabase db push            # spielt supabase/migrations/ ein
+```
+
+… oder indem die Dateien unter `supabase/migrations/` in dieser Reihenfolge im
+SQL-Editor des Dashboards ausgeführt werden. Danach optional `supabase/seed.sql`
+für Beispielstammdaten.
+
+```bash
+npm run dev                 # http://localhost:5173
+```
+
+Die Anmeldung läuft über einen Link per E-Mail. Damit Supabase ihn verschickt, muss unter
+Authentication → URL Configuration die Adresse der App als Redirect-URL hinterlegt sein.
+
+## Befehle
+
+| Befehl | Zweck |
+|---|---|
+| `npm run dev` | Entwicklungsserver |
+| `npm run build` | Typprüfung und Produktionsbuild |
+| `npm run typecheck` | nur Typprüfung |
+| `npm run lint` | ESLint |
+| `npm test` | Unit-Tests (Vitest) |
+| `./scripts/test-db.sh` | alle Migrationen in eine frische Datenbank einspielen und die Datenbanktests laufen lassen |
+| `npm run db:types` | `src/types/database.ts` aus dem verbundenen Schema erzeugen |
+
+`scripts/test-db.sh` startet ohne gesetztes `PGHOST` eine eigene Wegwerf-Instanz unter
+`/tmp` und räumt sie wieder ab. Die Tests prüfen Rundung, Satzermittlung mit
+Tätigkeitsart, Überlappungsfreiheit der Satzhistorie, Periodenzuordnung inklusive
+ISO-Wochen am Jahreswechsel, die Periodensperre und die RLS-Policies.
+
+## Aufbau
+
+```
+docs/                     Fachkonzept und Architektur
+supabase/
+  migrations/             versionierte SQL-Migrationen
+  seed.sql                Beispielstammdaten
+  tests/                  Schema- und RLS-Tests
+scripts/test-db.sh        Testlauf gegen eine frische Datenbank
+src/
+  features/               Schnitt nach Fachthema, nicht nach technischer Schicht
+    auth/ customers/ projects/ activity-types/ overview/
+  components/ui/          schlanke Bausteine (Button, Dialog, Feld …)
+  lib/                    Supabase-Client, Formatierung
+  types/database.ts       Typen zum Schema
+```
+
+Die Geschäftslogik liegt bewusst **in der Datenbank**: Satzermittlung, Rundung,
+Periodenzuordnung und die Sperre gemeldeter Perioden sind Funktionen und Trigger.
+So rechnen Oberfläche, späterer Excel-Export und FinOps-Adapter zwangsläufig gleich,
+und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 
 ## Dokumentation
 
 | Dokument | Inhalt |
 |---|---|
-| [docs/01-fachkonzept.md](docs/01-fachkonzept.md) | Fachliche Anforderungen, Kernentscheidungen, Auswertungen, Erfassungs-Ergonomie |
-| [docs/02-architektur.md](docs/02-architektur.md) | Stack, Systemüberblick, Datenmodell, Export, FinOps-Anbindung, Phasenplan |
-
-## Geplanter Stack
-
-React 19 + TypeScript (Vite) · PostgreSQL (Supabase) · PostgREST · Edge Functions (Deno)
-
-Details und Begründung der Technologiewahl: [docs/02-architektur.md](docs/02-architektur.md#1-technologie-stack)
+| [docs/01-fachkonzept.md](docs/01-fachkonzept.md) | Fachliche Anforderungen, Kernentscheidungen, Auswertungen, Erfassung und Geräte |
+| [docs/02-architektur.md](docs/02-architektur.md) | Stack, Systemüberblick, Datenmodell, Export, FinOps, Phasenplan |
+| [docs/03-phase-1.md](docs/03-phase-1.md) | Was in Phase 1 entstanden ist, inklusive Abweichungen vom Konzept |
