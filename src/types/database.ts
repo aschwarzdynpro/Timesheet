@@ -79,3 +79,68 @@ export type CustomerInsert = Insertable<Customer, 'owner_id' | 'currency' | 'is_
 export type ActivityTypeInsert = Insertable<ActivityType, 'owner_id' | 'is_active'>
 export type ProjectInsert = Insertable<Project, never>
 export type ProjectRateInsert = Insertable<ProjectRate, 'currency'>
+
+export type TimeEntryStatus = 'draft' | 'submitted' | 'invoiced'
+
+export interface TimeEntry {
+  id: string
+  owner_id: string
+  project_id: string
+  activity_type_id: string | null
+  work_date: string
+  start_time: string | null
+  end_time: string | null
+  duration_minutes: number
+  /** Vom Trigger gesetzt: gerundet nach Kunden-/Projektregel. Nie selbst schreiben. */
+  billable_minutes: number
+  is_billable: boolean
+  description: string
+  rate_snapshot: number | null
+  /** Vom Trigger gesetzt. */
+  period_id: string | null
+  status: TimeEntryStatus
+  created_at: string
+  updated_at: string
+}
+
+/** Angereicherte Sicht v_time_entries_full – enthaelt Satz und Betrag. */
+export interface TimeEntryFull extends Omit<TimeEntry, 'created_at' | 'updated_at'> {
+  project_code: string
+  project_name: string
+  customer_id: string
+  customer_code: string
+  customer_name: string
+  activity_code: string | null
+  activity_name: string | null
+  rate: number | null
+  amount: number
+  rate_is_frozen: boolean
+  iso_year: number
+  iso_week: number
+  week_start: string
+  month_start: string
+  year: number
+}
+
+/** Was die Oberflaeche schreiben darf. billable_minutes und period_id gehoeren dem Trigger. */
+export interface TimeEntryInput {
+  project_id: string
+  activity_type_id: string | null
+  work_date: string
+  duration_minutes: number
+  description: string
+  is_billable: boolean
+}
+
+export interface ReportingPeriod {
+  id: string
+  customer_id: string
+  cycle: ReportingCycle
+  period_start: string
+  period_end: string
+  status: 'open' | 'submitted' | 'approved' | 'invoiced'
+  submitted_at: string | null
+  total_minutes: number | null
+  total_fees: number | null
+  total_expenses: number | null
+}

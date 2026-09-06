@@ -26,7 +26,7 @@ export function OverviewPage() {
     <>
       <PageHeader
         title="Übersicht"
-        subtitle="Phase 1 ist eingerichtet: Stammdaten lassen sich pflegen. Die Zeiterfassung folgt in Phase 2."
+        subtitle="Stammdaten und ihr Zusammenspiel auf einen Blick."
       />
 
       {error && <ErrorNote message={describeError(error)} />}
@@ -80,10 +80,10 @@ export function OverviewPage() {
           </li>
         </ol>
         {projectsWithoutRate > 0 && (
-          <p className="mt-4 flex items-center gap-1.5 border-t border-ink-100 pt-4 text-sm text-ink-500">
-            Sätze werden im Projekt gepflegt — Zeile aufklappen.
-            <Link to="/projekte" className="inline-flex items-center gap-1 font-medium text-accent-500 hover:underline">
-              Zu den Projekten <ArrowRight className="size-3.5" />
+          <p className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-ink-100 pt-4 text-sm text-ink-500">
+            Steht das, geht es an die Erfassung.
+            <Link to="/" className="inline-flex items-center gap-1 font-medium text-accent-500 hover:underline">
+              Zum Wochenraster <ArrowRight className="size-3.5" />
             </Link>
           </p>
         )}

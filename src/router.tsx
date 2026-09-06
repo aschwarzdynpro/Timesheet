@@ -5,6 +5,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { ConfigNotice } from '@/features/auth/ConfigNotice'
 import { isConfigured } from '@/lib/supabase'
 import { OverviewPage } from '@/features/overview/OverviewPage'
+import { TimeEntryPage } from '@/features/time-entry/TimeEntryPage'
 import { CustomersPage } from '@/features/customers/CustomersPage'
 import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { ActivityTypesPage } from '@/features/activity-types/ActivityTypesPage'
@@ -28,7 +29,11 @@ function RootLayout() {
 
 const rootRoute = createRootRoute({ component: RootLayout })
 
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: OverviewPage })
+// Das Wochenraster ist der Hauptweg und damit die Startseite.
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: TimeEntryPage })
+const overviewRoute = createRoute({
+  getParentRoute: () => rootRoute, path: '/uebersicht', component: OverviewPage,
+})
 const customersRoute = createRoute({ getParentRoute: () => rootRoute, path: '/kunden', component: CustomersPage })
 const projectsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/projekte', component: ProjectsPage })
 const activityTypesRoute = createRoute({
@@ -36,7 +41,7 @@ const activityTypesRoute = createRoute({
 })
 
 const routeTree = rootRoute.addChildren([
-  indexRoute, customersRoute, projectsRoute, activityTypesRoute,
+  indexRoute, overviewRoute, customersRoute, projectsRoute, activityTypesRoute,
 ])
 
 export const router = createRouter({ routeTree })

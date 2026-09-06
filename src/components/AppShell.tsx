@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Building2, Clock3, FolderKanban, LogOut, Tags } from 'lucide-react'
+import { Building2, Clock3, FolderKanban, LayoutDashboard, LogOut, Tags } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 const NAV = [
-  { to: '/',             label: 'Übersicht',       icon: Clock3 },
+  { to: '/',             label: 'Zeiten',          icon: Clock3 },
+  { to: '/uebersicht',   label: 'Übersicht',       icon: LayoutDashboard },
   { to: '/kunden',       label: 'Kunden',          icon: Building2 },
   { to: '/projekte',     label: 'Projekte',        icon: FolderKanban },
   { to: '/taetigkeiten', label: 'Tätigkeitsarten', icon: Tags },
@@ -16,13 +17,15 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
 
   return (
     <div className="flex min-h-full flex-col sm:flex-row">
-      <nav className="flex shrink-0 flex-col border-b border-ink-200 bg-white sm:w-56 sm:border-r sm:border-b-0">
+      {/* min-w-0: ohne das waechst ein Flex-Element auf seinen Inhalt und schiebt
+          die ganze Seite seitwaerts, statt die Leiste in sich scrollen zu lassen. */}
+      <nav className="flex min-w-0 shrink-0 flex-col border-b border-ink-200 bg-white sm:w-56 sm:border-r sm:border-b-0">
         <div className="flex items-center gap-2 px-5 py-4">
           <span className="rounded bg-accent-500 px-1.5 py-0.5 text-xs font-bold text-white">ZE</span>
           <span className="text-sm font-semibold text-ink-800">Zeiterfassung</span>
         </div>
 
-        <ul className="flex gap-1 overflow-x-auto px-3 pb-3 sm:flex-1 sm:flex-col sm:overflow-visible">
+        <ul className="flex min-w-0 gap-1 overflow-x-auto px-3 pb-3 sm:flex-1 sm:flex-col sm:overflow-visible">
           {NAV.map(({ to, label, icon: Icon }) => {
             const active = to === '/' ? path === '/' : path.startsWith(to)
             return (

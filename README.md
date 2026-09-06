@@ -6,14 +6,13 @@ kundenindividuell reporten und nach Excel bzw. D365 F&O exportieren.
 
 ## Status
 
-**Phase 1 (Fundament) ist umgesetzt.** Das vollständige Datenbankschema samt Logik, RLS,
-Anmeldung und Stammdatenpflege steht. Die Zeiterfassung selbst folgt in Phase 2 —
-ab dann ist die App im Alltag nutzbar.
+**Phasen 1 und 2a sind umgesetzt** — die App ist im Alltag nutzbar: Stammdaten pflegen
+und Zeiten erfassen.
 
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Schema, Migrationen, RLS, Auth, Stammdaten | **fertig** |
-| 2a | Wochenraster, Schnelleintrag, Timer | offen |
+| 2a | Wochenraster, Timer, Tagesliste | **fertig** |
 | 2b | Reisezeit und Spesen, Beleg-Upload | offen |
 | 3 | Auswertungen, Auslastung | offen |
 | 4 | Export-Profile, Excel | offen |
@@ -97,7 +96,7 @@ supabase/
 scripts/test-db.sh        Testlauf gegen eine frische Datenbank
 src/
   features/               Schnitt nach Fachthema, nicht nach technischer Schicht
-    auth/ customers/ projects/ activity-types/ overview/
+    time-entry/ auth/ customers/ projects/ activity-types/ overview/
   components/ui/          schlanke Bausteine (Button, Dialog, Feld …)
   lib/                    Supabase-Client, Formatierung
   types/database.ts       Typen zum Schema
@@ -115,3 +114,4 @@ und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 | [docs/01-fachkonzept.md](docs/01-fachkonzept.md) | Fachliche Anforderungen, Kernentscheidungen, Auswertungen, Erfassung und Geräte |
 | [docs/02-architektur.md](docs/02-architektur.md) | Stack, Systemüberblick, Datenmodell, Export, FinOps, Phasenplan |
 | [docs/03-phase-1.md](docs/03-phase-1.md) | Was in Phase 1 entstanden ist, inklusive Abweichungen vom Konzept |
+| [docs/04-phase-2a.md](docs/04-phase-2a.md) | Zeiterfassung: Wochenraster, Timer, Gegenprobe der Wochenlogik |
