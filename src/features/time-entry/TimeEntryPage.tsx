@@ -31,8 +31,8 @@ export function TimeEntryPage() {
   const { data: projects } = useProjects()
   const { data: activityTypes } = useActivityTypes()
   const { data: customers } = useCustomers()
-  const { data: entries, isPending } = useWeekEntries(monday)
-  const { data: periods } = useWeekPeriods(monday)
+  const { data: entries, isPending, error: loadError } = useWeekEntries(monday)
+  const { data: periods, error: periodError } = useWeekPeriods(monday)
   const previousWeek = useWeekEntries(addDays(monday, -7))
   const save = useSaveTimeEntry()
 
@@ -157,6 +157,13 @@ export function TimeEntryPage() {
         </dl>
       </div>
 
+      {/* Eine fehlgeschlagene Abfrage sah bisher aus wie eine leere Woche.
+          Genau so blieben gespeicherte Zeiten unbemerkt unsichtbar. */}
+      {(loadError ?? periodError) && (
+        <div className="mt-4">
+          <ErrorNote message={`Die Woche konnte nicht geladen werden: ${describeError(loadError ?? periodError)}`} />
+        </div>
+      )}
       {error && <div className="mt-4"><ErrorNote message={error} /></div>}
 
       {needsSetup ? (

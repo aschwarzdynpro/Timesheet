@@ -33,7 +33,9 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        'h-9 w-full rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-800',
+        // min-w-0: ein Feld vom Typ date bringt auf iOS eine eigene Mindestbreite
+        // mit und stuende sonst ueber seine Rasterspalte hinaus.
+        'h-9 w-full min-w-0 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-800',
         'placeholder:text-ink-400 focus:border-accent-500 focus:outline-none',
         'focus:ring-2 focus:ring-accent-100 disabled:bg-ink-50',
         className,
@@ -75,7 +77,7 @@ export function Field({
   label, hint, error, children, className,
 }: { label: string; hint?: string; error?: string; children: ReactNode; className?: string }) {
   return (
-    <label className={cn('block', className)}>
+    <label className={cn('block min-w-0', className)}>
       <span className="mb-1 block text-xs font-semibold tracking-wide text-ink-600 uppercase">{label}</span>
       {children}
       {hint && !error && <span className="mt-1 block text-xs text-ink-400">{hint}</span>}

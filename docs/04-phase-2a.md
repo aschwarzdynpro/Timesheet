@@ -93,3 +93,44 @@ KW 53 des ISO-Jahres 2026.
 
 Phase 2b: Reisezeit-Sätze in der Erfassung sichtbar machen, Spesenarten pflegen, Spesen
 erfassen und Belege hochladen.
+
+## Nachtrag: gespeicherte Zeiten blieben unsichtbar
+
+Nach der Auslieferung des Schnelleintrags meldete der Nutzer, dass eine gespeicherte Zeit
+nicht in der Liste erscheint. Die Datenbank zeigte: Die Einträge **waren da**, mit
+zugeordneter Periode und gerundeten Minuten. Der Fehler lag in der Abfrage.
+
+Die Oberfläche sortiert Einträge eines Tages nach ihrer Erfassungsreihenfolge:
+
+```
+order=work_date.asc,created_at.asc
+```
+
+`v_time_entries_full` führte aber kein `created_at` — die Sicht listet ihre Spalten
+einzeln auf, und diese eine fehlte. PostgREST weist die **gesamte** Abfrage ab:
+
+```
+{"code":"42703","message":"column v_time_entries_full.created_at does not exist"}
+HTTP 400
+```
+
+Dieselbe Zeile stand auch im Export; dessen Vorschau wäre immer leer geblieben.
+
+**Warum es niemand bemerkt hat.** Zwei Dinge trafen zusammen. Erstens haben alle
+Browsertests den REST-Endpunkt abgefangen und Daten zurückgegeben, ohne die Abfrage zu
+prüfen — ein Sortierfeld, das es nicht gibt, fällt einem Mock nicht auf. Zweitens las die
+Seite den Fehler der Abfrage nie aus: `useWeekEntries` liefert `error`, die Seite nahm nur
+`data`. Eine gescheiterte Abfrage sah damit exakt aus wie eine leere Woche.
+
+**Behoben:**
+
+- `created_at` und `updated_at` in `v_time_entries_full` und `v_expenses_full` ergänzt
+  (Migration `20260906180000_view_created_at.sql`).
+- Beide Seiten zeigen Ladefehler jetzt an, statt sie zu verschlucken.
+- Der Schematest prüft neu, dass die Sichten **alle Spalten führen, nach denen die
+  Oberfläche filtert und sortiert**. Gegenprobe gemacht: Entfernt man `created_at` wieder,
+  schlägt der Test mit genau dieser Meldung fehl.
+
+Zusätzlich behoben: Das Datumsfeld stand auf schmalen Schirmen über seine Rasterspalte
+hinaus. Ein `input[type=date]` bringt auf iOS eine eigene Mindestbreite mit und schrumpft
+ohne `min-w-0` nicht mit — dieselbe Ursache wie bei der Navigationsleiste zuvor.

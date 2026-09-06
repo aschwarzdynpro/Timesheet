@@ -173,7 +173,11 @@ export function ExportPage() {
       />
 
       {error && <div className="mt-4"><ErrorNote message={error} /></div>}
-      {rows.error && <div className="mt-4"><ErrorNote message={describeError(rows.error)} /></div>}
+      {(rows.error ?? expenses.error) && (
+        <div className="mt-4">
+          <ErrorNote message={describeError(rows.error ?? expenses.error)} />
+        </div>
+      )}
 
       <Card className="mt-4 p-4">
         <div className="flex flex-wrap items-end gap-3">

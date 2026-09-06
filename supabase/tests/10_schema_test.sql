@@ -154,5 +154,48 @@ begin
   perform test_assert(fn_target_minutes(date '2026-03-02', date '2026-03-06') = 1920,
                       'ein Urlaubstag reduziert die Sollzeit auf 1920 min');
 
+  raise notice 'Spalten, auf die sich die Oberflaeche verlaesst';
+  -- Die Oberflaeche filtert und sortiert ueber PostgREST nach diesen Spalten.
+  -- Fehlt eine, weist PostgREST die gesamte Abfrage mit 42703 ab - und die
+  -- Seite bleibt leer, ohne dass ein Fehler sichtbar wird. Genau so waren
+  -- gespeicherte Zeiten einmal unsichtbar.
+  declare
+    v_sicht text;
+    v_spalte text;
+    v_fehlend text[] := '{}';
+  begin
+    foreach v_sicht in array array['v_time_entries_full'] loop
+      foreach v_spalte in array array[
+        'work_date','created_at','project_id','activity_type_id','customer_id',
+        'period_id','billable_minutes','duration_minutes','amount','rate','status',
+        'is_billable','description','iso_year','iso_week','week_start','month_start','year'
+      ] loop
+        if not exists (
+          select 1 from information_schema.columns
+          where table_schema = 'public' and table_name = v_sicht and column_name = v_spalte
+        ) then
+          v_fehlend := v_fehlend || (v_sicht || '.' || v_spalte);
+        end if;
+      end loop;
+    end loop;
+
+    foreach v_spalte in array array[
+      'expense_date','created_at','project_id','customer_id','period_id',
+      'amount_net','amount_recharged','is_rechargeable','markup_percent','status'
+    ] loop
+      if not exists (
+        select 1 from information_schema.columns
+        where table_schema = 'public' and table_name = 'v_expenses_full' and column_name = v_spalte
+      ) then
+        v_fehlend := v_fehlend || ('v_expenses_full.' || v_spalte);
+      end if;
+    end loop;
+
+    perform test_assert(cardinality(v_fehlend) = 0,
+      'alle von der Oberflaeche genutzten Spalten sind in den Sichten vorhanden'
+      || case when cardinality(v_fehlend) > 0
+              then ' - fehlt: ' || array_to_string(v_fehlend, ', ') else '' end);
+  end;
+
   raise notice 'ALLE ZUSICHERUNGEN ERFUELLT';
 end $$;
