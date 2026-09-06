@@ -134,3 +134,18 @@ Seite den Fehler der Abfrage nie aus: `useWeekEntries` liefert `error`, die Seit
 Zusätzlich behoben: Das Datumsfeld stand auf schmalen Schirmen über seine Rasterspalte
 hinaus. Ein `input[type=date]` bringt auf iOS eine eigene Mindestbreite mit und schrumpft
 ohne `min-w-0` nicht mit — dieselbe Ursache wie bei der Navigationsleiste zuvor.
+
+## Nachtrag: zwei Kleinigkeiten aus dem mobilen Alltag
+
+**Kürzel statt Namen in der Tagesliste.** Die Zeile unter der Beschreibung nannte Kunde
+und Projekt mit vollem Namen. Auf dem Telefon blieb davon
+„HSO CRM Solutions AG · Waldmann · Arb…“ übrig — der lange Kundenname fraß den Platz und
+schnitt ausgerechnet die Tätigkeitsart ab, die einen Eintrag unterscheidet. Jetzt stehen
+dort die Kürzel: „HSO · WAL · Arbeit“. Im Wochenraster am Laptop bleiben die vollen Namen,
+dort ist Platz.
+
+**Kein Fokus beim Öffnen des Schnelleintrags.** Das erste Feld ist die Projektauswahl,
+und `autoFocus` ließ iOS beim Öffnen sofort das Auswahlrad hochfahren, das den halben
+Dialog verdeckte. Der Fokus liegt jetzt nirgends; der Dialog zeigt sich zuerst ganz.
+Das Ändern eines bestehenden Eintrags springt weiterhin ins Dauer-Feld — dort ist es ein
+Textfeld, kein Auswahlrad, und am Laptop ist genau das der schnelle Weg.

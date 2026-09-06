@@ -80,8 +80,11 @@ export function DayList({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-ink-800">{e.description}</span>
+                        {/* Kuerzel statt Namen: auf dem Telefon bleibt von
+                            "HSO CRM Solutions AG · Waldmann · Arb…" sonst nur
+                            der Kunde uebrig, und der ist meist ohnehin klar. */}
                         <span className="block truncate text-xs text-ink-400">
-                          {e.customer_name} · {e.project_name}
+                          {e.customer_code} · {e.project_code}
                           {e.activity_name && ` · ${e.activity_name}`}
                         </span>
                       </span>

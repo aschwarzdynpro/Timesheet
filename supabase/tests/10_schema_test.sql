@@ -168,7 +168,8 @@ begin
       foreach v_spalte in array array[
         'work_date','created_at','project_id','activity_type_id','customer_id',
         'period_id','billable_minutes','duration_minutes','amount','rate','status',
-        'is_billable','description','iso_year','iso_week','week_start','month_start','year'
+        'is_billable','description','iso_year','iso_week','week_start','month_start','year',
+        'customer_code','project_code','activity_name'
       ] loop
         if not exists (
           select 1 from information_schema.columns

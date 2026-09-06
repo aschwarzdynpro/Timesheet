@@ -84,7 +84,9 @@ function QuickEntryForm({
             description="Projekt, Dauer, was gemacht wurde — mehr braucht ein Eintrag nicht.">
       <form onSubmit={onSubmit} className="space-y-3">
         <Field label="Projekt">
-          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} autoFocus>
+          {/* Kein autoFocus: auf dem Telefon faehrt sonst beim Oeffnen sofort
+              die Projektauswahl hoch und verdeckt den halben Dialog. */}
+          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             <option value="">Bitte wählen</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Select>
