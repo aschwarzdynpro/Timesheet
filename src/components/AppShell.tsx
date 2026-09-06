@@ -1,15 +1,19 @@
 import type { ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Building2, Clock3, FolderKanban, LayoutDashboard, LogOut, Tags } from 'lucide-react'
+import {
+  BarChart3, Building2, CalendarCheck, Clock3, FolderKanban, LayoutDashboard, LogOut, Tags,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 const NAV = [
-  { to: '/',             label: 'Zeiten',          icon: Clock3 },
-  { to: '/uebersicht',   label: 'Übersicht',       icon: LayoutDashboard },
-  { to: '/kunden',       label: 'Kunden',          icon: Building2 },
-  { to: '/projekte',     label: 'Projekte',        icon: FolderKanban },
-  { to: '/taetigkeiten', label: 'Tätigkeitsarten', icon: Tags },
+  { to: '/',              label: 'Zeiten',          icon: Clock3 },
+  { to: '/auswertungen',  label: 'Auswertungen',    icon: BarChart3 },
+  { to: '/perioden',      label: 'Perioden',        icon: CalendarCheck },
+  { to: '/uebersicht',    label: 'Übersicht',       icon: LayoutDashboard },
+  { to: '/kunden',        label: 'Kunden',          icon: Building2 },
+  { to: '/projekte',      label: 'Projekte',        icon: FolderKanban },
+  { to: '/taetigkeiten',  label: 'Tätigkeitsarten', icon: Tags },
 ] as const
 
 export function AppShell({ children, email }: { children: ReactNode; email?: string }) {

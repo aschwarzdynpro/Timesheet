@@ -6,17 +6,18 @@ kundenindividuell reporten und nach Excel bzw. D365 F&O exportieren.
 
 ## Status
 
-**Phasen 1 und 2a sind umgesetzt** — die App ist im Alltag nutzbar: Stammdaten pflegen
-und Zeiten erfassen.
+**Phasen 1, 2a, 3 und 5 sind umgesetzt** — Stammdaten pflegen, Zeiten erfassen,
+auswerten und Perioden melden. Offen sind Spesen (2b), der Excel-Export (4) und die
+FinOps-Anbindung (6).
 
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Schema, Migrationen, RLS, Auth, Stammdaten | **fertig** |
 | 2a | Wochenraster, Timer, Tagesliste | **fertig** |
 | 2b | Reisezeit und Spesen, Beleg-Upload | offen |
-| 3 | Auswertungen, Auslastung | offen |
+| 3 | Auswertungen, Auslastung | **fertig** |
 | 4 | Export-Profile, Excel | offen |
-| 5 | Perioden-Workflow | offen |
+| 5 | Perioden-Workflow | **fertig** |
 | 6 | FinOps-Anbindung | offen |
 
 ## Einrichten
@@ -96,7 +97,7 @@ supabase/
 scripts/test-db.sh        Testlauf gegen eine frische Datenbank
 src/
   features/               Schnitt nach Fachthema, nicht nach technischer Schicht
-    time-entry/ auth/ customers/ projects/ activity-types/ overview/
+    time-entry/ reporting/ periods/ auth/ customers/ projects/ activity-types/ overview/
   components/ui/          schlanke Bausteine (Button, Dialog, Feld …)
   lib/                    Supabase-Client, Formatierung
   types/database.ts       Typen zum Schema
@@ -115,3 +116,4 @@ und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 | [docs/02-architektur.md](docs/02-architektur.md) | Stack, Systemüberblick, Datenmodell, Export, FinOps, Phasenplan |
 | [docs/03-phase-1.md](docs/03-phase-1.md) | Was in Phase 1 entstanden ist, inklusive Abweichungen vom Konzept |
 | [docs/04-phase-2a.md](docs/04-phase-2a.md) | Zeiterfassung: Wochenraster, Timer, Gegenprobe der Wochenlogik |
+| [docs/05-phase-3-und-5.md](docs/05-phase-3-und-5.md) | Auswertungen und Perioden-Freigabe |
