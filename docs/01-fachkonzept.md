@@ -1,6 +1,6 @@
 # Zeiterfassung – Fachkonzept
 
-Stand: 2026-09-06 (Rev. 2, nach Abstimmung) · Status: Entwurf
+Stand: 2026-09-06 (Rev. 3) · Status: Entwurf
 
 ## 1. Ziel
 
@@ -18,11 +18,23 @@ Mehrbenutzer-Erweiterung kein Redesign erzwingt (siehe Architekturdokument §9).
 | Thema | Entscheidung |
 |---|---|
 | Rundung | 15-Minuten-Takt als Vorgabe, **je Kunde und Projekt konfigurierbar** |
-| Währung | **Mehrere Währungen**, je Kunde konfigurierbar, Vorbelegung EUR |
+| Währung | **Nur EUR.** Mehrwährung zurückgestellt |
 | Reisezeiten & Spesen | **In Phase 2** mit umgesetzt |
 | Sollarbeitszeit / Auslastung | Ja – Ausgestaltung in Phase 3 zu klären |
 | Geräte | Primär Laptop; Mobil/Tablet für ausgewählte Funktionen, Umfang in Phase 2–3 |
 | FinOps | Klärung der Zielumgebung zurückgestellt; Anbindung bleibt als Phase 6 geplant |
+
+### Zur Währung
+
+Es gibt keine Umrechnungslogik, keine Kurstabelle, keine Basiswährung und keine
+währungsbezogenen Regeln in Auswertungen und Oberfläche. Beträge werden schlicht addiert.
+
+Beibehalten wird lediglich ein Feld `currency char(3) not null default 'EUR'` an den drei
+Stellen, an denen Beträge entstehen (Kunde, Stundensatz, Spese). Es kostet nichts, wird
+nirgends ausgewertet und nirgends angezeigt – erspart aber, falls Mehrwährung später doch
+kommt, eine Schemaänderung an den gewachsenen Tabellen. Der eigentliche Aufwand einer
+späteren Einführung liegt ohnehin nicht in diesen Spalten, sondern in Kurshistorie,
+Snapshot und Auswertungslogik.
 
 ## 3. Fachliche Kernentscheidungen
 
@@ -38,7 +50,7 @@ Zeiteintrags ergibt sich aus dem Leistungsdatum. Zusätzlich wird der Satz beim 
 einer Periode nach *submitted* als `rate_snapshot` in den Zeiteintrag **eingefroren** –
 danach ist der gemeldete Betrag unveränderlich, egal was mit der Satzhistorie passiert.
 
-Ein Satz kann optional an eine **Tätigkeitsart** gebunden sein (siehe §3.6). Damit ist
+Ein Satz kann optional an eine **Tätigkeitsart** gebunden sein (siehe §3.5). Damit ist
 „Reisezeit zu 50 % des Normalsatzes" ein Datensatz, kein Sonderfall im Code.
 
 ### 3.2 Zeiteinträge sind tagesbasiert, nicht zeitpunktbasiert
@@ -88,36 +100,7 @@ Wochen sind **ISO-8601** (Montag–Sonntag, KW 1 = Woche mit dem ersten Donnerst
 PostgreSQL rechnet mit `EXTRACT(ISOYEAR …)` / `EXTRACT(WEEK …)` nativ so – wichtig, weil
 Kalenderwochen zum Jahreswechsel sonst falsch zugeordnet werden.
 
-### 3.5 Mehrwährungsfähigkeit erzwingt eine Berichtswährung
-
-Mehrere Währungen sind nicht „ein Feld mehr". Die eigentliche Konsequenz: **Beträge in
-verschiedenen Währungen dürfen nicht addiert werden.** Eine Jahresauswertung, die 12.000 EUR
-und 8.000 CHF stillschweigend zu 20.000 summiert, ist schlicht falsch.
-
-Das Modell trennt deshalb zwei Ebenen:
-
-| Ebene | Verwendung | Währung |
-|---|---|---|
-| **Abrechnungsbetrag** | Kundenmeldung, Rechnung, Export, Periodensumme | Währung des Kunden |
-| **Berichtsbetrag** | Auswertungen über mehrere Kunden hinweg | Basiswährung (EUR) |
-
-Umgerechnet wird über eine historisierte Kurstabelle `exchange_rates` – nach demselben
-Prinzip wie die Stundensätze, inklusive **Kurs-Snapshot** beim Periodenabschluss. Damit
-friert eine gemeldete Periode zwei Werte ein: den Stundensatz *und* den Umrechnungskurs.
-
-Regeln in der Oberfläche:
-
-- Kundenbezogene Ansichten (Periode, Report, Rechnungsgrundlage) zeigen **ausschließlich**
-  die Kundenwährung – dort wird nie umgerechnet.
-- Kundenübergreifende Auswertungen zeigen die Basiswährung mit sichtbarem Hinweis auf den
-  verwendeten Kurs, alternativ eine Gruppierung je Währung.
-- Eine Summe über gemischte Währungen ohne Umrechnung wird von der Oberfläche gar nicht
-  erst angeboten.
-
-Die Währung hängt am **Kunden** (Vorbelegung EUR) und vererbt sich auf Projekte und Sätze;
-ein Projekt in abweichender Währung bleibt möglich.
-
-### 3.6 Reisezeiten und Spesen sind zwei verschiedene Dinge
+### 3.5 Reisezeiten und Spesen sind zwei verschiedene Dinge
 
 Beides kommt in Phase 2 – aber sie werden unterschiedlich modelliert, weil sie
 unterschiedlich rechnen:
@@ -135,11 +118,11 @@ Tabelle `expenses` mit zwei Erfassungsarten:
 | Beleg | Hotel, Bahnticket, Bewirtung | Betrag brutto/netto direkt erfasst, Beleg als Foto oder PDF |
 | Pauschale | Kilometergeld, Verpflegungspauschale | `menge × satz`, z. B. 214 km × 0,30 € |
 
-Zusätzlich je Spese: weiterberechenbar ja/nein, optionaler Aufschlag in Prozent, Währung,
+Zusätzlich je Spese: weiterberechenbar ja/nein, optionaler Aufschlag in Prozent,
 Zuordnung zu Projekt und Reporting-Periode. Spesen laufen durch denselben Perioden-,
 Sperr- und Exportmechanismus wie Zeiten – sie erscheinen im Kundenreport als eigener Block.
 
-### 3.7 Export ist konfigurierbar, nicht hartcodiert
+### 3.6 Export ist konfigurierbar, nicht hartcodiert
 
 „Excel mit ausgewählten Spalten" wird als **Export-Profil** modelliert: eine gespeicherte,
 benannte Definition aus Spaltenliste (mit Reihenfolge, Label, Format), Filtern und
@@ -150,14 +133,13 @@ auf. Ein neues Kundenformat ist ein Datensatz, kein Release.
 
 | Objekt | Zweck | Wesentliche Merkmale |
 |---|---|---|
-| **Kunde** | Abrechnungsempfänger | Reporting-Rhythmus, Rundungsregel, **Währung**, FinOps-Zuordnung |
+| **Kunde** | Abrechnungsempfänger | Reporting-Rhythmus, Rundungsregel, FinOps-Zuordnung |
 | **Projekt** | Leistungskontext beim Kunden | Budget, abrechenbar j/n, Überschreibungen der Kundenvorgaben |
 | **Stundensatz** | Satz mit Gültigkeitszeitraum | optional je Tätigkeitsart, überlappungsfrei erzwungen |
 | **Tätigkeitsart** | Kategorie der Leistung | u. a. „Reisezeit"; Basis für abweichende Sätze und FinOps-Kategorie |
 | **Zeiteintrag** | Kern der Erfassung | Datum, Dauer, Beschreibung, Status, Periodenbezug |
 | **Spese** | Auslage oder Pauschale | Beleg oder Menge×Satz, weiterberechenbar, Beleganhang |
-| **Reporting-Periode** | Meldeeinheit je Kunde | Woche oder Monat, Status, Sperre, Summen je Währung |
-| **Wechselkurs** | Umrechnung in Basiswährung | historisiert, Snapshot beim Periodenabschluss |
+| **Reporting-Periode** | Meldeeinheit je Kunde | Woche oder Monat, Status, Sperre, Summen |
 | **Arbeitszeitmodell** | Sollstunden je Wochentag | historisiert, Basis der Auslastung |
 | **Abwesenheit** | Urlaub, Krankheit, Feiertag | reduziert die Sollzeit |
 | **Export-Profil** | Spaltendefinition | Excel / CSV / FinOps |
@@ -165,23 +147,24 @@ auf. Ein neues Kundenformat ist ein Datensatz, kein Release.
 ## 5. Auswertungen
 
 Alle Auswertungen basieren auf einer angereicherten Sicht (`v_time_entries_full`), die
-Kunde, Projekt, gültigen Satz, Währung, Betrag und Betrag in Basiswährung bereits enthält.
-Darauf setzen vorbereitete Aggregat-Views auf.
+Kunde, Projekt, gültigen Satz und Betrag bereits enthält. Darauf setzen vorbereitete
+Aggregat-Views auf.
 
 **Zeitraster:** Woche (ISO) · Monat · Quartal · Jahr
-**Dimensionen:** Kunde · Projekt · Tätigkeitsart · Währung · abrechenbar/nicht
-**Kennzahlen:** erfasste Stunden · abrechenbare Stunden · Umsatz (Kundenwährung und Basis) ·
-Ø realisierter Satz · Auslastungsquote · Budgetausschöpfung je Projekt · weiterberechenbare
-und nicht weiterberechenbare Spesen
+**Dimensionen:** Kunde · Projekt · Tätigkeitsart · abrechenbar/nicht
+**Kennzahlen:** erfasste Stunden · abrechenbare Stunden · Umsatz · Ø realisierter Satz ·
+Auslastungsquote · Budgetausschöpfung je Projekt · weiterberechenbare und nicht
+weiterberechenbare Spesen
 
 Konkrete Fragen, die das System beantworten muss:
 
 - Was habe ich in KW 37 für Kunde X geleistet, was kostet das, welche Spesen fallen an?
-- Wie verteilt sich mein Jahresumsatz auf Kunden – in EUR, über alle Währungen hinweg?
+- Wie verteilt sich mein Jahresumsatz auf Kunden?
 - Welche Projekte laufen auf ihr Budget zu?
 - Wie hoch war meine abrechenbare Quote im Q3?
 - Verdiene ich an diesem Projekt wirklich meinen Satz? *(Ø realisierter Satz = Umsatz ÷
   erfasste Stunden – die Kennzahl, die stillschweigend unrentable Projekte sichtbar macht)*
+- Was bleibt an Spesen bei mir hängen?
 - Welche Perioden habe ich noch nicht gemeldet?
 
 Der letzte Punkt ist im Alltag der wichtigste – ein Dashboard-Feld „offene Perioden"
@@ -236,8 +219,7 @@ voller Tiefe. Ein Service Worker puffert Erfassungen bei fehlender Verbindung.
 
 | # | Thema | Fällig |
 |---|---|---|
-| 1 | **Arbeitszeitmodell:** Wochenstunden, Verteilung auf Wochentage, Umgang mit Halbtagen; Bundesland für Feiertage; wird Urlaub in der App gepflegt oder nur als Sollzeit-Abzug? | Phase 3 |
-| 2 | **Wechselkurse:** manuelle Pflege je Monat oder automatischer Bezug (z. B. EZB-Referenzkurs)? Welche Währungen sind real im Einsatz? | Phase 1 |
-| 3 | **Spesenarten:** welche Pauschalen mit welchen Sätzen (Kilometergeld, Verpflegung)? Brutto/netto mit Vorsteuerausweis nötig? | Phase 2 |
-| 4 | **Mobiler Funktionsumfang:** Bestätigung der Liste aus §6.2 | Phase 2 |
-| 5 | **F&O-Zielumgebung:** Version, Project Operations ja/nein, Datenentitäten, App-Registrierung | zurückgestellt |
+| 1 | **Spesenarten:** welche Pauschalen mit welchen Sätzen (Kilometergeld, Verpflegung)? Brutto/netto mit Vorsteuerausweis nötig? | Phase 2b |
+| 2 | **Mobiler Funktionsumfang:** Bestätigung der Liste aus §6.2 | Phase 2 |
+| 3 | **Arbeitszeitmodell:** Wochenstunden, Verteilung auf Wochentage, Umgang mit Halbtagen; Bundesland für Feiertage; wird Urlaub in der App gepflegt oder nur als Sollzeit-Abzug? | Phase 3 |
+| 4 | **F&O-Zielumgebung:** Version, Project Operations ja/nein, Datenentitäten, App-Registrierung | zurückgestellt |

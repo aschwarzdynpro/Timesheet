@@ -1,6 +1,6 @@
 # Zeiterfassung – Architekturvorschlag
 
-Stand: 2026-09-06 (Rev. 2, nach Abstimmung) · Status: Entwurf
+Stand: 2026-09-06 (Rev. 3) · Status: Entwurf
 
 ## 1. Technologie-Stack
 
@@ -14,7 +14,7 @@ Stand: 2026-09-06 (Rev. 2, nach Abstimmung) · Status: Entwurf
 | API | PostgREST (Supabase Auto-API) | Kein handgeschriebenes CRUD-Backend für eine Ein-Personen-App |
 | Auth | Supabase Auth (E-Mail + Magic Link) | Ein Konto, aber sauberes Session-Handling und RLS-Grundlage |
 | Dateiablage | Supabase Storage | **Spesenbelege** (Foto/PDF), privater Bucket mit RLS |
-| Serverlogik | Supabase Edge Functions (Deno) | FinOps-Sync und Kursimport: Secrets dürfen nicht ins Frontend |
+| Serverlogik | Supabase Edge Functions (Deno) | FinOps-Sync: Secrets dürfen nicht ins Frontend |
 | Excel | SheetJS (`xlsx`) clientseitig | Bei diesen Datenmengen reicht der Browser |
 | Mobil | PWA, Service Worker | Installierbar, Offline-Puffer für Erfassung – keine zweite App |
 | Hosting | Vercel oder Netlify (Static) | Preview-Deployments je Branch |
@@ -24,9 +24,9 @@ Stand: 2026-09-06 (Rev. 2, nach Abstimmung) · Status: Entwurf
 
 **Warum kein eigenes Node/.NET-Backend?** Für eine Ein-Personen-App wäre eine zusätzliche
 API-Schicht reines CRUD-Durchreichen. Die Geschäftslogik mit Substanz (Satzermittlung,
-Rundung, Währungsumrechnung, Periodenzuordnung, Sperren) gehört ohnehin in die Datenbank,
-wo sie nicht umgangen werden kann. Kommt später doch ein Backend, sitzt es vor derselben
-DB – kein Wegwurf.
+Rundung, Periodenzuordnung, Sperren) gehört ohnehin in die Datenbank, wo sie nicht
+umgangen werden kann. Kommt später doch ein Backend, sitzt es vor derselben DB – kein
+Wegwurf.
 
 **Warum Supabase und nicht nur „Postgres irgendwo"?** Auth, Auto-API, Storage für
 Spesenbelege, Edge Functions, Backups und Migrations-CLI in einem Paket. Der Lock-in ist
@@ -52,20 +52,20 @@ ab und teilt sich Code, Datenmodell und Deployment mit dem Laptop-Client.
 ┌────────────────────┐  ┌──────────────────┐  ┌─────────────────┐
 │ PostgREST          │  │ Edge Functions   │  │ Supabase Storage│
 │ Tabellen/Views/RPC │  │ · finops-sync    │  │ Spesenbelege    │
-└──────────┬─────────┘  │ · fx-import      │  │ privat + RLS    │
-           │            │ · period-close   │  └─────────────────┘
-           │            └────────┬─────────┘
-           ▼                     │  OAuth2 (Client Credentials)
+└──────────┬─────────┘  │ · finops-status  │  │ privat + RLS    │
+           │            └────────┬─────────┘  └─────────────────┘
+           │                     │  OAuth2 (Client Credentials)
+           ▼                     │
 ┌────────────────────────────────┼──────────────┐   ┌──────────────┐
 │ PostgreSQL 16                  │              │   │ D365 F&O     │
 │                                ▼              │──▶│ Timesheets   │
 │  Stammdaten · Zeiten · Spesen · Perioden      │   │ (OData)      │
-│  Kurse · Arbeitszeitmodell · Abwesenheiten    │   └──────────────┘
+│  Arbeitszeitmodell · Abwesenheiten            │   └──────────────┘
 │  Views für Woche/Monat/Jahr                   │
-│  Funktionen: Satz · Rundung · FX · Periode    │   ┌──────────────┐
-│  Trigger: Sperre · Satz- und Kurs-Snapshot    │◀──│ EZB-Kurse    │
-│  RLS: owner_id = auth.uid()                   │   │ (optional)   │
-└───────────────────────────────────────────────┘   └──────────────┘
+│  Funktionen: Satz · Rundung · Periode         │
+│  Trigger: Sperre · Satz-Snapshot              │
+│  RLS: owner_id = auth.uid()                   │
+└───────────────────────────────────────────────┘
 ```
 
 Die FinOps-Anbindung ist bewusst ausgelagert: Sie ist der einzige Teil, der Secrets
@@ -84,11 +84,23 @@ customers ──1:n──> projects ──1:n──> project_rates ──n:1─�
     │                                  │
     └──1:n──> reporting_periods <──────┘  (Zeiten und Spesen)
 
-exchange_rates      work_schedules      absences      holidays
+work_schedules      absences      holidays
 export_profiles     finops_sync_log     app_settings
 ```
 
-### 3.2 Stammdaten
+### 3.2 Währung
+
+Es gibt **keine Umrechnungslogik, keine Kurstabelle und keine Basiswährung**. Beträge sind
+EUR und werden schlicht addiert.
+
+Beibehalten wird lediglich `currency char(3) not null default 'EUR'` an den drei Stellen,
+an denen Beträge entstehen (`customers`, `project_rates`, `expenses`). Das Feld wird
+nirgends ausgewertet und nirgends angezeigt. Es kostet nichts und erspart, falls
+Mehrwährung später doch kommt, eine Schemaänderung an den bis dahin gewachsenen Tabellen –
+der eigentliche Aufwand läge dann ohnehin in Kurshistorie, Snapshot und
+Auswertungslogik, nicht in diesen Spalten.
+
+### 3.3 Stammdaten
 
 ```sql
 create table customers (
@@ -96,7 +108,7 @@ create table customers (
   owner_id              uuid not null default auth.uid(),
   code                  text not null,              -- "ACME"
   name                  text not null,
-  currency              char(3) not null default 'EUR',   -- Abrechnungswährung
+  currency              char(3) not null default 'EUR',   -- Platzhalter, siehe §3.2
   reporting_cycle       text not null default 'monthly'
                           check (reporting_cycle in ('weekly','monthly')),
   rounding_minutes      int  not null default 15,
@@ -118,7 +130,6 @@ create table projects (
   status                 text not null default 'active'
                            check (status in ('active','paused','closed')),
   is_billable            boolean not null default true,
-  currency               char(3),      -- NULL = Kundenwährung
   start_date             date,
   end_date               date,
   budget_hours           numeric(10,2),
@@ -133,18 +144,18 @@ create table projects (
 );
 
 create table activity_types (
-  id               uuid primary key default gen_random_uuid(),
-  owner_id         uuid not null default auth.uid(),
-  code             text not null,      -- 'CONSULT', 'TRAVEL', 'INTERNAL'
-  name             text not null,
+  id                  uuid primary key default gen_random_uuid(),
+  owner_id            uuid not null default auth.uid(),
+  code                text not null,      -- 'CONSULT', 'TRAVEL', 'INTERNAL'
+  name                text not null,
   is_billable_default boolean not null default true,
-  finops_category  text,
-  sort_order       int not null default 100,
+  finops_category     text,
+  sort_order          int not null default 100,
   unique (owner_id, code)
 );
 ```
 
-### 3.3 Stundensätze – historisiert, optional je Tätigkeitsart
+### 3.4 Stundensätze – historisiert, optional je Tätigkeitsart
 
 ```sql
 create table project_rates (
@@ -170,29 +181,6 @@ create table project_rates (
 Treffer** auf: zuerst ein Satz für genau diese Tätigkeitsart, sonst der allgemeine
 Projektsatz. Damit ist „Reisezeit zu 50 %" reine Stammdatenpflege.
 
-### 3.4 Währung und Kurse
-
-```sql
-create table exchange_rates (
-  id           uuid primary key default gen_random_uuid(),
-  currency     char(3) not null,          -- Fremdwährung
-  rate_to_base numeric(14,6) not null,    -- 1 <currency> = x Basiswährung
-  valid_from   date not null,
-  valid_to     date,
-  source       text not null default 'manual',   -- 'manual' | 'ecb'
-  constraint fx_period_valid check (valid_to is null or valid_to >= valid_from),
-  exclude using gist (
-    currency with =,
-    daterange(valid_from, valid_to, '[]') with &&
-  )
-);
-```
-
-Basiswährung steht in `app_settings` (Vorgabe `EUR`). `fn_fx_rate(currency, on_date)`
-liefert den Kurs; für die Basiswährung selbst immer `1.0`. Kurse werden manuell gepflegt
-oder per Edge Function `fx-import` bezogen – die Entscheidung ist offen (§10) und ändert
-das Modell nicht, nur das Feld `source`.
-
 ### 3.5 Zeiteinträge
 
 ```sql
@@ -208,10 +196,7 @@ create table time_entries (
   billable_minutes   int  not null check (billable_minutes >= 0),
   is_billable        boolean not null default true,
   description        text not null check (length(btrim(description)) > 0),
-  -- beim Periodenabschluss eingefroren:
-  rate_snapshot      numeric(10,2),
-  currency_snapshot  char(3),
-  fx_rate_snapshot   numeric(14,6),
+  rate_snapshot      numeric(10,2),              -- beim Periodenabschluss eingefroren
   period_id          uuid references reporting_periods,
   status             text not null default 'draft'
                        check (status in ('draft','submitted','invoiced')),
@@ -231,40 +216,39 @@ create index on time_entries (period_id) where period_id is not null;
 
 ```sql
 create table expense_categories (
-  id             uuid primary key default gen_random_uuid(),
-  owner_id       uuid not null default auth.uid(),
-  code           text not null,          -- 'MILEAGE', 'HOTEL', 'TRAIN', 'PER_DIEM'
-  name           text not null,
-  entry_mode     text not null check (entry_mode in ('receipt','allowance')),
-  unit_label     text,                   -- 'km', 'Tag' – nur bei allowance
-  default_unit_rate numeric(10,4),       -- z. B. 0.3000 €/km
+  id                      uuid primary key default gen_random_uuid(),
+  owner_id                uuid not null default auth.uid(),
+  code                    text not null,   -- 'MILEAGE', 'HOTEL', 'TRAIN', 'PER_DIEM'
+  name                    text not null,
+  entry_mode              text not null check (entry_mode in ('receipt','allowance')),
+  unit_label              text,            -- 'km', 'Tag' – nur bei allowance
+  default_unit_rate       numeric(10,4),   -- z. B. 0.3000 €/km
   is_rechargeable_default boolean not null default true,
-  finops_category text,
+  finops_category         text,
   unique (owner_id, code)
 );
 
 create table expenses (
-  id                uuid primary key default gen_random_uuid(),
-  owner_id          uuid not null default auth.uid(),
-  project_id        uuid not null references projects on delete restrict,
-  category_id       uuid not null references expense_categories,
-  expense_date      date not null,
-  description       text not null,
+  id              uuid primary key default gen_random_uuid(),
+  owner_id        uuid not null default auth.uid(),
+  project_id      uuid not null references projects on delete restrict,
+  category_id     uuid not null references expense_categories,
+  expense_date    date not null,
+  description     text not null,
   -- Pauschale: quantity × unit_rate; Beleg: amount_net direkt
-  quantity          numeric(10,2),
-  unit_rate         numeric(10,4),
-  amount_net        numeric(12,2) not null check (amount_net >= 0),
-  vat_rate          numeric(5,2),
-  amount_gross      numeric(12,2),
-  currency          char(3) not null,
-  is_rechargeable   boolean not null default true,
-  markup_percent    numeric(5,2) not null default 0,
-  receipt_path      text,                -- Supabase Storage, NULL bei Pauschale
-  fx_rate_snapshot  numeric(14,6),
-  period_id         uuid references reporting_periods,
-  status            text not null default 'draft'
-                      check (status in ('draft','submitted','invoiced')),
-  created_at        timestamptz not null default now(),
+  quantity        numeric(10,2),
+  unit_rate       numeric(10,4),
+  amount_net      numeric(12,2) not null check (amount_net >= 0),
+  vat_rate        numeric(5,2),
+  amount_gross    numeric(12,2),
+  currency        char(3) not null default 'EUR',
+  is_rechargeable boolean not null default true,
+  markup_percent  numeric(5,2) not null default 0,
+  receipt_path    text,                    -- Supabase Storage, NULL bei Pauschale
+  period_id       uuid references reporting_periods,
+  status          text not null default 'draft'
+                    check (status in ('draft','submitted','invoiced')),
+  created_at      timestamptz not null default now(),
   constraint expense_mode check (
     (quantity is null and unit_rate is null) or
     (quantity is not null and unit_rate is not null)
@@ -288,18 +272,17 @@ create table reporting_periods (
   status         text not null default 'open'
                    check (status in ('open','submitted','approved','invoiced')),
   submitted_at   timestamptz,
-  currency       char(3),                -- Kundenwährung zum Abschlusszeitpunkt
   total_minutes  int,
-  total_fees     numeric(12,2),          -- Honorar in Kundenwährung
+  total_fees     numeric(12,2),          -- Honorar
   total_expenses numeric(12,2),          -- weiterberechnete Spesen
   unique (customer_id, cycle, period_start)
 );
 
 create table work_schedules (           -- Sollarbeitszeit, historisiert
-  id         uuid primary key default gen_random_uuid(),
-  owner_id   uuid not null default auth.uid(),
-  valid_from date not null,
-  valid_to   date,
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid(),
+  valid_from  date not null,
+  valid_to    date,
   minutes_mon int not null default 480, minutes_tue int not null default 480,
   minutes_wed int not null default 480, minutes_thu int not null default 480,
   minutes_fri int not null default 480, minutes_sat int not null default 0,
@@ -335,15 +318,13 @@ Feiertagen und Abwesenheiten – Grundlage der Auslastungsquote.
 | Objekt | Aufgabe |
 |---|---|
 | `fn_rate_for(project, activity, date)` | Gültigen Satz ermitteln, spezifischster Treffer gewinnt |
-| `fn_fx_rate(currency, date)` | Kurs zur Basiswährung, `1.0` für die Basiswährung selbst |
 | `fn_effective_rounding(project)` | Takt und Modus mit Kundenvererbung auflösen |
 | `fn_round_minutes(minutes, incr, mode)` | Abrechenbare Minuten berechnen |
-| `fn_effective_currency(project)` | Währung mit Kundenvererbung auflösen |
 | `fn_ensure_period(customer, date)` | Periode finden oder anlegen |
 | `fn_target_minutes(from, to)` | Sollarbeitszeit abzüglich Feiertagen/Abwesenheiten |
 | `trg_assign_period` (BEFORE INS/UPD) | `period_id` und `billable_minutes` setzen – auf Zeiten **und** Spesen |
 | `trg_lock_closed_period` (BEFORE INS/UPD/DEL) | Änderung ablehnen, wenn Periode ≠ `open` |
-| `fn_submit_period(period)` | Satz **und Kurs** einfrieren, Summen schreiben, Status setzen |
+| `fn_submit_period(period)` | Sätze einfrieren, Summen schreiben, Status setzen |
 
 Die Sperre als **Trigger** statt als UI-Prüfung ist bewusst gewählt: Auch ein direkter
 API-Aufruf, ein Import oder ein SQL-Zugriff darf gemeldete Perioden nicht ändern.
@@ -357,20 +338,12 @@ select
   p.name as project_name, p.code as project_code,
   c.id   as customer_id,  c.name as customer_name, c.code as customer_code,
   a.name as activity_name,
-  coalesce(t.currency_snapshot, fn_effective_currency(t.project_id))      as currency,
   coalesce(t.rate_snapshot,
            fn_rate_for(t.project_id, t.activity_type_id, t.work_date))    as rate,
   round(t.billable_minutes / 60.0
         * coalesce(t.rate_snapshot,
                    fn_rate_for(t.project_id, t.activity_type_id, t.work_date)), 2)
                                                                           as amount,
-  -- Betrag in Basiswährung – nur für kundenübergreifende Auswertungen
-  round(t.billable_minutes / 60.0
-        * coalesce(t.rate_snapshot,
-                   fn_rate_for(t.project_id, t.activity_type_id, t.work_date))
-        * coalesce(t.fx_rate_snapshot,
-                   fn_fx_rate(fn_effective_currency(t.project_id), t.work_date)), 2)
-                                                                          as amount_base,
   extract(isoyear from t.work_date)::int as iso_year,
   extract(week    from t.work_date)::int as iso_week,
   date_trunc('week',  t.work_date)::date as week_start,
@@ -383,12 +356,8 @@ left join activity_types a on a.id = t.activity_type_id;
 ```
 
 Analog `v_expenses_full`. Darauf: `v_report_week`, `v_report_month`, `v_report_year` –
-gruppiert nach Kunde, Projekt und **Währung**, mit Stunden, abrechenbaren Stunden, Honorar
-und Spesen. Das Frontend fragt diese Views direkt ab und rechnet selbst nichts nach.
-
-**Regel für alle Aggregate:** Wird über mehr als eine Währung gruppiert, liefert die View
-`amount_base`; kundenbezogene Views liefern ausschließlich `amount` in Kundenwährung. Eine
-View, die beides stumm mischt, gibt es nicht.
+gruppiert nach Kunde und Projekt, mit Stunden, abrechenbaren Stunden, Honorar und Spesen.
+Das Frontend fragt diese Views direkt ab und rechnet selbst nichts nach.
 
 ## 4. Export nach Excel
 
@@ -398,9 +367,8 @@ temporären Dateien, keine Wartezeit.
 
 Verfügbare Spalten (Auswahl je Profil): Datum · KW · Monat · Kunde · Projekt(-code) ·
 Tätigkeitsart · Beschreibung · Dauer (h/min) · abrechenbar j/n · abrechenbare Stunden ·
-Stundensatz · **Währung** · Betrag · **Betrag in EUR** · Status · Periode. Für Spesen ein
-eigener Blattbereich mit Datum · Kategorie · Beschreibung · Menge · Satz · Betrag ·
-Währung · weiterberechenbar · Aufschlag.
+Stundensatz · Betrag · Status · Periode. Für Spesen ein eigener Blattbereich mit Datum ·
+Kategorie · Beschreibung · Menge · Satz · Betrag · weiterberechenbar · Aufschlag.
 
 Profile werden gespeichert und je Kunde als Standard hinterlegbar.
 
@@ -468,11 +436,10 @@ Zielumgebung zu verifizieren.
 ├── docs/                       Konzept, Architektur, Entscheidungen
 ├── supabase/
 │   ├── migrations/             versionierte SQL-Migrationen
-│   ├── seed.sql                Testdaten (Kunden, Projekte, Sätze, Kurse)
+│   ├── seed.sql                Testdaten (Kunden, Projekte, Sätze)
 │   └── functions/
 │       ├── finops-sync/
-│       ├── finops-status/
-│       └── fx-import/
+│       └── finops-status/
 ├── src/
 │   ├── features/
 │   │   ├── time-entry/         Wochenraster, Schnelleintrag, Timer
@@ -481,9 +448,9 @@ Zielumgebung zu verifizieren.
 │   │   ├── projects/           inkl. Satzhistorie je Tätigkeitsart
 │   │   ├── reporting/          Auswertungen, Charts, Auslastung
 │   │   ├── periods/            Perioden, Freigabe, Sperre
-│   │   ├── settings/           Währungen, Kurse, Arbeitszeit, Abwesenheiten
+│   │   ├── settings/           Arbeitszeit, Abwesenheiten, Stammlisten
 │   │   └── export/             Profile, Excel-Erzeugung
-│   ├── lib/                    Supabase-Client, Datums-/Währungs-Utils
+│   ├── lib/                    Supabase-Client, Datums-Utils
 │   ├── components/ui/          shadcn-Komponenten
 │   └── types/database.ts       aus dem Schema generiert
 └── .github/workflows/
@@ -496,12 +463,12 @@ an einer Stelle. Das hält Änderungen lokal.
 
 | Phase | Inhalt | Ergebnis |
 |---|---|---|
-| **1 – Fundament** | Schema, Migrationen, RLS, Auth, Stammdaten: Kunden (mit Währung), Projekte, Tätigkeitsarten, Sätze, Wechselkurse | Daten pflegbar |
+| **1 – Fundament** | Schema, Migrationen, RLS, Auth, Stammdaten: Kunden, Projekte, Tätigkeitsarten, Stundensätze | Daten pflegbar |
 | **2a – Zeiterfassung** | Wochenraster, Schnelleintrag, Timer, Rundung, Periodenzuordnung, mobile Kernfunktionen | **Ab hier produktiv nutzbar** |
 | **2b – Reisezeit & Spesen** | Tätigkeitsart-Sätze, Spesenarten, Beleg-Upload, Belegfoto mobil | Vollständige Leistungserfassung |
 | **3 – Auswertung** | Views, Dashboard, Woche/Monat/Jahr, Charts, Budgetampel, Arbeitszeitmodell und Auslastung | Zahlen auf Knopfdruck |
 | **4 – Export** | Export-Profile, Spaltenauswahl, Excel, Kundenreport | Kundenmeldung ohne Handarbeit |
-| **5 – Perioden** | Freigabe-Workflow, Satz- und Kurs-Snapshot, Sperre, Offene-Perioden-Widget | Abrechnungssicherheit |
+| **5 – Perioden** | Freigabe-Workflow, Satz-Snapshot, Sperre, Offene-Perioden-Widget | Abrechnungssicherheit |
 | **6 – FinOps** | Adapter, Mapping-Pflege, Sync-Konsole, Protokoll, Retry | ERP-Übertragung |
 
 **Hinweis zur Aufteilung:** Reisezeiten und Spesen sind wie besprochen Teil von Phase 2.
@@ -511,19 +478,23 @@ der App beginnt schon nach 2a, ohne dass Spesen nach hinten rutschen.
 
 Phase 6 setzt die zurückgestellte Klärung aus §5.3 voraus.
 
-## 9. Spätere Mehrbenutzer-Erweiterung
+## 9. Spätere Erweiterungen
 
-Das Modell trägt `owner_id` von Anfang an mit, die RLS-Policies hängen daran. Für ein
-kleines Team kämen hinzu: eine `memberships`-Tabelle, eine Rolle „Admin" in den Policies
-und eine Genehmigungsstufe in `reporting_periods`. Kein Schema-Bruch, keine Datenmigration
-der Zeiteinträge.
+**Mehrbenutzer:** Das Modell trägt `owner_id` von Anfang an mit, die RLS-Policies hängen
+daran. Für ein kleines Team kämen hinzu: eine `memberships`-Tabelle, eine Rolle „Admin" in
+den Policies und eine Genehmigungsstufe in `reporting_periods`. Kein Schema-Bruch.
+
+**Mehrwährung:** Falls doch nötig, kommen hinzu: eine historisierte Kurstabelle
+`exchange_rates`, eine Funktion `fn_fx_rate()`, ein zweiter Snapshot `fx_rate_snapshot` an
+Zeiten und Spesen, ein Berichtsbetrag `amount_base` in den Views und die Regel, dass
+kundenbezogene Ansichten nie umrechnen und übergreifende immer. Die `currency`-Spalten
+sind bereits vorhanden (§3.2), die bestehenden Beträge müssen nicht migriert werden.
 
 ## 10. Zu klärende Punkte
 
 | # | Thema | Fällig |
 |---|---|---|
-| 1 | **Wechselkurse:** manuelle Pflege je Monat oder automatischer Bezug (EZB-Referenzkurs)? Welche Währungen sind real im Einsatz? Kurs zum Leistungsdatum, zum Periodenende oder zum Rechnungsdatum? | Phase 1 |
-| 2 | **Spesenarten:** welche Pauschalen zu welchen Sätzen (Kilometergeld, Verpflegung)? Brutto/netto mit Vorsteuerausweis nötig? | Phase 2b |
-| 3 | **Mobiler Funktionsumfang:** Bestätigung der Liste aus Fachkonzept §6.2 | Phase 2 |
-| 4 | **Arbeitszeitmodell:** Wochenstunden und Verteilung, Bundesland für Feiertage, Urlaubspflege in der App? | Phase 3 |
-| 5 | **F&O-Zielumgebung:** Version, Project Operations, Datenentitäten, App-Registrierung | zurückgestellt |
+| 1 | **Spesenarten:** welche Pauschalen zu welchen Sätzen (Kilometergeld, Verpflegung)? Brutto/netto mit Vorsteuerausweis nötig? | Phase 2b |
+| 2 | **Mobiler Funktionsumfang:** Bestätigung der Liste aus Fachkonzept §6.2 | Phase 2 |
+| 3 | **Arbeitszeitmodell:** Wochenstunden und Verteilung, Bundesland für Feiertage, Urlaubspflege in der App? | Phase 3 |
+| 4 | **F&O-Zielumgebung:** Version, Project Operations, Datenentitäten, App-Registrierung | zurückgestellt |
