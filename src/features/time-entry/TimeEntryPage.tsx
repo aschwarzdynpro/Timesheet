@@ -15,6 +15,7 @@ import { EntryDialog, type EntryDialogTarget } from './EntryDialog'
 import { WeekGrid, rowKey, type GridRow } from './WeekGrid'
 import { DayList } from './DayList'
 import { Timer } from './Timer'
+import { QuickEntryDialog } from './QuickEntryDialog'
 import { useSaveTimeEntry, useWeekEntries, useWeekPeriods } from './api'
 
 export function TimeEntryPage() {
@@ -23,6 +24,9 @@ export function TimeEntryPage() {
   const [dialog, setDialog] = useState<EntryDialogTarget | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [quickEntry, setQuickEntry] = useState<{ open: boolean; workDate?: string }>({
+    open: false,
+  })
 
   const { data: projects } = useProjects()
   const { data: activityTypes } = useActivityTypes()
@@ -106,7 +110,11 @@ export function TimeEntryPage() {
         title="Zeiten"
         subtitle="Dauer direkt in die Zelle tippen — 1,5 · 1:30 · 90m. Rundung und Periode setzt die Datenbank."
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="primary" disabled={activeProjects.length === 0}
+                    onClick={() => setQuickEntry({ open: true })}>
+              <Plus className="size-4" /> Erfassen
+            </Button>
             <Button aria-label="Vorherige Woche"
                     onClick={() => setMonday((m) => addDays(m, -7))}>
               <ChevronLeft className="size-4" />
@@ -225,7 +233,12 @@ export function TimeEntryPage() {
             ) : rows.length === 0 ? (
               <EmptyState
                 title="Diese Woche ist noch leer"
-                hint="Füge eine Zeile hinzu, übernimm die Projekte der Vorwoche oder starte den Timer."
+                hint="Erfasse eine Zeit, füge eine Rasterzeile hinzu oder übernimm die Projekte der Vorwoche."
+                action={
+                  <Button variant="primary" onClick={() => setQuickEntry({ open: true })}>
+                    <Plus className="size-4" /> Zeit erfassen
+                  </Button>
+                }
               />
             ) : (
               <>
@@ -257,7 +270,7 @@ export function TimeEntryPage() {
                   <DayList
                     monday={monday}
                     entries={entries ?? []}
-                    onAdd={() => setAdding(true)}
+                    onAdd={(workDate) => setQuickEntry({ open: true, workDate })}
                     onEdit={(entry: TimeEntryFull) => {
                       const project = projects?.find((p) => p.id === entry.project_id)
                       if (!project) return
@@ -276,6 +289,14 @@ export function TimeEntryPage() {
       )}
 
       <EntryDialog target={dialog} entries={dialogEntries} onClose={() => setDialog(null)} />
+
+      <QuickEntryDialog
+        open={quickEntry.open}
+        workDate={quickEntry.workDate}
+        projects={activeProjects}
+        activityTypes={activityTypes ?? []}
+        onClose={() => setQuickEntry({ open: false })}
+      />
     </>
   )
 }

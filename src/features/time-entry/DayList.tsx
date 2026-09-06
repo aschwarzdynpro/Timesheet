@@ -13,7 +13,8 @@ export function DayList({
 }: {
   monday: Date
   entries: TimeEntryFull[]
-  onAdd: () => void
+  /** Erfassen fuer einen bestimmten Tag. */
+  onAdd: (workDate: string) => void
   onEdit: (entry: TimeEntryFull) => void
 }) {
   const days = weekDays(monday).filter((day) => {
@@ -25,8 +26,12 @@ export function DayList({
     return (
       <EmptyState
         title="Diese Woche ist noch leer"
-        hint="Nutze den Timer oder den Schnelleintrag."
-        action={<Button variant="primary" onClick={onAdd}><Plus className="size-4" /> Eintrag</Button>}
+        hint="Erfasse eine Zeit oder starte den Timer."
+        action={
+          <Button variant="primary" onClick={() => onAdd(toIsoDate(new Date()))}>
+            <Plus className="size-4" /> Zeit erfassen
+          </Button>
+        }
       />
     )
   }
@@ -48,13 +53,22 @@ export function DayList({
                 {String(day.getDate()).padStart(2, '0')}.{String(day.getMonth() + 1).padStart(2, '0')}.
                 {isToday(day) && <span className="ml-1.5 text-xs font-normal">heute</span>}
               </span>
-              <span className="tabular text-sm text-ink-500">
-                {total > 0 ? `${minutesToHours(total)} h` : '–'}
+              <span className="flex items-center gap-1">
+                <span className="tabular text-sm text-ink-500">
+                  {total > 0 ? `${minutesToHours(total)} h` : '–'}
+                </span>
+                <Button size="sm" variant="ghost" aria-label={`Zeit für ${iso} erfassen`}
+                        onClick={() => onAdd(iso)}>
+                  <Plus className="size-4" />
+                </Button>
               </span>
             </div>
 
             {ofDay.length === 0 ? (
-              <p className="text-sm text-ink-300">nichts erfasst</p>
+              <button onClick={() => onAdd(iso)}
+                      className="w-full rounded-md border border-dashed border-ink-200 px-3 py-2 text-left text-sm text-ink-400 hover:border-accent-500 hover:text-accent-600">
+                nichts erfasst — antippen zum Erfassen
+              </button>
             ) : (
               <ul className="space-y-1">
                 {ofDay.map((e) => (

@@ -13,7 +13,7 @@ Phase 6, die eine Klärung der F&O-Zielumgebung voraussetzt.
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Schema, Migrationen, RLS, Auth, Stammdaten | **fertig** |
-| 2a | Wochenraster, Timer, Tagesliste | **fertig** |
+| 2a | Wochenraster, Schnelleintrag, Timer, Tagesliste | **fertig** |
 | 2b | Reisezeit und Spesen, Beleg-Upload | **fertig** |
 | 3 | Auswertungen, Auslastung | **fertig** |
 | 4 | Export-Profile, Excel | **fertig** |

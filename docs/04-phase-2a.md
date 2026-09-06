@@ -30,15 +30,32 @@ würde einen Monat später einen Report ohne Inhalt ergeben.
 Dauern werden so entgegengenommen, wie Leute sie tippen: `1,5` · `1.5` · `1:30` · `90m`
 · `2h`. Unverständliches wird abgelehnt statt geraten.
 
+### Schnelleintrag
+
+Ein Dialog mit Projekt, Tätigkeitsart, Datum, Dauer und Beschreibung — der Weg für
+Nachträge zwischendurch und der einzige manuelle Weg auf dem Telefon, wo das Raster
+keinen Platz hat. Erreichbar über „Erfassen“ in der Kopfzeile, über das Plus an jedem
+Wochentag der Tagesliste und über das Antippen eines leeren Tages; in den beiden
+letzteren Fällen mit vorbelegtem Datum.
+
+**Nachgereicht.** Beim ersten Durchgang von Phase 2a hatte ich ihn übersehen, obwohl das
+Fachkonzept ihn als einen der drei Erfassungswege und ausdrücklich als mobile Kernfunktion
+nennt. Schlimmer noch: Die Tagesliste warb mit „Nutze den Timer oder den Schnelleintrag“
+für etwas, das es nicht gab, und die zugehörige Schaltfläche öffnete nur das Panel zum
+Hinzufügen einer Rasterzeile. Auf dem Telefon gab es damit außer dem Timer **keinen Weg,
+eine Zeit zu erfassen** — gefunden hat das der Nutzer, nicht ich. Meine Prüfläufe hatten
+die mobile Ansicht zwar gerendert, aber nie versucht, darin etwas zu erfassen.
+
 ### Timer und Tagesliste
 
 Der Timer speichert den Startzeitpunkt lokal und überlebt damit ein Neuladen — einer, der
 beim versehentlichen Schließen des Tabs verschwindet, ist wertlos. Beim Stoppen öffnet der
 Dialog mit der gelaufenen Dauer.
 
-Unter 640 px Breite tritt an die Stelle des Rasters eine Tagesliste: ansehen und
-korrigieren, gruppiert nach Wochentag. Das Raster braucht Breite und bleibt dem Laptop
-vorbehalten, wie im Fachkonzept §6.2 festgelegt.
+Unter 640 px Breite tritt an die Stelle des Rasters eine Tagesliste: erfassen, ansehen und
+korrigieren, gruppiert nach Wochentag. Jeder Tag trägt ein Plus, leere Tage laden zum
+Antippen ein. Das Raster braucht Breite und bleibt dem Laptop vorbehalten, wie im
+Fachkonzept §6.2 festgelegt.
 
 ### Was die Oberfläche bewusst nicht tut
 
