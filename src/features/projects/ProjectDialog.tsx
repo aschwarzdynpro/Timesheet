@@ -186,6 +186,13 @@ export function ProjectDialog({
           Projekt ist abrechenbar
         </label>
 
+        <p className="rounded-md border border-ink-200 bg-ink-50 px-3 py-2 text-sm text-ink-600">
+          <strong className="font-semibold text-ink-700">Stundensatz?</strong> Der steht nicht in
+          diesem Formular, sondern an der Projektzeile in der Liste — dort hat er eine Historie mit
+          Gültigkeitszeiträumen und kann je Tätigkeitsart abweichen.
+          {project ? ' Tippe die Zeile an, um sie zu öffnen.' : ' Nach dem Speichern öffnet sie sich von selbst.'}
+        </p>
+
         <ErrorNote message={formError} />
 
         <div className="flex justify-end gap-2 border-t border-ink-100 pt-4">

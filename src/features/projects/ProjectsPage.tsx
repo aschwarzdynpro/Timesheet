@@ -1,20 +1,23 @@
-import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, ErrorNote, Select } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
-import { CYCLE_LABEL, ROUNDING_LABEL, STATUS_LABEL, formatEuro, formatHours } from '@/lib/format'
+import {
+  CYCLE_LABEL, ROUNDING_LABEL, STATUS_LABEL, formatEuro, formatHours, formatRate,
+} from '@/lib/format'
 import { describeError } from '@/lib/supabase'
 import type { Project } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
 import { useActivityTypes } from '@/features/activity-types/api'
 import { ProjectDialog } from './ProjectDialog'
 import { RatePanel } from './RatePanel'
-import { useDeleteProject, useProjects } from './api'
+import { useCurrentRates, useDeleteProject, useProjects } from './api'
 
 export function ProjectsPage() {
   const { data: projects, isPending, error } = useProjects()
   const { data: customers } = useCustomers()
   const { data: activityTypes } = useActivityTypes()
+  const { data: currentRates } = useCurrentRates()
   const remove = useDeleteProject()
 
   const [customerFilter, setCustomerFilter] = useState('')
@@ -22,6 +25,7 @@ export function ProjectsPage() {
   const [dialog, setDialog] = useState<{ open: boolean; project: Project | null }>({
     open: false, project: null,
   })
+  const bekannteProjekte = useRef<Set<string> | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
 
   const visible = useMemo(
@@ -30,6 +34,30 @@ export function ProjectsPage() {
   )
 
   const customerOf = (id: string) => customers?.find((c) => c.id === id)
+
+  /** Aktuell gueltiger Satz je Projekt, aufgeschluesselt nach Taetigkeitsart. */
+  const rateInfo = useMemo(() => {
+    const map = new Map<string, { general: number | null; specific: number }>()
+    for (const rate of currentRates ?? []) {
+      const entry = map.get(rate.project_id) ?? { general: null, specific: 0 }
+      if (rate.activity_type_id === null) entry.general = Number(rate.hourly_rate)
+      else entry.specific += 1
+      map.set(rate.project_id, entry)
+    }
+    return map
+  }, [currentRates])
+
+  // Ein frisch angelegtes Projekt klappt von selbst auf: der Stundensatz fehlt
+  // dann noch, und er ist der naechste noetige Schritt.
+  useEffect(() => {
+    if (!projects) return
+    const ids = new Set(projects.map((p) => p.id))
+    const vorher = bekannteProjekte.current
+    bekannteProjekte.current = ids
+    if (!vorher) return
+    const neu = projects.find((p) => !vorher.has(p.id))
+    if (neu) setExpanded(neu.id)
+  }, [projects])
 
   async function onDelete(project: Project) {
     if (!confirm(`Projekt „${project.name}" wirklich löschen?`)) return
@@ -47,7 +75,7 @@ export function ProjectsPage() {
     <>
       <PageHeader
         title="Projekte"
-        subtitle="Jedes Projekt trägt seine eigene Satzhistorie. Aufklappen zeigt sie."
+        subtitle="Der Stundensatz hängt am Projekt, nicht am Projektformular — tippe auf eine Zeile, um ihn anzulegen oder zu ändern."
         action={
           <Button
             variant="primary"
@@ -101,17 +129,21 @@ export function ProjectsPage() {
             {visible.map((p) => {
               const customer = customerOf(p.customer_id)
               const isOpen = expanded === p.id
+              const rate = rateInfo.get(p.id)
               return (
                 <li key={p.id} className="border-b border-ink-100 last:border-0">
-                  <div className="flex items-start gap-3 px-5 py-3 hover:bg-ink-50/60">
+                  <div className="flex items-start gap-2 px-2 py-1 hover:bg-ink-50/60 sm:px-3">
+                    {/* Die ganze Zeile klappt auf: ein 20-Pixel-Pfeil ist auf einem
+                        Touchscreen nicht zuverlaessig zu treffen. */}
                     <button
                       onClick={() => setExpanded(isOpen ? null : p.id)}
                       aria-expanded={isOpen}
-                      aria-label={isOpen ? 'Sätze einklappen' : 'Sätze aufklappen'}
-                      className="mt-0.5 rounded p-0.5 text-ink-400 hover:bg-ink-100 hover:text-ink-600"
+                      aria-label={isOpen ? 'Stundensätze einklappen' : 'Stundensätze anzeigen'}
+                      className="flex min-w-0 flex-1 items-start gap-3 rounded-md px-3 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
                     >
-                      {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-                    </button>
+                      <span className="mt-0.5 shrink-0 text-ink-400">
+                        {isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                      </span>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -162,9 +194,35 @@ export function ProjectsPage() {
                           </div>
                         )}
                       </dl>
-                    </div>
 
-                    <div className="whitespace-nowrap">
+                      {/* Ohne Satz bleibt erfasste Zeit unbewertet - das gehoert
+                          in die Liste, nicht hinter einen Klick. */}
+                      <div className="mt-1.5">
+                        {rate?.general != null ? (
+                          <span className="tabular inline-flex items-center gap-1.5 rounded bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700">
+                            {formatRate(rate.general)}
+                            {rate.specific > 0 && (
+                              <span className="font-normal text-accent-700/70">
+                                + {rate.specific} je Tätigkeitsart
+                              </span>
+                            )}
+                          </span>
+                        ) : rate?.specific ? (
+                          <span className="inline-flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">
+                            <AlertTriangle className="size-3.5" />
+                            nur Sätze je Tätigkeitsart, kein allgemeiner Satz
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">
+                            <AlertTriangle className="size-3.5" />
+                            kein Stundensatz — tippen zum Anlegen
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    </button>
+
+                    <div className="shrink-0 pt-2 whitespace-nowrap">
                       <Button size="sm" variant="ghost" aria-label="Bearbeiten"
                               onClick={() => setDialog({ open: true, project: p })}>
                         <Pencil className="size-4" />

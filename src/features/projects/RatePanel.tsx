@@ -152,7 +152,7 @@ export function RatePanel({
           hint="Ohne Satz lässt sich erfasste Zeit nicht bewerten."
         />
       ) : (
-        <table className="w-full text-sm">
+        <table className="hidden w-full text-sm sm:table">
           <thead>
             <tr className="border-b border-ink-200 text-left text-xs tracking-wide text-ink-400 uppercase">
               <th className="py-2 font-semibold">Satz</th>
@@ -186,6 +186,35 @@ export function RatePanel({
             })}
           </tbody>
         </table>
+      )}
+
+      {/* Auf schmalen Schirmen als Liste: fuenf Spalten passen dort nicht. */}
+      {!isPending && rates && rates.length > 0 && (
+        <ul className="space-y-2 sm:hidden">
+          {rates.map((r) => {
+            const activity = activityTypes.find((a) => a.id === r.activity_type_id)
+            return (
+              <li key={r.id} className="rounded-md border border-ink-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="tabular font-medium text-ink-800">
+                    {formatRate(r.hourly_rate)}
+                    {isCurrent(r) && <span className="ml-2"><Badge tone="good">aktuell</Badge></span>}
+                  </span>
+                  <Button size="sm" variant="ghost" aria-label="Satz löschen" onClick={() => onDelete(r)}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+                <p className="mt-0.5 text-sm text-ink-600">
+                  {activity ? activity.name : 'alle Tätigkeiten'}
+                </p>
+                <p className="tabular mt-0.5 text-xs text-ink-400">
+                  {formatValidity(r.valid_from, r.valid_to)}
+                  {r.note && ` · ${r.note}`}
+                </p>
+              </li>
+            )
+          })}
+        </ul>
       )}
 
       <RateDialog

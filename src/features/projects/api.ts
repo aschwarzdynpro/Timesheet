@@ -44,6 +44,31 @@ export function useDeleteProject() {
 
 /* ------------------------------------------------------------ Stundensaetze */
 
+export interface CurrentRate {
+  project_id: string
+  activity_type_id: string | null
+  activity_name: string | null
+  hourly_rate: number
+  valid_from: string
+  valid_to: string | null
+}
+
+/**
+ * Der heute gueltige Satz je Projekt, aus der Sicht v_project_current_rate.
+ * Damit sieht man schon in der Liste, ob ein Projekt bewertet werden kann -
+ * ohne jede Zeile einzeln aufzuklappen.
+ */
+export function useCurrentRates() {
+  return useQuery({
+    queryKey: ['current-rates'],
+    queryFn: async (): Promise<CurrentRate[]> => {
+      const { data, error } = await supabase.from('v_project_current_rate').select('*')
+      if (error) throw error
+      return (data ?? []) as CurrentRate[]
+    },
+  })
+}
+
 export function useProjectRates(projectId: string | null) {
   return useQuery({
     queryKey: rateKey(projectId ?? 'none'),
@@ -71,7 +96,10 @@ export function useSaveProjectRate(projectId: string) {
       if (error) throw error
       return data as ProjectRate
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: rateKey(projectId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: rateKey(projectId) })
+      void qc.invalidateQueries({ queryKey: ['current-rates'] })
+    },
   })
 }
 
@@ -82,6 +110,9 @@ export function useDeleteProjectRate(projectId: string) {
       const { error } = await supabase.from('project_rates').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: rateKey(projectId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: rateKey(projectId) })
+      void qc.invalidateQueries({ queryKey: ['current-rates'] })
+    },
   })
 }
