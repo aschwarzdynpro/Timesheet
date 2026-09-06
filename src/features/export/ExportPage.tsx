@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/format'
 import { minutesToHours, toIsoDate } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
 import { useProjects } from '@/features/projects/api'
+import { useExpenses } from '@/features/expenses/api'
 import {
   useDeleteExportProfile, useExportProfiles, useExportRows, useSaveExportProfile,
   type ExportFilters,
@@ -44,6 +45,8 @@ export function ExportPage() {
   const [error, setError] = useState<string | null>(null)
 
   const rows = useExportRows(filters)
+  // Spesen kommen als eigenes Blatt mit, sofern im Zeitraum welche liegen.
+  const expenses = useExpenses(filters.from, filters.to)
 
   const projectsOfCustomer = useMemo(
     () => (projects ?? []).filter((p) => !filters.customerId || p.customer_id === filters.customerId),
@@ -140,6 +143,9 @@ export function ExportPage() {
       const label = customer ? customer.code : 'Alle'
       await exportToExcel({
         rows: list,
+        expenses: (expenses.data ?? []).filter(
+          (e) => (!filters.customerId || e.customer_id === filters.customerId) &&
+                 (!filters.projectId || e.project_id === filters.projectId)),
         columns,
         fileName: `Zeiten_${label}_${filters.from}_bis_${filters.to}.xlsx`,
         title: customer?.name ?? 'Zeiten',
@@ -291,6 +297,8 @@ export function ExportPage() {
                   <span className="tabular">
                     {totals.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                   </span>
+                  {(expenses.data?.length ?? 0) > 0 &&
+                    ` · ${expenses.data!.length} Spesen als eigenes Blatt`}
                   {totals.count > PREVIEW_ROWS && ` · zeigt die ersten ${PREVIEW_ROWS}`}
                 </>
               )}

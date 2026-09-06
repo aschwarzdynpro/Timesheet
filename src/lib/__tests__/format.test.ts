@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatEuro, formatHours, formatRate, formatValidity } from '@/lib/format'
+import { formatDate, formatEuro, formatHours, formatRate, formatValidity, today } from '@/lib/format'
 
 describe('Anzeigeformate', () => {
   it('zeigt Betraege in Euro', () => {
@@ -23,6 +23,19 @@ describe('Anzeigeformate', () => {
     expect(formatDate('2026-03-31')).toBe('31.03.2026')
     expect(formatDate('2026-01-01')).toBe('01.01.2026')
     expect(formatDate(null)).toBe('–')
+  })
+
+  it('liefert heute nach lokaler Zeit, nicht nach UTC', () => {
+    // toISOString() haette in Berlin zwischen Mitternacht und zwei Uhr noch den
+    // Vortag geliefert - ein Eintrag waere am falschen Tag und moeglicherweise
+    // in der falschen Meldeperiode gelandet.
+    const jetzt = new Date()
+    const lokal = [
+      jetzt.getFullYear(),
+      String(jetzt.getMonth() + 1).padStart(2, '0'),
+      String(jetzt.getDate()).padStart(2, '0'),
+    ].join('-')
+    expect(today()).toBe(lokal)
   })
 
   it('beschreibt offene und geschlossene Gueltigkeitszeitraeume', () => {

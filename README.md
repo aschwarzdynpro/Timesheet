@@ -6,15 +6,15 @@ kundenindividuell reporten und nach Excel bzw. D365 F&O exportieren.
 
 ## Status
 
-**Phasen 1, 2a, 3, 4 und 5 sind umgesetzt** — Stammdaten pflegen, Zeiten erfassen,
-auswerten, nach Excel exportieren und Perioden melden. Offen sind Spesen (2b) und die
-FinOps-Anbindung (6).
+**Alles bis auf die FinOps-Anbindung ist umgesetzt** — Stammdaten pflegen, Zeiten und
+Spesen erfassen, auswerten, nach Excel exportieren und Perioden melden. Offen ist allein
+Phase 6, die eine Klärung der F&O-Zielumgebung voraussetzt.
 
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Schema, Migrationen, RLS, Auth, Stammdaten | **fertig** |
 | 2a | Wochenraster, Timer, Tagesliste | **fertig** |
-| 2b | Reisezeit und Spesen, Beleg-Upload | offen |
+| 2b | Reisezeit und Spesen, Beleg-Upload | **fertig** |
 | 3 | Auswertungen, Auslastung | **fertig** |
 | 4 | Export-Profile, Excel | **fertig** |
 | 5 | Perioden-Workflow | **fertig** |
@@ -97,7 +97,7 @@ supabase/
 scripts/test-db.sh        Testlauf gegen eine frische Datenbank
 src/
   features/               Schnitt nach Fachthema, nicht nach technischer Schicht
-    time-entry/ reporting/ periods/ export/
+    time-entry/ expenses/ reporting/ periods/ export/
     auth/ customers/ projects/ activity-types/ overview/
   components/ui/          schlanke Bausteine (Button, Dialog, Feld …)
   lib/                    Supabase-Client, Formatierung
@@ -119,3 +119,4 @@ und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 | [docs/04-phase-2a.md](docs/04-phase-2a.md) | Zeiterfassung: Wochenraster, Timer, Gegenprobe der Wochenlogik |
 | [docs/05-phase-3-und-5.md](docs/05-phase-3-und-5.md) | Auswertungen und Perioden-Freigabe |
 | [docs/06-phase-4.md](docs/06-phase-4.md) | Excel-Export mit Spaltenprofilen |
+| [docs/07-phase-2b.md](docs/07-phase-2b.md) | Reisezeiten, Spesen und Belege |

@@ -1,3 +1,5 @@
+import { toIsoDate } from '@/lib/week'
+
 const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
 const decimal = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -30,7 +32,14 @@ export function formatValidity(from: string, to: string | null): string {
   return to ? `${formatDate(from)} – ${formatDate(to)}` : `ab ${formatDate(from)}`
 }
 
-export const today = (): string => new Date().toISOString().slice(0, 10)
+/**
+ * Heutiges Datum als 'YYYY-MM-DD' nach lokaler Zeit.
+ *
+ * Bewusst nicht toISOString(): das rechnet nach UTC um und liefert in Berlin
+ * zwischen Mitternacht und zwei Uhr noch den Vortag - ein Zeiteintrag landete
+ * dann am falschen Tag und womoeglich in der falschen Meldeperiode.
+ */
+export const today = (): string => toIsoDate(new Date())
 
 export const CYCLE_LABEL = { weekly: 'wöchentlich', monthly: 'monatlich' } as const
 export const ROUNDING_LABEL = { up: 'aufrunden', nearest: 'kaufmännisch', none: 'keine Rundung' } as const

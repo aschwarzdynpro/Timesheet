@@ -2,13 +2,14 @@ import type { ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   BarChart3, Building2, CalendarCheck, Clock3, Download, FolderKanban, LayoutDashboard,
-  LogOut, Tags,
+  LogOut, Receipt, Tags, Wallet,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 const NAV = [
   { to: '/',              label: 'Zeiten',          icon: Clock3 },
+  { to: '/spesen',        label: 'Spesen',          icon: Receipt },
   { to: '/auswertungen',  label: 'Auswertungen',    icon: BarChart3 },
   { to: '/perioden',      label: 'Perioden',        icon: CalendarCheck },
   { to: '/export',        label: 'Export',          icon: Download },
@@ -16,6 +17,7 @@ const NAV = [
   { to: '/kunden',        label: 'Kunden',          icon: Building2 },
   { to: '/projekte',      label: 'Projekte',        icon: FolderKanban },
   { to: '/taetigkeiten',  label: 'Tätigkeitsarten', icon: Tags },
+  { to: '/spesenarten',   label: 'Spesenarten',     icon: Wallet },
 ] as const
 
 export function AppShell({ children, email }: { children: ReactNode; email?: string }) {

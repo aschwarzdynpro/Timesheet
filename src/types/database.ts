@@ -144,3 +144,79 @@ export interface ReportingPeriod {
   total_fees: number | null
   total_expenses: number | null
 }
+
+export type ExpenseEntryMode = 'receipt' | 'allowance'
+
+export interface ExpenseCategory {
+  id: string
+  owner_id: string
+  code: string
+  name: string
+  entry_mode: ExpenseEntryMode
+  /** Nur bei Pauschalen: die Einheit, z. B. "km" oder "Tag". */
+  unit_label: string | null
+  default_unit_rate: number | null
+  is_rechargeable_default: boolean
+  finops_category: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export type ExpenseCategoryInsert = Omit<ExpenseCategory, 'id' | 'created_at' | 'owner_id'> &
+  Partial<Pick<ExpenseCategory, 'owner_id'>>
+
+export interface Expense {
+  id: string
+  owner_id: string
+  project_id: string
+  category_id: string
+  expense_date: string
+  description: string
+  /** Pauschale: Menge und Satz gemeinsam. Beleg: beide leer. */
+  quantity: number | null
+  unit_rate: number | null
+  amount_net: number
+  vat_rate: number | null
+  amount_gross: number | null
+  currency: string
+  is_rechargeable: boolean
+  markup_percent: number
+  receipt_path: string | null
+  period_id: string | null
+  status: 'draft' | 'submitted' | 'invoiced'
+  created_at: string
+  updated_at: string
+}
+
+/** Angereicherte Sicht v_expenses_full. */
+export interface ExpenseFull extends Omit<Expense, 'created_at' | 'updated_at' | 'category_id'> {
+  amount_recharged: number
+  category_code: string
+  category_name: string
+  category_entry_mode: ExpenseEntryMode
+  project_code: string
+  project_name: string
+  customer_id: string
+  customer_code: string
+  customer_name: string
+  iso_year: number
+  iso_week: number
+  week_start: string
+  month_start: string
+  year: number
+}
+
+export interface ExpenseInput {
+  project_id: string
+  category_id: string
+  expense_date: string
+  description: string
+  quantity: number | null
+  unit_rate: number | null
+  amount_net: number
+  vat_rate: number | null
+  amount_gross: number | null
+  is_rechargeable: boolean
+  markup_percent: number
+  receipt_path: string | null
+}
