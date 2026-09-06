@@ -6,7 +6,7 @@ kundenindividuell reporten und nach Excel bzw. D365 F&O exportieren.
 
 ## Status
 
-Konzeptphase – es ist noch kein Code implementiert.
+Konzeptphase (Rev. 2, nach Abstimmung) – es ist noch kein Code implementiert.
 
 ## Dokumentation
 
