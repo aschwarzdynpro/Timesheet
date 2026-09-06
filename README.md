@@ -22,30 +22,52 @@ ab dann ist die App im Alltag nutzbar.
 
 ## Einrichten
 
-Voraussetzung: Node 22 und ein Supabase-Projekt (die kostenlose Stufe reicht).
+Voraussetzung: Node 22.
 
 ```bash
 npm install
-cp .env.example .env        # URL und publishable Key eintragen
-```
-
-Schema einspielen — entweder mit der Supabase-CLI …
-
-```bash
-supabase link --project-ref <projekt-ref>
-supabase db push            # spielt supabase/migrations/ ein
-```
-
-… oder indem die Dateien unter `supabase/migrations/` in dieser Reihenfolge im
-SQL-Editor des Dashboards ausgeführt werden. Danach optional `supabase/seed.sql`
-für Beispielstammdaten.
-
-```bash
+cp .env.example .env        # Werte siehe unten
 npm run dev                 # http://localhost:5173
 ```
 
-Die Anmeldung läuft über einen Link per E-Mail. Damit Supabase ihn verschickt, muss unter
-Authentication → URL Configuration die Adresse der App als Redirect-URL hinterlegt sein.
+Die Anmeldung läuft über einen Link per E-Mail. Beim ersten Aufruf legst du dir mit
+deiner E-Mail-Adresse ein Konto an; ein weiterer Schritt ist nicht nötig.
+
+### Supabase
+
+Das Projekt ist eingerichtet (Organisation *Black Nor White*, Region eu-west-3). Die
+Werte für `.env` stehen im Dashboard unter **Project Settings → API Keys**: die Project
+URL und der **publishable** Key (`sb_publishable_…`). Der `service_role` Key gehört
+niemals in diese Datei — er landet sonst im Browser-Bundle und hängt RLS komplett aus.
+
+Schemaänderungen laufen ausschließlich über neue Dateien in `supabase/migrations/`:
+
+```bash
+supabase link --project-ref <projekt-ref>
+supabase db push
+```
+
+Damit die Anmeldelinks funktionieren, müssen unter **Authentication → URL Configuration**
+die Site URL und die Redirect URLs auf die laufende App zeigen — lokal
+`http://localhost:5173`, produktiv die Vercel-Adresse.
+
+### Vercel
+
+`vercel.json` liegt im Repository: SPA-Rewrites, damit ein direkter Aufruf von
+`/kunden` nicht ins Leere läuft, plus Cache- und Sicherheits-Header.
+
+Beim Import in Vercel:
+
+| Einstellung | Wert |
+|---|---|
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Production Branch | `main` |
+
+Environment Variables (für Production, Preview und Development):
+`VITE_SUPABASE_URL` und `VITE_SUPABASE_ANON_KEY`. Nach dem ersten Deployment die
+Vercel-Adresse in Supabase als Redirect-URL nachtragen.
 
 ## Befehle
 
