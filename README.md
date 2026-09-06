@@ -15,7 +15,7 @@ Phase 6, die eine Klärung der F&O-Zielumgebung voraussetzt.
 | 1 | Schema, Migrationen, RLS, Auth, Stammdaten | **fertig** |
 | 2a | Wochenraster, Schnelleintrag, Timer, Tagesliste | **fertig** |
 | 2b | Reisezeit und Spesen, Beleg-Upload | **fertig** |
-| 3 | Auswertungen, Auslastung | **fertig** |
+| 3 | Auswertungen, Arbeitszeit, Auslastung | **fertig** |
 | 4 | Export-Profile, Excel | **fertig** |
 | 5 | Perioden-Workflow | **fertig** |
 | 6 | FinOps-Anbindung | offen |
@@ -86,6 +86,9 @@ Vercel-Adresse in Supabase als Redirect-URL nachtragen.
 Tätigkeitsart, Überlappungsfreiheit der Satzhistorie, Periodenzuordnung inklusive
 ISO-Wochen am Jahreswechsel, die Periodensperre und die RLS-Policies.
 
+Bevor die Auslastung eine Zahl zeigt, braucht sie unter **Arbeitszeit** ein
+Arbeitszeitmodell; Feiertage und Abwesenheiten gehören auf dieselbe Seite.
+
 ## Aufbau
 
 ```
@@ -98,9 +101,9 @@ scripts/test-db.sh        Testlauf gegen eine frische Datenbank
 src/
   features/               Schnitt nach Fachthema, nicht nach technischer Schicht
     time-entry/ expenses/ reporting/ periods/ export/
-    auth/ customers/ projects/ activity-types/ overview/
+    auth/ customers/ projects/ activity-types/ overview/ settings/
   components/ui/          schlanke Bausteine (Button, Dialog, Feld …)
-  lib/                    Supabase-Client, Formatierung
+  lib/                    Supabase-Client, Formatierung, Feiertagsberechnung
   types/database.ts       Typen zum Schema
 ```
 
@@ -117,6 +120,6 @@ und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 | [docs/02-architektur.md](docs/02-architektur.md) | Stack, Systemüberblick, Datenmodell, Export, FinOps, Phasenplan |
 | [docs/03-phase-1.md](docs/03-phase-1.md) | Was in Phase 1 entstanden ist, inklusive Abweichungen vom Konzept |
 | [docs/04-phase-2a.md](docs/04-phase-2a.md) | Zeiterfassung: Wochenraster, Timer, Gegenprobe der Wochenlogik |
-| [docs/05-phase-3-und-5.md](docs/05-phase-3-und-5.md) | Auswertungen und Perioden-Freigabe |
+| [docs/05-phase-3-und-5.md](docs/05-phase-3-und-5.md) | Auswertungen, Arbeitszeit und Perioden-Freigabe |
 | [docs/06-phase-4.md](docs/06-phase-4.md) | Excel-Export mit Spaltenprofilen |
 | [docs/07-phase-2b.md](docs/07-phase-2b.md) | Reisezeiten, Spesen und Belege |

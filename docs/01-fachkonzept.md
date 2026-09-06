@@ -20,7 +20,7 @@ Mehrbenutzer-Erweiterung kein Redesign erzwingt (siehe Architekturdokument §9).
 | Rundung | 15-Minuten-Takt als Vorgabe, **je Kunde und Projekt konfigurierbar** |
 | Währung | **Nur EUR.** Mehrwährung zurückgestellt |
 | Reisezeiten & Spesen | **In Phase 2** mit umgesetzt |
-| Sollarbeitszeit / Auslastung | Ja – Ausgestaltung in Phase 3 zu klären |
+| Sollarbeitszeit / Auslastung | Ja – umgesetzt in Phase 3, konfigurierbar unter *Arbeitszeit* |
 | Geräte | Primär Laptop; Mobil/Tablet für ausgewählte Funktionen, Umfang in Phase 2–3 |
 | FinOps | Klärung der Zielumgebung zurückgestellt; Anbindung bleibt als Phase 6 geplant |
 
@@ -221,5 +221,5 @@ voller Tiefe. Ein Service Worker puffert Erfassungen bei fehlender Verbindung.
 |---|---|---|
 | 1 | **Spesenarten:** welche Pauschalen mit welchen Sätzen (Kilometergeld, Verpflegung)? Brutto/netto mit Vorsteuerausweis nötig? | Phase 2b |
 | 2 | **Mobiler Funktionsumfang:** Bestätigung der Liste aus §6.2 | Phase 2 |
-| 3 | **Arbeitszeitmodell:** Wochenstunden, Verteilung auf Wochentage, Umgang mit Halbtagen; Bundesland für Feiertage; wird Urlaub in der App gepflegt oder nur als Sollzeit-Abzug? | Phase 3 |
+| 3 | ~~**Arbeitszeitmodell:** Wochenstunden, Verteilung, Bundesland, Urlaubspflege~~ — beantwortet: alles drei wird unter *Arbeitszeit* gepflegt, Urlaub in der App. Offen ist nur noch das Eintragen der eigenen Werte. | erledigt (Phase 3) |
 | 4 | **F&O-Zielumgebung:** Version, Project Operations ja/nein, Datenentitäten, App-Registrierung | zurückgestellt |

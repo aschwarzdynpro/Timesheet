@@ -496,5 +496,5 @@ sind bereits vorhanden (§3.2), die bestehenden Beträge müssen nicht migriert 
 |---|---|---|
 | 1 | **Spesenarten:** welche Pauschalen zu welchen Sätzen (Kilometergeld, Verpflegung)? Brutto/netto mit Vorsteuerausweis nötig? | Phase 2b |
 | 2 | **Mobiler Funktionsumfang:** Bestätigung der Liste aus Fachkonzept §6.2 | Phase 2 |
-| 3 | **Arbeitszeitmodell:** Wochenstunden und Verteilung, Bundesland für Feiertage, Urlaubspflege in der App? | Phase 3 |
+| 3 | ~~**Arbeitszeitmodell:** Wochenstunden und Verteilung, Bundesland, Urlaubspflege~~ — beantwortet: Oberfläche unter `/einstellungen`, Feiertage werden je Bundesland berechnet, Urlaub in der App. | erledigt (Phase 3) |
 | 4 | **F&O-Zielumgebung:** Version, Project Operations, Datenentitäten, App-Registrierung | zurückgestellt |

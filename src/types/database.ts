@@ -220,3 +220,41 @@ export interface ExpenseInput {
   markup_percent: number
   receipt_path: string | null
 }
+
+export interface WorkSchedule {
+  id: string
+  owner_id: string
+  valid_from: string
+  valid_to: string | null
+  minutes_mon: number
+  minutes_tue: number
+  minutes_wed: number
+  minutes_thu: number
+  minutes_fri: number
+  minutes_sat: number
+  minutes_sun: number
+  created_at: string
+}
+
+export type WorkScheduleInsert = Omit<WorkSchedule, 'id' | 'created_at' | 'owner_id'>
+
+export type AbsenceKind = 'vacation' | 'sick' | 'training' | 'other'
+
+export interface Absence {
+  id: string
+  owner_id: string
+  date_from: string
+  date_to: string
+  kind: AbsenceKind
+  note: string | null
+  created_at: string
+}
+
+export type AbsenceInsert = Omit<Absence, 'id' | 'created_at' | 'owner_id'>
+
+export interface HolidayRow {
+  owner_id: string
+  holiday_date: string
+  region: string
+  name: string
+}

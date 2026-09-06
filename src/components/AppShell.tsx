@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   BarChart3, Building2, CalendarCheck, Clock3, Download, FolderKanban, LayoutDashboard,
-  LogOut, Receipt, Tags, Wallet,
+  LogOut, Receipt, SlidersHorizontal, Tags, Wallet,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,7 @@ const NAV = [
   { to: '/projekte',      label: 'Projekte',        icon: FolderKanban },
   { to: '/taetigkeiten',  label: 'Tätigkeitsarten', icon: Tags },
   { to: '/spesenarten',   label: 'Spesenarten',     icon: Wallet },
+  { to: '/einstellungen', label: 'Arbeitszeit',     icon: SlidersHorizontal },
 ] as const
 
 export function AppShell({ children, email }: { children: ReactNode; email?: string }) {

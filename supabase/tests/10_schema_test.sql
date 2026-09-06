@@ -191,11 +191,40 @@ begin
       end if;
     end loop;
 
+    -- Die Arbeitszeitseite sortiert direkt ueber die Tabellen.
+    if not exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='work_schedules'
+                     and column_name='valid_from') then
+      v_fehlend := v_fehlend || 'work_schedules.valid_from';
+    end if;
+    if not exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='absences'
+                     and column_name='date_from') then
+      v_fehlend := v_fehlend || 'absences.date_from';
+    end if;
+    if not exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='holidays'
+                     and column_name='holiday_date') then
+      v_fehlend := v_fehlend || 'holidays.holiday_date';
+    end if;
+
     perform test_assert(cardinality(v_fehlend) = 0,
       'alle von der Oberflaeche genutzten Spalten sind in den Sichten vorhanden'
       || case when cardinality(v_fehlend) > 0
               then ' - fehlt: ' || array_to_string(v_fehlend, ', ') else '' end);
   end;
+
+  -- Der Feiertagsimport nennt PostgREST diese Spalten als Konfliktziel. Passt der
+  -- Schluessel nicht exakt dazu, scheitert jeder Import mit 42P10.
+  perform test_assert(exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.holidays'::regclass
+      and contype in ('p','u')
+      and (select array_agg(attname::text order by attname::text)
+             from pg_attribute
+            where attrelid = conrelid and attnum = any(conkey))
+          = array['holiday_date','owner_id','region']
+  ), 'holidays hat den Schluessel, auf den der Feiertagsimport aufsetzt');
 
   raise notice 'ALLE ZUSICHERUNGEN ERFUELLT';
 end $$;

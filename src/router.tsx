@@ -14,6 +14,7 @@ import { PeriodsPage } from '@/features/periods/PeriodsPage'
 import { ExportPage } from '@/features/export/ExportPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
 import { ExpenseCategoriesPage } from '@/features/expenses/ExpenseCategoriesPage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
 
 /** Alles hinter der Anmeldung liegt unter derselben Huelle. */
 function RootLayout() {
@@ -60,9 +61,13 @@ const expenseCategoriesRoute = createRoute({
   getParentRoute: () => rootRoute, path: '/spesenarten', component: ExpenseCategoriesPage,
 })
 
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute, path: '/einstellungen', component: SettingsPage,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute, expensesRoute, reportingRoute, periodsRoute, exportRoute, overviewRoute,
-  customersRoute, projectsRoute, activityTypesRoute, expenseCategoriesRoute,
+  customersRoute, projectsRoute, activityTypesRoute, expenseCategoriesRoute, settingsRoute,
 ])
 
 export const router = createRouter({ routeTree })
