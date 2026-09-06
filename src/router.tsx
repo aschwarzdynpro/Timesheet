@@ -11,6 +11,7 @@ import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { ActivityTypesPage } from '@/features/activity-types/ActivityTypesPage'
 import { ReportingPage } from '@/features/reporting/ReportingPage'
 import { PeriodsPage } from '@/features/periods/PeriodsPage'
+import { ExportPage } from '@/features/export/ExportPage'
 
 /** Alles hinter der Anmeldung liegt unter derselben Huelle. */
 function RootLayout() {
@@ -47,9 +48,12 @@ const reportingRoute = createRoute({
 const periodsRoute = createRoute({
   getParentRoute: () => rootRoute, path: '/perioden', component: PeriodsPage,
 })
+const exportRoute = createRoute({
+  getParentRoute: () => rootRoute, path: '/export', component: ExportPage,
+})
 
 const routeTree = rootRoute.addChildren([
-  indexRoute, reportingRoute, periodsRoute, overviewRoute,
+  indexRoute, reportingRoute, periodsRoute, exportRoute, overviewRoute,
   customersRoute, projectsRoute, activityTypesRoute,
 ])
 
