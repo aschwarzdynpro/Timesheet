@@ -6,6 +6,10 @@
 --   * Leistungsdatum als date, nicht timestamptz.
 --   * currency ist Platzhalter und immer 'EUR' (siehe docs/02-architektur.md §3.2).
 
+-- btree_gist liegt im Schema extensions (siehe vorige Migration); die
+-- EXCLUDE-Constraints unten brauchen dessen Operatorklassen im Suchpfad.
+set local search_path = public, extensions;
+
 -- ---------------------------------------------------------------- Stammdaten
 
 create table customers (

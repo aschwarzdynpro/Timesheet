@@ -3,6 +3,7 @@
 -- Wird NICHT gegen eine echte Supabase-Instanz eingespielt.
 
 create schema if not exists auth;
+create schema if not exists extensions;
 create schema if not exists storage;
 
 create table if not exists auth.users (
