@@ -146,6 +146,19 @@ export interface ReportingPeriod {
   total_minutes: number | null
   total_fees: number | null
   total_expenses: number | null
+  reopened_at: string | null
+  reopen_count: number
+}
+
+/** Protokoll je Periode: was wann gemeldet und was zurueckgenommen wurde. */
+export interface PeriodEvent {
+  id: string
+  period_id: string
+  event: 'submitted' | 'reopened'
+  note: string | null
+  total_minutes: number | null
+  total_fees: number | null
+  created_at: string
 }
 
 export type ExpenseEntryMode = 'receipt' | 'allowance'

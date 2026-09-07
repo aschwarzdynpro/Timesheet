@@ -103,6 +103,37 @@ Summen schreiben, Status setzen — passiert in der Datenbank, in einer Transakt
 nennt eine Rückfrage Kunde, Zeitraum und die Folge im Klartext: Danach sind die Zeiten
 gesperrt und die Sätze eingefroren, und das lässt sich in der App nicht zurücknehmen.
 
+### Meldung zurücknehmen
+
+Der Lebenszyklus war eine Einbahnstraße. Im Alltag weist ein Kunde aber Positionen zurück
+und bittet um Umbuchung — ohne Rückweg bliebe nur, die Zahlen falsch stehen zu lassen oder
+an der App vorbei in der Datenbank zu arbeiten. Beides ist schlechter als ein Weg, der
+festhält, dass es ihn gab.
+
+`fn_reopen_period(periode, grund)` nimmt eine Meldung zurück: Status wieder `open`,
+Meldezeitpunkt und eingefrorene Summen weg, Einträge und Spesen zurück auf Entwurf. Der
+**eingefrorene Stundensatz fällt dabei weg**. Das ist die entscheidende Folge und steht
+deshalb im Dialog: Die Periode ist nicht mehr endgültig, also gilt wieder die
+Satzhistorie, und beim erneuten Melden wird nach dem dann gültigen Satz neu eingefroren.
+Wer zwischendurch einen Satz geändert hat, bekommt eine andere Summe — sichtbar, statt
+still.
+
+Die Reihenfolge in der Funktion ist nicht beliebig: Zuerst wird die Periode geöffnet,
+dann werden die Einträge angefasst. Die Sperre prüft den Status der Periode, an der ein
+Eintrag hängt; andersherum würde die Funktion sich selbst blockieren.
+
+**Abgerechnet ist Schluss.** Eine Periode im Status `invoiced` steht in einer Rechnung.
+Sie hier still wieder zu öffnen würde die Buchhaltung von der Zeiterfassung abkoppeln,
+ohne dass es jemand merkt; wer wirklich umbuchen muss, storniert zuerst. Die Oberfläche
+zeigt dort statt der Schaltfläche „abgerechnet", die Datenbank lehnt den Aufruf ohnehin ab.
+
+**Das Protokoll.** `period_events` hält je Periode fest, was wann gemeldet und was
+zurückgenommen wurde — mit Grund und mit den Summen des Augenblicks. Es entsteht aus einem
+schlichten Grund: Beim Wiederöffnen verliert die Periode ihre eingefrorenen Zahlen. Ohne
+Protokoll wäre nicht mehr nachlesbar, was der Kunde ursprünglich bekommen hat. In der
+Oberfläche steht der Verlauf im aufgeklappten Bereich, aber erst ab dem zweiten Ereignis:
+eine einzelne Meldung erzählt nichts, was nicht schon in der Zeile steht.
+
 ## Beim Bauen gefunden
 
 - **Ein Typ-Cast, der zur Laufzeit falsch gewesen wäre.** Die Tooltip-Position im
@@ -141,6 +172,13 @@ legt zwei Tage an, der zweite Lauf keinen weiteren. Die Woche 01.–07.01.2026 e
 Mo–Fr je 8 h zunächst 1.920 statt 2.400 Minuten — Neujahr fällt auf den Donnerstag —
 und nach einem Urlaubstag am Freitag 1.440. Damit rechnet die Sollzeit Feiertage und
 Abwesenheiten nachweislich heraus.
+
+Das Wiederöffnen in beiden Schichten: in der Datenbank 14 Zusicherungen (Status, Summen,
+Zähler, Protokolleintrag mit Grund und altem Stand, aufgetauter Satz, der Eintrag ist
+danach wirklich wieder änderbar, erneutes Melden mit der berichtigten Summe, drei
+Protokolleinträge, und die abgerechnete Periode wird abgelehnt); in der Oberfläche neun
+Browserschritte auf vier Breiten, darunter die Gegenprobe, dass ohne Grund `null` statt
+eines leeren Textes an die Datenbank geht.
 
 Nicht geprüft: das Verhalten gegen die echte API im Browser. Die Browsertests mocken
 `/rest/v1/**`; Vertragsfehler zwischen App und PostgREST — eine Spalte, die es nicht

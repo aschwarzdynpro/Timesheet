@@ -94,6 +94,9 @@ einem Lebenszyklus:
 
 ```
 open  →  submitted  →  approved  →  invoiced
+ ↑         │              │
+ │         └──────────────┘
+ │          Meldung zurücknehmen, mit Grund und Protokolleintrag
  │
  └─ nur in diesem Status sind Zeiteinträge und Spesen änderbar
 ```
@@ -140,6 +143,7 @@ auf. Ein neues Kundenformat ist ein Datensatz, kein Release.
 | Objekt | Zweck | Wesentliche Merkmale |
 |---|---|---|
 | **Kunde** | Abrechnungsempfänger | Reporting-Rhythmus, Wochenbeginn, Rundungsregel, FinOps-Zuordnung |
+| **Periodenprotokoll** | Was wann gemeldet und zurückgenommen wurde | mit Grund und den Summen des Augenblicks |
 | **Projekt** | Leistungskontext beim Kunden | Budget, abrechenbar j/n, Überschreibungen der Kundenvorgaben |
 | **Stundensatz** | Satz mit Gültigkeitszeitraum | optional je Tätigkeitsart, überlappungsfrei erzwungen |
 | **Tätigkeitsart** | Kategorie der Leistung | u. a. „Reisezeit"; Basis für abweichende Sätze und FinOps-Kategorie |

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { ReportingPeriod, TimeEntryFull } from '@/types/database'
+import type { PeriodEvent, ReportingPeriod, TimeEntryFull } from '@/types/database'
 
 export interface PeriodWithTotals extends ReportingPeriod {
   /** Aus den Eintraegen berechnet, solange die Periode noch offen ist. */
@@ -84,6 +84,49 @@ export function useSubmitPeriod() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['periods'] })
       void qc.invalidateQueries({ queryKey: ['period-entries'] })
+      void qc.invalidateQueries({ queryKey: ['period-events'] })
+      void qc.invalidateQueries({ queryKey: ['time-entries'] })
+      void qc.invalidateQueries({ queryKey: ['report'] })
+    },
+  })
+}
+
+/** Was mit dieser Periode schon passiert ist - gemeldet, zurueckgenommen. */
+export function usePeriodEvents(periodId: string | null) {
+  return useQuery({
+    queryKey: ['period-events', periodId],
+    enabled: Boolean(periodId),
+    queryFn: async (): Promise<PeriodEvent[]> => {
+      const { data, error } = await supabase
+        .from('period_events')
+        .select('*')
+        .eq('period_id', periodId as string)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as PeriodEvent[]
+    },
+  })
+}
+
+/**
+ * Meldung zuruecknehmen. Auch das gehoert in die Datenbank: Status, Saetze,
+ * Summen und der Protokolleintrag muessen zusammen fallen oder gar nicht.
+ */
+export function useReopenPeriod() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ periodId, note }: { periodId: string; note?: string }) => {
+      const { data, error } = await supabase.rpc('fn_reopen_period', {
+        p_period_id: periodId,
+        p_note: note?.trim() || null,
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['periods'] })
+      void qc.invalidateQueries({ queryKey: ['period-entries'] })
+      void qc.invalidateQueries({ queryKey: ['period-events'] })
       void qc.invalidateQueries({ queryKey: ['time-entries'] })
       void qc.invalidateQueries({ queryKey: ['report'] })
     },

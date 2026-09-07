@@ -214,6 +214,62 @@ begin
   perform test_assert(fn_target_minutes(date '2026-03-02', date '2026-03-06') = 1920,
                       'ein Urlaubstag reduziert die Sollzeit auf 1920 min');
 
+  raise notice 'Periode wieder oeffnen';
+  -- Der Kunde weist eine Position zurueck: die Meldung muss zuruecknehmbar sein.
+  -- v_period zeigt inzwischen auf die Nordwind-Woche; hier geht es um die
+  -- gemeldete ACME-Monatsperiode, in der v_entry liegt.
+  select period_id into v_period from time_entries where id = v_entry;
+  perform test_assert(
+    (select count(*) from period_events where period_id = v_period and event = 'submitted') = 1,
+    'die Meldung steht im Protokoll');
+
+  perform fn_reopen_period(v_period, 'Kunde hat Workshop-Position zurueckgewiesen');
+  select * into r from reporting_periods where id = v_period;
+  perform test_assert(r.status = 'open',            'Periode ist wieder offen');
+  perform test_assert(r.submitted_at is null,       'der Meldezeitpunkt ist zurueckgenommen');
+  perform test_assert(r.total_minutes is null,      'die eingefrorene Summe ist weg');
+  perform test_assert(r.reopen_count = 1,           'die Wiedereroeffnung ist gezaehlt');
+  perform test_assert(r.reopened_at is not null,    'und mit Zeitpunkt vermerkt');
+
+  select * into r from period_events where period_id = v_period and event = 'reopened';
+  perform test_assert(r.note = 'Kunde hat Workshop-Position zurueckgewiesen',
+                      'der Grund steht im Protokoll');
+  perform test_assert(r.total_minutes = 90,
+                      'und was gemeldet war, bleibt dort nachlesbar');
+
+  perform test_assert(
+    (select rate_snapshot from time_entries where id = v_entry) is null,
+    'der eingefrorene Satz ist wieder beweglich');
+  perform test_assert(
+    (select status from time_entries where id = v_entry) = 'draft',
+    'der Eintrag ist wieder ein Entwurf');
+
+  -- Und jetzt laesst sich wirklich umbuchen.
+  update time_entries set duration_minutes = 120 where id = v_entry;
+  perform test_assert(
+    (select billable_minutes from time_entries where id = v_entry) = 120,
+    'nach dem Oeffnen ist der Eintrag wieder aenderbar');
+
+  perform test_expect_error(
+    format('select fn_reopen_period(%L)', v_period),
+    'eine offene Periode nochmals zu oeffnen wird abgelehnt');
+
+  -- Erneut melden friert zum heutigen Stand ein.
+  perform fn_submit_period(v_period);
+  select * into r from reporting_periods where id = v_period;
+  perform test_assert(r.status = 'submitted',   'die berichtigte Periode ist wieder gemeldet');
+  perform test_assert(r.total_minutes = 120,    'mit der berichtigten Summe');
+  perform test_assert(
+    (select count(*) from period_events where period_id = v_period) = 3,
+    'Melden, Oeffnen, Melden - drei Eintraege im Protokoll');
+
+  -- Abgerechnet ist Schluss: dahinter haengt eine Rechnung.
+  update reporting_periods set status = 'invoiced' where id = v_period;
+  perform test_expect_error(
+    format('select fn_reopen_period(%L)', v_period),
+    'eine abgerechnete Periode laesst sich nicht wieder oeffnen');
+  update reporting_periods set status = 'submitted' where id = v_period;
+
   raise notice 'Spalten, auf die sich die Oberflaeche verlaesst';
   -- Die Oberflaeche filtert und sortiert ueber PostgREST nach diesen Spalten.
   -- Fehlt eine, weist PostgREST die gesamte Abfrage mit 42703 ab - und die
@@ -268,6 +324,22 @@ begin
                      and column_name='holiday_date') then
       v_fehlend := v_fehlend || 'holidays.holiday_date';
     end if;
+
+    -- Die Periodenseite liest den Zaehler und sortiert das Protokoll.
+    foreach v_spalte in array array['reopen_count','reopened_at'] loop
+      if not exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='reporting_periods'
+                       and column_name=v_spalte) then
+        v_fehlend := v_fehlend || ('reporting_periods.' || v_spalte);
+      end if;
+    end loop;
+    foreach v_spalte in array array['period_id','created_at','event','note','total_minutes','total_fees'] loop
+      if not exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='period_events'
+                       and column_name=v_spalte) then
+        v_fehlend := v_fehlend || ('period_events.' || v_spalte);
+      end if;
+    end loop;
 
     perform test_assert(cardinality(v_fehlend) = 0,
       'alle von der Oberflaeche genutzten Spalten sind in den Sichten vorhanden'

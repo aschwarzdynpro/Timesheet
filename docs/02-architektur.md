@@ -328,7 +328,8 @@ Feiertagen und Abwesenheiten – Grundlage der Auslastungsquote.
 | `fn_target_minutes(from, to)` | Sollarbeitszeit abzüglich Feiertagen/Abwesenheiten |
 | `trg_assign_period` (BEFORE INS/UPD) | `period_id` und `billable_minutes` setzen – auf Zeiten **und** Spesen |
 | `trg_lock_closed_period` (BEFORE INS/UPD/DEL) | Änderung ablehnen, wenn Periode ≠ `open` |
-| `fn_submit_period(period)` | Sätze einfrieren, Summen schreiben, Status setzen |
+| `fn_submit_period(period)` | Sätze einfrieren, Summen schreiben, Status setzen, protokollieren |
+| `fn_reopen_period(period, grund)` | Meldung zurücknehmen: Status offen, Sätze wieder beweglich, protokollieren |
 
 Die Sperre als **Trigger** statt als UI-Prüfung ist bewusst gewählt: Auch ein direkter
 API-Aufruf, ein Import oder ein SQL-Zugriff darf gemeldete Perioden nicht ändern.
