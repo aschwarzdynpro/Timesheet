@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import type { ActivityType, ActivityTypeInsert } from '@/types/database'
 import { useActivityTypes, useDeleteActivityType, useSaveActivityType } from './api'
 
@@ -98,13 +99,14 @@ function ActivityDialog({
 export function ActivityTypesPage() {
   const { data: items, isPending, error } = useActivityTypes()
   const remove = useDeleteActivityType()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<{ open: boolean; item: ActivityType | null }>({
     open: false, item: null,
   })
   const [removeError, setRemoveError] = useState<string | null>(null)
 
   async function onDelete(item: ActivityType) {
-    if (!confirm(`Tätigkeitsart „${item.name}" wirklich löschen?`)) return
+    if (!await confirm(loeschFrage('Tätigkeitsart', item.name))) return
     setRemoveError(null)
     try {
       await remove.mutateAsync(item.id)

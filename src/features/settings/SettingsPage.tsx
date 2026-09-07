@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatDate, today } from '@/lib/format'
 import { minutesToHours, parseDuration } from '@/lib/week'
 import { BUNDESLAENDER, holidaysFor, type BundeslandCode } from '@/lib/holidays'
@@ -190,6 +191,7 @@ export function SettingsPage() {
   const removeAbsence = useDeleteAbsence()
   const importHolidays = useImportHolidays()
   const removeHolidayYear = useDeleteHolidayYear()
+  const confirm = useConfirm()
 
   const [scheduleDialog, setScheduleDialog] = useState<{ open: boolean; schedule: WorkSchedule | null }>(
     { open: false, schedule: null })
@@ -282,8 +284,11 @@ export function SettingsPage() {
                     <Pencil className="size-4" />
                   </Button>
                   <Button size="sm" variant="ghost" aria-label="Löschen"
-                          onClick={() => confirm('Modell wirklich löschen?')
-                            && void run(() => removeSchedule.mutateAsync(s.id))}>
+                          onClick={() => void run(async () => {
+                            if (!await confirm(loeschFrage('Arbeitszeitmodell')))
+                              return
+                            await removeSchedule.mutateAsync(s.id)
+                          })}>
                     <Trash2 className="size-4" />
                   </Button>
                 </span>
@@ -325,8 +330,16 @@ export function SettingsPage() {
           </Button>
           {vorhanden.has(`${region}|${year}`) && (
             <Button variant="danger"
-                    onClick={() => confirm(`Feiertage ${year} für dieses Bundesland löschen?`)
-                      && void run(() => removeHolidayYear.mutateAsync({ region, year }))}>
+                    onClick={() => void run(async () => {
+                      const ja = await confirm({
+                        title: `Feiertage ${year} löschen?`,
+                        subject: BUNDESLAENDER.find((b) => b.code === region)?.name,
+                        body: 'Die berechnete Liste bleibt — du kannst sie jederzeit erneut übernehmen.',
+                        confirmLabel: 'Jahr löschen',
+                      })
+                      if (!ja) return
+                      await removeHolidayYear.mutateAsync({ region, year })
+                    })}>
               <Trash2 className="size-4" /> Jahr löschen
             </Button>
           )}
@@ -396,8 +409,10 @@ export function SettingsPage() {
                     <Pencil className="size-4" />
                   </Button>
                   <Button size="sm" variant="ghost" aria-label="Löschen"
-                          onClick={() => confirm('Abwesenheit wirklich löschen?')
-                            && void run(() => removeAbsence.mutateAsync(a.id))}>
+                          onClick={() => void run(async () => {
+                            if (!await confirm(loeschFrage(ABWESENHEIT[a.kind]))) return
+                            await removeAbsence.mutateAsync(a.id)
+                          })}>
                     <Trash2 className="size-4" />
                   </Button>
                 </span>

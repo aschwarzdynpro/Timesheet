@@ -455,13 +455,22 @@ Zielumgebung zu verifizieren.
 │   │   ├── settings/           Arbeitszeit, Abwesenheiten, Stammlisten
 │   │   └── export/             Profile, Excel-Erzeugung
 │   ├── lib/                    Supabase-Client, Datums-Utils
-│   ├── components/ui/          shadcn-Komponenten
+│   ├── components/ui/          eigene Bausteine, inkl. Rückfrage-Dialog
 │   └── types/database.ts       aus dem Schema generiert
 └── .github/workflows/
 ```
 
 Schnitt nach **Feature**, nicht nach technischer Schicht: Alles zum Thema „Spesen" liegt
 an einer Stelle. Das hält Änderungen lokal.
+
+**Rückfragen** laufen über `useConfirm()` aus `components/ui/confirm.tsx`, nicht über
+`window.confirm`. Der eingebaute Dialog lässt sich nicht gestalten, zeigt auf dem Telefon
+die nackte Systemkarte und macht aus jeder Handlung ein beliebiges „OK". Der eigene
+Dialog gibt ein Promise zurück, sodass die Aufrufstelle gleich schlank bleibt
+(`if (!await confirm(…)) return`), und hält drei Regeln ein: die bestätigende
+Schaltfläche trägt den **Namen der Handlung** statt „OK", eine unumkehrbare steht
+**gefüllt in Rot**, und der Fokus liegt beim Öffnen auf *Abbrechen* — wer versehentlich
+die Eingabetaste trifft, soll nicht löschen oder melden.
 
 ## 8. Umsetzung in Phasen
 

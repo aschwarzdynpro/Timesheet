@@ -3,6 +3,7 @@ import { ExternalLink, Paperclip, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, ErrorNote, Input } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatDate, formatEuro } from '@/lib/format'
 import { toIsoDate } from '@/lib/week'
 import { useProjects } from '@/features/projects/api'
@@ -44,6 +45,7 @@ export function ExpensesPage() {
   const { data: categories } = useExpenseCategories()
   const { data: projects } = useProjects()
   const remove = useDeleteExpense()
+  const confirm = useConfirm()
 
   const activeProjects = useMemo(
     () => (projects ?? []).filter((p) => p.status === 'active'),
@@ -61,7 +63,7 @@ export function ExpensesPage() {
   }, [expenses])
 
   async function onDelete(expense: ExpenseFull) {
-    if (!confirm(`Spese „${expense.description}" wirklich löschen?`)) return
+    if (!await confirm(loeschFrage('Spese', expense.description))) return
     setError(null)
     try {
       await remove.mutateAsync({ id: expense.id, receiptPath: expense.receipt_path })

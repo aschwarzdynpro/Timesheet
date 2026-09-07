@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, ErrorNote } from '@/components/ui/primitives'
 import { CYCLE_LABEL, ROUNDING_LABEL, WEEK_START_SHORT } from '@/lib/format'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import type { Customer } from '@/types/database'
 import { PageHeader } from '@/components/PageHeader'
 import { CustomerDialog } from './CustomerDialog'
@@ -11,13 +12,14 @@ import { useCustomers, useDeleteCustomer } from './api'
 export function CustomersPage() {
   const { data: customers, isPending, error } = useCustomers()
   const remove = useDeleteCustomer()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<{ open: boolean; customer: Customer | null }>({
     open: false, customer: null,
   })
   const [removeError, setRemoveError] = useState<string | null>(null)
 
   async function onDelete(customer: Customer) {
-    if (!confirm(`Kunde „${customer.name}" wirklich löschen?`)) return
+    if (!await confirm(loeschFrage('Kunde', customer.name))) return
     setRemoveError(null)
     try {
       await remove.mutateAsync(customer.id)

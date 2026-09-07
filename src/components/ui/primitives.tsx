@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
    selbsttragend. shadcn/ui-Komponenten lassen sich spaeter danebenlegen. */
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'destructive'
   size?: 'sm' | 'md'
 }
 
@@ -22,6 +22,7 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
         variant === 'secondary' && 'border-ink-200 bg-white text-ink-700 hover:bg-ink-50',
         variant === 'ghost' && 'border-transparent bg-transparent text-ink-500 hover:bg-ink-100',
         variant === 'danger' && 'border-red-200 bg-white text-red-700 hover:bg-red-50',
+        variant === 'destructive' && 'border-red-700 bg-red-600 text-white hover:bg-red-700',
         className,
       )}
       {...props}

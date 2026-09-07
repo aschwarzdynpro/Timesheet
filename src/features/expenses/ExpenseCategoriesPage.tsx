@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatEuro } from '@/lib/format'
 import type { ExpenseCategory, ExpenseCategoryInsert, ExpenseEntryMode } from '@/types/database'
 import { useDeleteExpenseCategory, useExpenseCategories, useSaveExpenseCategory } from './api'
@@ -123,13 +124,14 @@ function CategoryDialog({
 export function ExpenseCategoriesPage() {
   const { data: categories, isPending, error } = useExpenseCategories()
   const remove = useDeleteExpenseCategory()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<{
     open: boolean; category: ExpenseCategory | null; preset?: (typeof VORSCHLAEGE)[number] | null
   }>({ open: false, category: null })
   const [removeError, setRemoveError] = useState<string | null>(null)
 
   async function onDelete(category: ExpenseCategory) {
-    if (!confirm(`Spesenart „${category.name}" wirklich löschen?`)) return
+    if (!await confirm(loeschFrage('Spesenart', category.name))) return
     setRemoveError(null)
     try {
       await remove.mutateAsync(category.id)

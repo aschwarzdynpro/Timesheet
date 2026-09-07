@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { AuthProvider } from '@/features/auth/AuthProvider'
+import { ConfirmProvider } from '@/components/ui/confirm'
 import { router } from '@/router'
 import './index.css'
 
@@ -23,7 +24,9 @@ createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

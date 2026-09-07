@@ -6,6 +6,7 @@ import {
   CYCLE_LABEL, ROUNDING_LABEL, STATUS_LABEL, formatEuro, formatHours, formatRate,
 } from '@/lib/format'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import type { Project } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
 import { useActivityTypes } from '@/features/activity-types/api'
@@ -19,6 +20,7 @@ export function ProjectsPage() {
   const { data: activityTypes } = useActivityTypes()
   const { data: currentRates } = useCurrentRates()
   const remove = useDeleteProject()
+  const confirm = useConfirm()
 
   const [customerFilter, setCustomerFilter] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -60,7 +62,7 @@ export function ProjectsPage() {
   }, [projects])
 
   async function onDelete(project: Project) {
-    if (!confirm(`Projekt „${project.name}" wirklich löschen?`)) return
+    if (!await confirm(loeschFrage('Projekt', project.name))) return
     setRemoveError(null)
     try {
       await remove.mutateAsync(project.id)

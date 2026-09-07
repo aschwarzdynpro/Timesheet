@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Trash2 } from 'lucide-react'
 import { Button, Dialog, ErrorNote, Field, Input, Textarea } from '@/components/ui/primitives'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration } from '@/lib/week'
 import type { ActivityType, Project, TimeEntryFull } from '@/types/database'
@@ -37,6 +38,7 @@ function EntryDialogForm({
 }: { target: EntryDialogTarget; entries: TimeEntryFull[]; onClose: () => void }) {
   const save = useSaveTimeEntry()
   const remove = useDeleteTimeEntry()
+  const confirm = useConfirm()
   const { data: suggestions } = useRecentDescriptions(target?.project.id ?? null)
 
   const [duration, setDuration] = useState(
@@ -102,7 +104,7 @@ function EntryDialogForm({
   }
 
   async function onDelete(entry: TimeEntryFull) {
-    if (!confirm('Diesen Eintrag wirklich löschen?')) return
+    if (!await confirm(loeschFrage('Zeiteintrag'))) return
     setError(null)
     try {
       await remove.mutateAsync(entry.id)

@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/primitives'
 import { formatRate, formatValidity, today } from '@/lib/format'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import type { ActivityType, Project, ProjectRate, ProjectRateInsert } from '@/types/database'
 import { useDeleteProjectRate, useProjectRates, useSaveProjectRate } from './api'
 
@@ -111,6 +112,7 @@ export function RatePanel({
 }: { project: Project; activityTypes: ActivityType[] }) {
   const { data: rates, isPending } = useProjectRates(project.id)
   const remove = useDeleteProjectRate(project.id)
+  const confirm = useConfirm()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -118,7 +120,7 @@ export function RatePanel({
   const isCurrent = (r: ProjectRate) => r.valid_from <= now && (!r.valid_to || r.valid_to >= now)
 
   async function onDelete(rate: ProjectRate) {
-    if (!confirm('Diesen Satz wirklich löschen?')) return
+    if (!await confirm(loeschFrage('Stundensatz'))) return
     setError(null)
     try {
       await remove.mutateAsync(rate.id)

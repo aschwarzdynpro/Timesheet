@@ -3,6 +3,7 @@ import { CheckCircle2, ChevronDown, ChevronRight, Lock } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, ErrorNote, Select } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
+import { useConfirm } from '@/components/ui/confirm'
 import { CYCLE_LABEL, formatDate, formatEuro } from '@/lib/format'
 import { minutesToHours, toIsoDate } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
@@ -69,6 +70,7 @@ export function PeriodsPage() {
   const { data: periods, isPending, error } = usePeriods()
   const { data: customers } = useCustomers()
   const submit = useSubmitPeriod()
+  const confirm = useConfirm()
 
   const [customerId, setCustomerId] = useState('')
   const [onlyOpen, setOnlyOpen] = useState(true)
@@ -94,11 +96,15 @@ export function PeriodsPage() {
   const nameOf = (id: string) => customers?.find((c) => c.id === id)?.name ?? '—'
 
   async function onSubmitPeriod(period: PeriodWithTotals) {
-    const label = `${nameOf(period.customer_id)}, ${formatDate(period.period_start)} – ${formatDate(period.period_end)}`
-    if (!confirm(
-      `Periode melden?\n\n${label}\n\nDanach sind die Zeiten dieser Periode gesperrt und die ` +
-      `Stundensätze eingefroren. Das lässt sich in der App nicht rückgängig machen.`
-    )) return
+    const ja = await confirm({
+      title: 'Periode melden?',
+      subject: `${nameOf(period.customer_id)}, ${formatDate(period.period_start)} – ${formatDate(period.period_end)}`,
+      body: 'Danach sind die Zeiten dieser Periode gesperrt und die Stundensätze eingefroren. '
+          + 'Das lässt sich in der App nicht rückgängig machen.',
+      confirmLabel: 'Periode melden',
+      tone: 'primary',
+    })
+    if (!ja) return
 
     setActionError(null)
     try {

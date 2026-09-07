@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
+import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatDate } from '@/lib/format'
 import { minutesToHours, toIsoDate } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
@@ -33,6 +34,7 @@ export function ExportPage() {
   const { data: projects } = useProjects()
   const saveProfile = useSaveExportProfile()
   const deleteProfile = useDeleteExportProfile()
+  const confirm = useConfirm()
 
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS)
   const [filters, setFilters] = useState<ExportFilters>({
@@ -120,7 +122,7 @@ export function ExportPage() {
 
   async function onDeleteProfile() {
     const profile = profiles?.find((p) => p.id === activeProfile)
-    if (!profile || !confirm(`Profil „${profile.name}" wirklich löschen?`)) return
+    if (!profile || !await confirm(loeschFrage('Profil', profile.name))) return
     setError(null)
     try {
       await deleteProfile.mutateAsync(profile.id)
