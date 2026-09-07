@@ -122,11 +122,11 @@ export function Timer({
       </Select>
       <Select value={activityId} onChange={(e) => setActivityId(e.target.value)}
               className="min-w-0 flex-1 sm:w-36 sm:flex-none" aria-label="Tätigkeitsart für den Timer">
-        <option value="">ohne Art</option>
+        <option value="">Tätigkeit (optional)</option>
         {activityTypes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </Select>
-      <Button size="sm" onClick={start} disabled={!projectId}>
-        <Play className="size-3.5" /> Start
+      <Button size="sm" variant="primary" onClick={start} disabled={!projectId}>
+        <Play className="size-3.5" /> Timer starten
       </Button>
     </div>
   )
