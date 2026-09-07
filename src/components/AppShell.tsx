@@ -24,53 +24,51 @@ const NAV = [
 export function AppShell({ children, email }: { children: ReactNode; email?: string }) {
   const path = useRouterState({ select: (s) => s.location.pathname })
 
-  const primary = NAV.slice(0, 3)
-  const groups = [
-    { label: 'Arbeitsplatz', items: NAV.slice(0, 3) },
-    { label: 'Abrechnung', items: NAV.slice(3, 5) },
-    { label: 'Verwaltung', items: NAV.slice(5) },
-  ]
-  const navLink = ({ to, label, icon: Icon }: typeof NAV[number]) => {
-    const active = to === '/' ? path === '/' : path.startsWith(to)
-    return <Link key={to} to={to} aria-current={active ? 'page' : undefined}
-      className={cn('workspace-link', active && 'is-active')}>
-      <Icon className="size-[18px] shrink-0" aria-hidden="true" /><span>{label}</span>
-    </Link>
-  }
-
   return (
-    <div className="workspace">
-      <a href="#main-content" className="skip-link">Zum Inhalt springen</a>
-      <aside className="workspace-sidebar">
-        <Link to="/" className="workspace-brand" aria-label="Timesheet – Zeiterfassung">
-          <span className="brand-icon"><Clock3 className="size-6" /></span>
-          <span>Timesheet<span className="brand-caption">Dein Arbeitsalltag. Im Blick.</span></span>
-        </Link>
-        <nav aria-label="Hauptnavigation" className="desktop-navigation">
-          {groups.map(group => <div className="nav-group" key={group.label}>
-            <p className="nav-label">{group.label}</p>
-            {group.items.map(navLink)}
-          </div>)}
-        </nav>
-        <nav aria-label="Mobile Navigation" className="mobile-navigation">
-          {primary.map(navLink)}
-          <details className="mobile-more" key={path}>
-            <summary className={cn('workspace-link', NAV.slice(3).some(item => path.startsWith(item.to)) && 'is-active')}>
-              <SlidersHorizontal className="size-[18px]" />Mehr
-            </summary>
-            <div className="mobile-more-panel">{NAV.slice(3).map(navLink)}
-              <button className="workspace-link" onClick={() => void supabase.auth.signOut()}><LogOut className="size-4" />Abmelden</button>
-            </div>
-          </details>
-        </nav>
-        <div className="workspace-account">
-          <span className="account-avatar">{email?.slice(0, 1).toUpperCase() || 'T'}</span>
-          <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Mein Workspace</p><p className="truncate text-xs text-ink-500">{email}</p></div>
-          <button aria-label="Abmelden" title="Abmelden" className="rounded-lg p-2 hover:bg-ink-100" onClick={() => void supabase.auth.signOut()}><LogOut className="size-4" /></button>
+    <div className="flex min-h-full flex-col sm:flex-row">
+      {/* min-w-0: ohne das waechst ein Flex-Element auf seinen Inhalt und schiebt
+          die ganze Seite seitwaerts, statt die Leiste in sich scrollen zu lassen. */}
+      <nav className="flex min-w-0 shrink-0 flex-col border-b border-ink-200 bg-white sm:w-56 sm:border-r sm:border-b-0">
+        <div className="flex items-center gap-2 px-5 py-4">
+          <span className="rounded bg-accent-500 px-1.5 py-0.5 text-xs font-bold text-white">ZE</span>
+          <span className="text-sm font-semibold text-ink-800">Zeiterfassung</span>
         </div>
-      </aside>
-      <main id="main-content" tabIndex={-1} className="workspace-main">
-        <div className="mx-auto max-w-6xl">{children}</div>
+
+        <ul className="flex min-w-0 gap-1 overflow-x-auto px-3 pb-3 sm:flex-1 sm:flex-col sm:overflow-visible">
+          {NAV.map(({ to, label, icon: Icon }) => {
+            const active = to === '/' ? path === '/' : path.startsWith(to)
+            return (
+              <li key={to}>
+                <Link
+                  to={to}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm whitespace-nowrap transition',
+                    active
+                      ? 'bg-accent-50 font-medium text-accent-700'
+                      : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800',
+                  )}
+                >
+                  <Icon className="size-4" />
+                  {label}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+
+        <div className="hidden border-t border-ink-100 px-3 py-3 sm:block">
+          {email && <p className="truncate px-3 pb-2 text-xs text-ink-400">{email}</p>}
+          <button
+            onClick={() => void supabase.auth.signOut()}
+            className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-ink-500 hover:bg-ink-50 hover:text-ink-800"
+          >
+            <LogOut className="size-4" /> Abmelden
+          </button>
+        </div>
+      </nav>
+
+      <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8">
+        <div className="mx-auto max-w-5xl">{children}</div>
       </main>
     </div>
   )

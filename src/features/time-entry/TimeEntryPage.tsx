@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import { CalendarDays, ChevronLeft, ChevronRight, CopyPlus, Plus } from 'lucide-react'
 import {
   Button, Card, EmptyState, ErrorNote, Select,
@@ -21,19 +20,17 @@ import { useSaveTimeEntry, useWeekEntries, useWeekPeriods } from './api'
 
 export function TimeEntryPage() {
   const [monday, setMonday] = useState(() => mondayOf(new Date()))
-  const [view, setView] = useState<'week' | 'list'>('week')
   const [extraRows, setExtraRows] = useState<string[]>([])
   const [dialog, setDialog] = useState<EntryDialogTarget | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [quickEntry, setQuickEntry] = useState<{ open: boolean; workDate?: string }>({
     open: false,
   })
 
-  const { data: projects, isPending: projectsPending, error: projectsError } = useProjects()
+  const { data: projects } = useProjects()
   const { data: activityTypes } = useActivityTypes()
-  const { data: customers, isPending: customersPending, error: customersError } = useCustomers()
+  const { data: customers } = useCustomers()
   const { data: entries, isPending, error: loadError } = useWeekEntries(monday)
   const { data: periods, error: periodError } = useWeekPeriods(monday)
   const previousWeek = useWeekEntries(addDays(monday, -7))
@@ -103,7 +100,6 @@ export function TimeEntryPage() {
     const keys = new Set(extraRows)
     for (const e of previousWeek.data ?? []) keys.add(rowKey(e.project_id, e.activity_type_id))
     setExtraRows([...keys])
-    setNotice('Projektzeilen übernommen. Die Stunden bleiben leer.')
   }
 
   const needsSetup = (customers?.length ?? 0) === 0 || activeProjects.length === 0
@@ -111,8 +107,8 @@ export function TimeEntryPage() {
   return (
     <>
       <PageHeader
-        title="Deine Zeit. Im Überblick."
-        subtitle="Zeiten erfassen, Projekte im Blick behalten und die Woche abschließen."
+        title="Zeiten"
+        subtitle="Dauer direkt in die Zelle tippen — 1,5 · 1:30 · 90m. Rundung und Periode setzt die Datenbank."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="primary" disabled={activeProjects.length === 0}
@@ -134,18 +130,31 @@ export function TimeEntryPage() {
         }
       />
 
-      <dl className="week-summary" aria-label="Summen der ausgewählten Woche">
-        <div className="week-stat"><dt>Erfasste Zeit</dt><dd className="tabular">{isPending || loadError ? '–' : `${minutesToHours(totals.tracked)} h`}</dd></div>
-        <div className="week-stat"><dt>Abrechenbar</dt><dd className="tabular">{isPending || loadError ? '–' : `${minutesToHours(totals.billable)} h`}</dd></div>
-        <div className="week-stat"><dt>Honorar</dt><dd className="tabular">{isPending || loadError ? '–' : formatEuro(totals.fees)}</dd></div>
-      </dl>
-      <div className="week-toolbar">
-        <div><p className="text-lg font-semibold">Kalenderwoche {week} <span className="font-normal text-ink-500">/ {year}</span></p>
-          <p className="tabular mt-1 text-sm text-ink-500">{formatDate(toIsoDate(monday))} – {formatDate(toIsoDate(sunday))}</p></div>
-        <div className="view-switch hidden sm:flex" role="group" aria-label="Ansicht wählen">
-          <button aria-pressed={view === 'week'} onClick={() => setView('week')}>Wochenraster</button>
-          <button aria-pressed={view === 'list'} onClick={() => setView('list')}>Tagesliste</button>
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-lg font-semibold text-ink-800">KW {week} / {year}</p>
+          <p className="tabular text-sm text-ink-500">
+            {formatDate(toIsoDate(monday))} – {formatDate(toIsoDate(sunday))}
+          </p>
         </div>
+        <dl className="flex flex-wrap gap-x-6 gap-y-2 text-right">
+          <div>
+            <dt className="text-xs tracking-wide text-ink-400 uppercase">Erfasst</dt>
+            <dd className="tabular text-lg font-semibold text-ink-800">
+              {minutesToHours(totals.tracked)} h
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs tracking-wide text-ink-400 uppercase">Abrechenbar</dt>
+            <dd className="tabular text-lg font-semibold text-ink-800">
+              {minutesToHours(totals.billable)} h
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs tracking-wide text-ink-400 uppercase">Honorar</dt>
+            <dd className="tabular text-lg font-semibold text-ink-800">{formatEuro(totals.fees)}</dd>
+          </div>
+        </dl>
       </div>
 
       {/* Eine fehlgeschlagene Abfrage sah bisher aus wie eine leere Woche.
@@ -155,24 +164,18 @@ export function TimeEntryPage() {
           <ErrorNote message={`Die Woche konnte nicht geladen werden: ${describeError(loadError ?? periodError)}`} />
         </div>
       )}
-      {notice && <p role="status" className="mt-4 rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700">{notice}</p>}
       {error && <div className="mt-4"><ErrorNote message={error} /></div>}
 
-      {projectsPending || customersPending ? (
-        <Card className="mt-4 p-6"><p role="status" className="text-sm text-ink-500">Dein Arbeitsplatz wird geladen …</p></Card>
-      ) : projectsError || customersError ? (
-        <div className="mt-4"><ErrorNote message={describeError(projectsError ?? customersError)} /></div>
-      ) : needsSetup ? (
+      {needsSetup ? (
         <Card className="mt-4">
           <EmptyState
-            title="Bereit für dein erstes Projekt?"
-            hint="Lege einen Kunden und ein aktives Projekt an. Danach kannst du direkt deine erste Zeit erfassen."
-            action={<Link to={(customers?.length ?? 0) === 0 ? '/kunden' : '/projekte'} className="inline-flex rounded-xl bg-accent-500 px-5 py-3 text-sm font-medium text-white">{(customers?.length ?? 0) === 0 ? 'Kunden anlegen' : 'Projekt anlegen'}</Link>}
+            title="Zuerst Stammdaten anlegen"
+            hint="Zeiterfassung braucht mindestens einen Kunden mit einem aktiven Projekt. Ein Stundensatz am Projekt sorgt dafür, dass die erfasste Zeit auch bewertet wird."
           />
         </Card>
       ) : (
         <>
-          <div className="timer-workspace flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <Timer
               projects={activeProjects}
               activityTypes={activityTypes ?? []}
@@ -188,11 +191,11 @@ export function TimeEntryPage() {
               }}
             />
             <Button onClick={() => setAdding((v) => !v)}>
-              <Plus className="size-4" /> Projektzeile
+              <Plus className="size-4" /> Zeile
             </Button>
             {(previousWeek.data?.length ?? 0) > 0 && (
               <Button onClick={copyPreviousWeek} title="Projektzeilen der Vorwoche übernehmen, ohne Stunden">
-                <CopyPlus className="size-4" /> Projekte aus Vorwoche
+                <CopyPlus className="size-4" /> Vorwoche
               </Button>
             )}
           </div>
@@ -247,7 +250,7 @@ export function TimeEntryPage() {
             ) : (
               <>
                 {/* Raster braucht Breite und bleibt dem Laptop vorbehalten */}
-                <div className={view === 'week' ? 'hidden sm:block' : 'hidden'}>
+                <div className="hidden sm:block">
                   <WeekGrid
                     monday={monday}
                     rows={rows}
@@ -270,7 +273,7 @@ export function TimeEntryPage() {
                     }
                   />
                 </div>
-                <div className={view === 'list' ? 'px-4' : 'px-4 sm:hidden'}>
+                <div className="px-4 sm:hidden">
                   <DayList
                     monday={monday}
                     entries={entries ?? []}
