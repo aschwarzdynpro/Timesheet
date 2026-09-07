@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, ErrorNote } from '@/components/ui/primitives'
-import { CYCLE_LABEL, ROUNDING_LABEL } from '@/lib/format'
+import { CYCLE_LABEL, ROUNDING_LABEL, WEEK_START_SHORT } from '@/lib/format'
 import { describeError } from '@/lib/supabase'
 import type { Customer } from '@/types/database'
 import { PageHeader } from '@/components/PageHeader'
@@ -75,7 +75,16 @@ export function CustomersPage() {
                       <span className="text-ink-800">{c.name}</span>
                       {!c.is_active && <span className="ml-2"><Badge tone="muted">inaktiv</Badge></span>}
                     </td>
-                    <td className="px-5 py-2.5"><Badge>{CYCLE_LABEL[c.reporting_cycle]}</Badge></td>
+                    <td className="px-5 py-2.5">
+                      <Badge>{CYCLE_LABEL[c.reporting_cycle]}</Badge>
+                      {/* Ohne den Wochenbeginn steht in der Zeile nicht, welcher
+                          Zeitraum gemeldet wird - und er ist je Kunde verschieden. */}
+                      {c.reporting_cycle === 'weekly' && (
+                        <span className="ml-1.5 text-xs text-ink-400">
+                          ab {WEEK_START_SHORT[c.week_start_day]}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-5 py-2.5 tabular text-ink-600">
                       {c.rounding_mode === 'none'
                         ? 'minutengenau'
@@ -99,11 +108,13 @@ export function CustomersPage() {
         )}
       </Card>
 
-      <CustomerDialog
-        open={dialog.open}
+      {/* Erst beim Oeffnen einhaengen: sonst behaelt der Dialog den Meldungs-
+          rhythmus des zuletzt geoeffneten Kunden. */}
+      {dialog.open && <CustomerDialog
+        open
         customer={dialog.customer}
         onClose={() => setDialog({ open: false, customer: null })}
-      />
+      />}
     </>
   )
 }

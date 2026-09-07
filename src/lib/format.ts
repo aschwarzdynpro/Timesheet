@@ -42,5 +42,7 @@ export function formatValidity(from: string, to: string | null): string {
 export const today = (): string => toIsoDate(new Date())
 
 export const CYCLE_LABEL = { weekly: 'wöchentlich', monthly: 'monatlich' } as const
+export const WEEK_START_LABEL = { monday: 'Montag', sunday: 'Sonntag' } as const
+export const WEEK_START_SHORT = { monday: 'Mo', sunday: 'So' } as const
 export const ROUNDING_LABEL = { up: 'aufrunden', nearest: 'kaufmännisch', none: 'keine Rundung' } as const
 export const STATUS_LABEL = { active: 'aktiv', paused: 'pausiert', closed: 'abgeschlossen' } as const

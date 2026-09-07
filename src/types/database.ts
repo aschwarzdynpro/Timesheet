@@ -8,6 +8,8 @@
  */
 
 export type ReportingCycle = 'weekly' | 'monthly'
+/** Erster Tag der Meldewoche; wirkt nur bei woechentlicher Meldung. */
+export type WeekStartDay = 'monday' | 'sunday'
 export type RoundingMode = 'up' | 'nearest' | 'none'
 export type ProjectStatus = 'active' | 'paused' | 'closed'
 
@@ -18,6 +20,7 @@ export interface Customer {
   name: string
   currency: string
   reporting_cycle: ReportingCycle
+  week_start_day: WeekStartDay
   rounding_minutes: number
   rounding_mode: RoundingMode
   invoice_email: string | null

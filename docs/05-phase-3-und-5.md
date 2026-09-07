@@ -73,6 +73,31 @@ Oben steht eine Warnung für **abgelaufene, noch nicht gemeldete Perioden** — 
 den man im Alltag tatsächlich vergisst und der im Fachkonzept als wichtigster
 Dashboard-Punkt genannt ist.
 
+### Wochenbeginn je Kunde
+
+Bei wöchentlicher Meldung steht am Kunden, ob die Woche am **Montag oder am Sonntag**
+beginnt. `date_trunc('week', …)` in PostgreSQL kennt nur ISO-8601 und damit nur den
+Montag; der Sonntagsschnitt entsteht, indem ein Tag vorgezogen, der ISO-Montag bestimmt
+und wieder ein Tag zurückgegangen wird. Der Wochenbeginn geht als dritter Parameter in
+`fn_period_bounds`; `fn_ensure_period` liest ihn beim Kunden, sodass kein Aufrufer davon
+weiß — dieselbe Linie wie bei Rundung und Rhythmus: die Regel steht in der Datenbank.
+
+Zwei Fälle waren zu entscheiden:
+
+- **Umstellung mit Bestand.** Jede Wochengrenze verschiebt sich. Offene Wochen werden
+  deshalb neu geschnitten: die Vorbereitungs-Trigger rechnen `period_id` ohnehin bei
+  jedem Schreibvorgang neu, eine Aktualisierung ohne inhaltliche Änderung genügt, um sie
+  erneut auszulösen. Was danach leer zurückbleibt, ist eine Woche im alten Schnitt und
+  wird gelöscht.
+- **Umstellung nach einer Meldung.** Sie ist gesperrt. Der gemeldete Zeitraum ist
+  gegenüber dem Kunden verbindlich; ihn nachträglich zu verschieben wäre ein stiller
+  Widerspruch zu dem, was er bereits bekommen hat. Ein Trigger lehnt den Wechsel ab,
+  sobald für den Kunden eine Wochenperiode nicht mehr `open` ist.
+
+Die eigenen Auswertungen (`v_report_week`, das Wochenraster) bleiben bei ISO-Wochen ab
+Montag. Sie beantworten „wie war meine Woche", nicht „was bekommt dieser Kunde" — ein
+kundenabhängiger Schnitt würde die eigenen Zahlen zwischen Kunden unvergleichbar machen.
+
 Die Freigabe ruft `fn_submit_period()` als RPC auf. Die gesamte Arbeit — Sätze einfrieren,
 Summen schreiben, Status setzen — passiert in der Datenbank, in einer Transaktion. Vorher
 nennt eine Rückfrage Kunde, Zeitraum und die Folge im Klartext: Danach sind die Zeiten

@@ -83,7 +83,13 @@ genau die brauchst du für eine ehrliche Auslastungsquote.
 ### 3.4 Reporting-Perioden sind ein eigenes Objekt mit Status
 
 Der Reporting-Rhythmus (wöchentlich / monatlich) hängt am **Kunden**, überschreibbar je
-Projekt. Daraus entsteht pro Kunde und Zeitraum ein Datensatz `reporting_periods` mit
+Projekt. Bei wöchentlicher Meldung kommt der **erste Tag der Woche** hinzu: Montag oder
+Sonntag, ebenfalls je Kunde. Er hängt bewusst am Kunden und nicht am Projekt — ein Kunde
+meldet nicht zwei verschiedene Wochenschnitte nebeneinander. Die eigenen Auswertungen
+bleiben davon unberührt und zählen weiter nach ISO-Wochen ab Montag; sie gehören dem
+Nutzer, nicht dem Kunden.
+
+Daraus entsteht pro Kunde und Zeitraum ein Datensatz `reporting_periods` mit
 einem Lebenszyklus:
 
 ```
@@ -133,7 +139,7 @@ auf. Ein neues Kundenformat ist ein Datensatz, kein Release.
 
 | Objekt | Zweck | Wesentliche Merkmale |
 |---|---|---|
-| **Kunde** | Abrechnungsempfänger | Reporting-Rhythmus, Rundungsregel, FinOps-Zuordnung |
+| **Kunde** | Abrechnungsempfänger | Reporting-Rhythmus, Wochenbeginn, Rundungsregel, FinOps-Zuordnung |
 | **Projekt** | Leistungskontext beim Kunden | Budget, abrechenbar j/n, Überschreibungen der Kundenvorgaben |
 | **Stundensatz** | Satz mit Gültigkeitszeitraum | optional je Tätigkeitsart, überlappungsfrei erzwungen |
 | **Tätigkeitsart** | Kategorie der Leistung | u. a. „Reisezeit"; Basis für abweichende Sätze und FinOps-Kategorie |

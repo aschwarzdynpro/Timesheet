@@ -111,6 +111,8 @@ create table customers (
   currency              char(3) not null default 'EUR',   -- Platzhalter, siehe §3.2
   reporting_cycle       text not null default 'monthly'
                           check (reporting_cycle in ('weekly','monthly')),
+  week_start_day        text not null default 'monday'   -- nur bei cycle = weekly
+                          check (week_start_day in ('monday','sunday')),
   rounding_minutes      int  not null default 15,
   rounding_mode         text not null default 'up'
                           check (rounding_mode in ('up','nearest','none')),
@@ -320,7 +322,9 @@ Feiertagen und Abwesenheiten – Grundlage der Auslastungsquote.
 | `fn_rate_for(project, activity, date)` | Gültigen Satz ermitteln, spezifischster Treffer gewinnt |
 | `fn_effective_rounding(project)` | Takt und Modus mit Kundenvererbung auflösen |
 | `fn_round_minutes(minutes, incr, mode)` | Abrechenbare Minuten berechnen |
-| `fn_ensure_period(customer, date)` | Periode finden oder anlegen |
+| `fn_period_bounds(cycle, date, week_start)` | Grenzen der Meldeperiode; `week_start` wirkt nur bei `weekly` |
+| `fn_ensure_period(customer, cycle, date)` | Periode finden oder anlegen, Wochenbeginn vom Kunden |
+| `trg_customer_week_start_*` (BEFORE/AFTER UPD) | Wochenbeginn ab der ersten Meldung sperren, offene Wochen neu schneiden |
 | `fn_target_minutes(from, to)` | Sollarbeitszeit abzüglich Feiertagen/Abwesenheiten |
 | `trg_assign_period` (BEFORE INS/UPD) | `period_id` und `billable_minutes` setzen – auf Zeiten **und** Spesen |
 | `trg_lock_closed_period` (BEFORE INS/UPD/DEL) | Änderung ablehnen, wenn Periode ≠ `open` |

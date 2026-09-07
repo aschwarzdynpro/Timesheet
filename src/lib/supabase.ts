@@ -33,6 +33,11 @@ export function describeError(error: unknown): string {
   if (message.includes('projects_customer_id_code_key')) {
     return 'Dieses Projektkürzel gibt es bei diesem Kunden schon.'
   }
+  if (message.includes('Der Wochenbeginn')) {
+    return 'Für diesen Kunden ist bereits eine Woche gemeldet. Der Wochenbeginn lässt '
+      + 'sich danach nicht mehr ändern, sonst würde ein gemeldeter Zeitraum nachträglich '
+      + 'verschoben.'
+  }
   if (message.includes('gesperrt') || message.includes('gemeldeten')) {
     return message
   }

@@ -76,6 +76,51 @@ begin
   perform test_assert(extract(isodow from r.period_start)::int = 1, 'Woche beginnt am Montag (ISO-8601)');
   perform test_assert(r.period_end - r.period_start = 6,            'Woche umfasst sieben Tage');
 
+  raise notice 'Wochenbeginn je Kunde';
+  -- Der 05.03.2026 ist ein Donnerstag. Ab Montag beginnt seine Woche am 02.03.,
+  -- ab Sonntag am 01.03. - dieselbe Zeit, ein anderer Schnitt.
+  select period_start, period_end into r
+  from fn_period_bounds('weekly', date '2026-03-05', 'monday');
+  perform test_assert(r.period_start = date '2026-03-02', 'Montagswoche des 05.03. beginnt am 02.03.');
+  perform test_assert(r.period_end   = date '2026-03-08', 'und endet am 08.03.');
+
+  select period_start, period_end into r
+  from fn_period_bounds('weekly', date '2026-03-05', 'sunday');
+  perform test_assert(r.period_start = date '2026-03-01', 'Sonntagswoche des 05.03. beginnt am 01.03.');
+  perform test_assert(r.period_end   = date '2026-03-07', 'und endet am 07.03.');
+
+  -- Der Sonntag selbst gehoert zur Woche, die er eroeffnet, nicht zur vorigen.
+  select period_start into r from fn_period_bounds('weekly', date '2026-03-01', 'sunday');
+  perform test_assert(r.period_start = date '2026-03-01', 'ein Sonntag eroeffnet seine eigene Woche');
+  select period_start into r from fn_period_bounds('weekly', date '2026-03-01', 'monday');
+  perform test_assert(r.period_start = date '2026-02-23', 'bei Montagsbeginn schliesst er die vorige ab');
+
+  -- Der Monatsrhythmus darf sich davon nicht beirren lassen.
+  select period_start, period_end into r
+  from fn_period_bounds('monthly', date '2026-03-05', 'sunday');
+  perform test_assert(r.period_start = date '2026-03-01' and r.period_end = date '2026-03-31',
+                      'der Wochenbeginn laesst den Monatsrhythmus unberuehrt');
+
+  raise notice 'Umstellung schneidet offene Wochen neu';
+  update customers set week_start_day = 'sunday' where id = v_nord;
+  select * into r from reporting_periods rp
+    join time_entries t on t.period_id = rp.id
+   where t.project_id = v_p_migr and t.work_date = date '2026-03-05';
+  perform test_assert(r.period_start = date '2026-03-01',
+                      'die offene Woche wandert auf den Sonntagsschnitt');
+  perform test_assert(not exists (
+    select 1 from reporting_periods
+    where customer_id = v_nord and cycle = 'weekly' and period_start = date '2026-03-02'),
+    'die leere Montagswoche bleibt nicht zurueck');
+
+  -- Und wieder zurueck, damit die folgenden Zusicherungen den Ausgangsstand sehen.
+  update customers set week_start_day = 'monday' where id = v_nord;
+  perform test_assert((
+    select rp.period_start from reporting_periods rp
+      join time_entries t on t.period_id = rp.id
+     where t.project_id = v_p_migr and t.work_date = date '2026-03-05') = date '2026-03-02',
+    'zurueckgestellt gilt wieder der Montagsschnitt');
+
   raise notice 'Rundung wirkt beim Speichern';
   perform test_assert(
     (select billable_minutes from time_entries where project_id = v_p_crm and work_date = date '2026-03-31') = 90,
@@ -135,6 +180,21 @@ begin
   perform test_expect_error(
     format('select fn_submit_period(%L)', v_period),
     'zweimaliges Freigeben wird abgelehnt');
+
+  raise notice 'Wochenbeginn nach der ersten Meldung';
+  -- Ab der ersten gemeldeten Woche ist der Schnitt gegenueber dem Kunden
+  -- verbindlich; ein Wechsel wuerde ihn nachtraeglich verschieben.
+  select rp.id into v_period
+  from reporting_periods rp
+    join time_entries t on t.period_id = rp.id
+  where t.project_id = v_p_migr and t.work_date = date '2026-03-05';
+  perform fn_submit_period(v_period);
+  perform test_expect_error(
+    format('update customers set week_start_day = ''sunday'' where id = %L', v_nord),
+    'Wochenbeginn nach einer Meldung zu aendern wird abgelehnt');
+  perform test_assert(
+    (select week_start_day from customers where id = v_nord) = 'monday',
+    'und der bisherige Wochenbeginn bleibt stehen');
 
   raise notice 'Schutz der Satzhistorie';
   perform test_expect_error(
