@@ -116,6 +116,7 @@ und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 
 | Dokument | Inhalt |
 |---|---|
+| [AGENTS.md](AGENTS.md) | Arbeitsregeln für alle Werkzeuge, die hier Code ändern |
 | [docs/01-fachkonzept.md](docs/01-fachkonzept.md) | Fachliche Anforderungen, Kernentscheidungen, Auswertungen, Erfassung und Geräte |
 | [docs/02-architektur.md](docs/02-architektur.md) | Stack, Systemüberblick, Datenmodell, Export, FinOps, Phasenplan |
 | [docs/03-phase-1.md](docs/03-phase-1.md) | Was in Phase 1 entstanden ist, inklusive Abweichungen vom Konzept |

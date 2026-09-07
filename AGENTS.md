@@ -1,0 +1,139 @@
+# Arbeitsregeln für dieses Repository
+
+Persönliche Zeiterfassung für Beratungsleistungen. Ein Benutzer, React + Supabase,
+Oberfläche auf Deutsch. Diese Datei gilt für jedes Werkzeug, das hier Code ändert.
+
+Wer schnell etwas ändern will, liest die fünf Regeln unter „Nicht verhandelbar" und
+danach den Abschnitt zum betroffenen Thema. Der Rest ist Nachschlagewerk.
+
+## Nicht verhandelbar
+
+1. **Geschäftslogik gehört in die Datenbank.** Satzermittlung, Rundung,
+   Periodenzuordnung, Sperren: Funktionen und Trigger in `supabase/migrations/`.
+   Nichts davon in der Oberfläche nachrechnen.
+2. **Bausteine statt eigenes CSS.** Alles Sichtbare kommt aus
+   `src/components/ui/primitives.tsx` und Tailwind-Klassen. Keine handgeschriebene
+   Klassenwelt daneben, keine zweite Formensprache.
+3. **Farben und Palette bleiben, wo sie sind.** Die Akzentfarbe steht in
+   `src/index.css` unter `@theme`, die Diagrammfarben in `charts.tsx`. Beide sind
+   geprüft. Nicht ohne ausdrücklichen Auftrag ändern.
+4. **Der `service_role`-Key gehört nie ins Frontend**, auch nicht in `.env`. Im
+   Browser lebt ausschließlich der `sb_publishable_…`-Key. Sonst hängt RLS aus.
+5. **Schema-Änderungen nur als neue Datei** in `supabase/migrations/`. Bestehende
+   Migrationen werden nicht bearbeitet.
+
+## Der Grund für Regel 1
+
+Dieselben Zahlen entstehen an drei Stellen: in der Oberfläche, im Excel-Export und
+später im FinOps-Adapter. Liegt die Regel in der Datenbank, rechnen alle drei
+zwangsläufig gleich, und keine Regel lässt sich durch einen direkten API-Aufruf
+umgehen. Die Periodensperre ist deshalb ein Trigger und keine Formularprüfung.
+
+## Aufbau
+
+```
+docs/                     Fachkonzept, Architektur, Phasenberichte
+supabase/
+  migrations/             versionierte SQL-Migrationen (Zeitstempel_name.sql)
+  tests/                  Schema- und RLS-Tests, reines SQL
+scripts/test-db.sh        spielt alle Migrationen in eine frische DB und testet
+src/
+  features/               Schnitt nach Fachthema, nicht nach Schicht
+    time-entry/ expenses/ reporting/ periods/ export/ settings/
+    auth/ customers/ projects/ activity-types/ overview/
+  components/ui/          Button, Input, Select, Field, Dialog, Badge, Card …
+  lib/                    Supabase-Client, Formatierung, Wochenlogik, Feiertage
+  types/database.ts       Typen zum Schema
+```
+
+Jedes Feature hat `api.ts` (TanStack Query) und seine Seiten. Alles zu einem Thema
+liegt an einer Stelle.
+
+## Oberfläche
+
+- **Deutsch**, in ganzen Sätzen. Auch Fehlermeldungen: `describeError()` in
+  `src/lib/supabase.ts` übersetzt Datenbankfehler. Neue Bedingung in der Datenbank
+  heißt: dort einen Satz ergänzen.
+- **Rückfragen über `useConfirm()`** aus `components/ui/confirm.tsx`, nie
+  `window.confirm`. Die bestätigende Schaltfläche trägt den Namen der Handlung
+  („Löschen", „Periode melden"), nie „OK"; Unumkehrbares steht gefüllt in Rot; der
+  Fokus liegt beim Öffnen auf *Abbrechen*.
+- **Leerzustände nennen die Folge**, nicht nur den Zustand. „Ohne Sollzeit bleibt
+  die Auslastungsquote ausgeblendet — eine erfundene Zahl wäre schlimmer als keine."
+- **Dialoge erst beim Öffnen einhängen** (`{offen && <Dialog …/>}`), sonst stehen
+  Eingaben und Fehlermeldungen des vorigen Aufrufs wieder da.
+- **Minuten, keine Dezimalstunden.** Gerechnet wird in `int`; `minutesToHours()`
+  formatiert erst zur Anzeige. Eingaben versteht `parseDuration()`: `1,5`, `1:30`, `90m`.
+- **Daten als `DATE`**, nie `timestamptz`. Ein Arbeitstag hat keine Zeitzone.
+  `today()` aus `lib/format.ts` benutzen, nicht `toISOString().slice(0,10)` — das
+  liefert in Berlin nachts den Vortag.
+
+## Mobil ist kein Nachgedanke
+
+Der Nutzer erfasst unterwegs auf dem Telefon. Wiederkehrende Fallen aus diesem Repo:
+
+- `min-w-0` auf Flex- und Grid-Kinder, sonst wächst ein Element auf seinen Inhalt
+  und schiebt die Seite seitwärts.
+- Raster mit einem `input[type=date]` stehen unter 640 px **untereinander**
+  (`grid gap-3 sm:grid-cols-2`). iOS gibt Datumsfeldern eine eigene Mindestbreite.
+- Kein `autoFocus` auf einem `<select>` in einem Dialog: iOS fährt sofort das
+  Auswahlrad hoch und verdeckt den halben Dialog.
+- Lange Namen kürzen: in der mobilen Tagesliste stehen Kundenkürzel statt Namen.
+
+Neue Ansichten werden auf **320, 390, 768 und 1400 px** geprüft — kein seitliches
+Scrollen, keine Konsolenfehler.
+
+## Datenbank
+
+- Sichten immer mit `security_invoker = true`, sonst hängen sie RLS aus.
+- Jede Tabelle bekommt RLS und eine Policy. Bei Kindtabellen hängt die
+  Zugehörigkeit am Kunden (siehe `reporting_periods`, `period_events`).
+- Historisierte Sätze und Modelle sichern ihre Überlappungsfreiheit mit
+  `EXCLUDE USING gist`. `NULL` kollidiert dort nie — deshalb der Kunstgriff
+  `coalesce(activity_type_id, '000…'::uuid)` in `project_rates`.
+- SQL und Commit-Nachrichten sind **ASCII** (`ae`, `oe`, `ue`, `ss`); Umlaute nur in
+  Texten, die im Browser landen.
+- Prüfen mit `./scripts/test-db.sh`. Ohne gesetztes `PGHOST` startet es eine eigene
+  Wegwerf-Instanz unter `/tmp` und räumt sie wieder ab.
+
+## Prüfen vor dem Abliefern
+
+```bash
+npm run typecheck && npm run lint && npm test && npm run build
+./scripts/test-db.sh
+```
+
+Die Browsertests dieses Projekts fangen `/rest/v1/**` ab. **Vertragsfehler zwischen
+App und PostgREST sind darin unsichtbar** — eine Sortierspalte, die es nicht gibt,
+fällt einem Mock nicht auf. Genau so waren gespeicherte Zeiten einmal wochenlang
+unsichtbar. Deshalb: Wer in der Oberfläche nach einer neuen Spalte filtert oder
+sortiert, ergänzt sie in der Spaltenzusicherung in
+`supabase/tests/10_schema_test.sql`.
+
+Eine neue Zusicherung wird gegengeprüft: einmal absichtlich brechen und sehen, dass
+sie fehlschlägt. Ein Test, der nie rot war, hat nichts bewiesen.
+
+## Was Absprache braucht
+
+Diese Dinge sind Entscheidungen des Nutzers, keine Umsetzungsdetails:
+
+- Farben, Schriften, Navigationsstruktur
+- neue Abhängigkeiten (die Diagramme sind bewusst handgezeichnetes SVG statt einer
+  Bibliothek; `xlsx` ist wegen offener Sicherheitslücken durch `write-excel-file`
+  ersetzt)
+- Mehrbenutzer und Mehrwährung — bewusst zurückgestellt, Weg steht in
+  `docs/02-architektur.md` §9
+- alles an der FinOps-Anbindung (Phase 6), sie wartet auf Angaben zur F&O-Umgebung
+
+## Weiterlesen
+
+| Dokument | Inhalt |
+|---|---|
+| `docs/01-fachkonzept.md` | Anforderungen, Kernentscheidungen, Auswertungen |
+| `docs/02-architektur.md` | Stack, Datenmodell, Funktionen, Phasenplan |
+| `docs/03-…` bis `07-…` | was je Phase entstand, inklusive der gefundenen Fehler |
+| `README.md` | Einrichtung, Befehle, Stand |
+
+Die Phasenberichte führen jeweils einen Abschnitt „Beim Bauen gefunden". Wer einen
+Fehler behebt, den ein Test nicht gefunden hätte, schreibt ihn dort auf — samt der
+Frage, warum ihn niemand bemerkt hat.
