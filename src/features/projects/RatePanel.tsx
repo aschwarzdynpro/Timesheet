@@ -82,7 +82,7 @@ function RateDialog({
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Gültig ab" error={errors.valid_from}>
             <Input name="valid_from" type="date" required defaultValue={today()} />
           </Field>

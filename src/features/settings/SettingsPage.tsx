@@ -78,7 +78,7 @@ function ScheduleDialog({
             title={schedule ? 'Arbeitszeitmodell ändern' : 'Neues Arbeitszeitmodell'}
             description="Stunden je Wochentag. Ein Wechsel bekommt einen eigenen Zeitraum, damit ältere Auswertungen richtig bleiben.">
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Gültig ab">
             <Input type="date" name="valid_from" required
                    defaultValue={schedule?.valid_from ?? `${new Date().getFullYear()}-01-01`} />
@@ -157,7 +157,7 @@ function AbsenceDialog({
             ))}
           </Select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Von">
             <Input type="date" name="date_from" required defaultValue={absence?.date_from ?? today()} />
           </Field>

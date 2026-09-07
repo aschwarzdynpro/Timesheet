@@ -136,7 +136,7 @@ function ExpenseDialogForm({
             title={expense ? 'Spese bearbeiten' : 'Neue Spese'}
             description="Beleg oder Pauschale — die Spesenart bestimmt, was erfasst wird.">
       <form onSubmit={onSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Projekt">
             <Select name="project_id" defaultValue={expense?.project_id ?? ''} required>
               <option value="">Bitte wählen</option>

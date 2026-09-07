@@ -126,7 +126,7 @@ export function ProjectDialog({
           <Textarea name="description" rows={2} defaultValue={project?.description ?? ''} />
         </Field>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Status" error={errors.status}>
             <Select name="status" defaultValue={project?.status ?? 'active'}>
               <option value="active">aktiv</option>

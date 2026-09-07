@@ -38,3 +38,17 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Ein Feld vom Typ date bekommt auf iOS aus dem Plattform-Aussehen eine eigene
+   Mindestbreite und setzt sich damit ueber width:100% hinweg — es stand dadurch
+   rechts aus dem Dialog heraus. Ohne dieses Aussehen greift die Breite wieder. */
+input[type='date'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+
+/* Sonst rueckt iOS den Wert in die Mitte, sobald das Aussehen abgeschaltet ist. */
+input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+}

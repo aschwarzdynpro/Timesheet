@@ -149,3 +149,26 @@ und `autoFocus` ließ iOS beim Öffnen sofort das Auswahlrad hochfahren, das den
 Dialog verdeckte. Der Fokus liegt jetzt nirgends; der Dialog zeigt sich zuerst ganz.
 Das Ändern eines bestehenden Eintrags springt weiterhin ins Dauer-Feld — dort ist es ein
 Textfeld, kein Auswahlrad, und am Laptop ist genau das der schnelle Weg.
+
+**Das Datumsfeld stand erneut über.** Beim ersten Mal reichte `min-w-0` — es lag damals
+an der Rasterspalte. Diesmal lag es am Feld selbst: iOS gibt einem `input[type=date]` aus
+dem Plattform-Aussehen eine eigene Mindestbreite und setzt sich damit über `width: 100%`
+hinweg. In einer 155 px breiten Spalte reicht das nicht für „07.09.2026" plus
+Kalendersymbol, und das Feld wuchs nach rechts aus dem Dialog heraus.
+
+Zwei Ansätze, beide angewendet:
+
+- `-webkit-appearance: none` für Datumsfelder, damit die gesetzte Breite wieder greift.
+- Wichtiger: Alle Raster mit einem Datumsfeld stehen unter 640 px **untereinander** statt
+  nebeneinander. Damit bekommt das Feld die volle Dialogbreite (rund 326 px bei einem
+  390 px breiten Schirm), also fast das Doppelte dessen, was iOS mindestens will. Das
+  hält unabhängig davon, ob der Hersteller-Kniff greift.
+
+Betroffen waren fünf Stellen: Schnelleintrag, Spesenerfassung, Projektdialog
+(Status/Beginn/Ende), Satzhistorie und beide Datumspaare der Arbeitszeitseite.
+
+**Grenze der Prüfung.** Chromium unter Linux kennt diese Mindestbreite nicht und kann den
+Fehler daher nicht nachstellen. Der automatische Test misst deshalb, was sich prüfen
+lässt: jedes sichtbare Datumsfeld gegen den Rand seines Dialogs und gegen den eigenen
+Platzbedarf, auf vier Breiten und in fünf Dialogen. Dass die zweite Maßnahme trägt, folgt
+aus der Geometrie, nicht aus dem Testlauf.
