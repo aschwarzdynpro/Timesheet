@@ -43,7 +43,7 @@ scripts/test-db.sh        spielt alle Migrationen in eine frische DB und testet
 src/
   features/               Schnitt nach Fachthema, nicht nach Schicht
     time-entry/ expenses/ reporting/ periods/ export/ settings/
-    auth/ customers/ projects/ activity-types/ overview/ account/
+    auth/ customers/ projects/ activity-types/ master-data/ account/
   components/ui/          Button, Input, Select, Field, Dialog, Badge, Card …
   lib/                    Supabase-Client, Formatierung, Wochenlogik, Feiertage
   types/database.ts       Typen zum Schema
@@ -85,6 +85,23 @@ Der Nutzer erfasst unterwegs auf dem Telefon. Wiederkehrende Fallen aus diesem R
 
 Neue Ansichten werden auf **320, 390, 768 und 1400 px** geprüft — kein seitliches
 Scrollen, keine Konsolenfehler.
+
+## Navigation
+
+Die Navigation trennt nach **Haeufigkeit, nicht nach Thema**. Vier taegliche
+Ziele — Zeiten, Spesen, Auswertungen, Perioden — stehen auf dem Telefon fest am
+unteren Rand; alles Seltene liegt hinter „Mehr" und die fuenf Stammdatenbereiche
+zusammen auf `/stammdaten`.
+
+Eine neue Seite kommt deshalb nicht einfach in die Liste: Wer sie taeglich
+braucht, verdraengt unten etwas anderes — sonst gehoert sie zu den Stammdaten.
+**Fuenf Felder sind das Maximum**, bei mehr faengt das Quergeschiebe wieder an,
+das diese Leiste abgeloest hat.
+
+Wer die Leiste anfasst, prueft auf **320 px**: dort hat ein Feld 60 px, und
+„Auswertungen" braucht 64 — deshalb das Feld `kurz` in `NavEintrag`. Der Inhalt
+darunter braucht `padding-bottom` in Hoehe der Leiste plus
+`env(safe-area-inset-bottom)`, sonst verdeckt sie die letzte Zeile.
 
 ## Heller und dunkler Modus
 

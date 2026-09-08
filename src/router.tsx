@@ -1,10 +1,12 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router'
+import {
+  createRootRoute, createRoute, createRouter, Outlet, redirect,
+} from '@tanstack/react-router'
 import { AppShell } from '@/components/AppShell'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ConfigNotice } from '@/features/auth/ConfigNotice'
 import { isConfigured } from '@/lib/supabase'
-import { OverviewPage } from '@/features/overview/OverviewPage'
+import { MasterDataPage } from '@/features/master-data/MasterDataPage'
 import { TimeEntryPage } from '@/features/time-entry/TimeEntryPage'
 import { CustomersPage } from '@/features/customers/CustomersPage'
 import { ProjectsPage } from '@/features/projects/ProjectsPage'
@@ -38,8 +40,17 @@ const rootRoute = createRootRoute({ component: RootLayout })
 
 // Das Wochenraster ist der Hauptweg und damit die Startseite.
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: TimeEntryPage })
-const overviewRoute = createRoute({
-  getParentRoute: () => rootRoute, path: '/uebersicht', component: OverviewPage,
+// Die fuenf Stammdatenbereiche haengen unter einer Seite, statt einzeln in der
+// Navigation zu stehen - taeglich braucht man sie nicht.
+const masterDataRoute = createRoute({
+  getParentRoute: () => rootRoute, path: '/stammdaten', component: MasterDataPage,
+})
+
+// Der alte Pfad bleibt erreichbar: auf dem Telefon liegt er als Lesezeichen.
+const overviewRedirect = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/uebersicht',
+  beforeLoad: () => { throw redirect({ to: '/stammdaten' }) },
 })
 const customersRoute = createRoute({ getParentRoute: () => rootRoute, path: '/kunden', component: CustomersPage })
 const projectsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/projekte', component: ProjectsPage })
@@ -71,8 +82,9 @@ const accountRoute = createRoute({
 })
 
 const routeTree = rootRoute.addChildren([
-  indexRoute, expensesRoute, reportingRoute, periodsRoute, exportRoute, overviewRoute,
-  customersRoute, projectsRoute, activityTypesRoute, expenseCategoriesRoute, settingsRoute, accountRoute,
+  indexRoute, expensesRoute, reportingRoute, periodsRoute, exportRoute,
+  masterDataRoute, overviewRedirect, customersRoute, projectsRoute, activityTypesRoute,
+  expenseCategoriesRoute, settingsRoute, accountRoute,
 ])
 
 export const router = createRouter({ routeTree })

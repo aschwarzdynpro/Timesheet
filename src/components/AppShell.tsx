@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
-  BarChart3, Building2, CalendarCheck, Clock3, Download, FolderKanban, LayoutDashboard,
-  Receipt, SlidersHorizontal, Tags, UserCog, Wallet,
+  BarChart3, Boxes, CalendarCheck, Clock3, Download, Ellipsis, Receipt, UserCog,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -10,71 +9,77 @@ type NavEintrag = {
   to: string
   label: string
   icon: typeof Clock3
-  /** Steht breit unten bei der Adresse und gehoert nur schmal in die Leiste. */
-  nurMobil?: boolean
+  /** Beschriftung in der schmalen Leiste unten, wenn der Name dort nicht passt. */
+  kurz?: string
 }
 
-const NAV: NavEintrag[] = [
-  { to: '/',              label: 'Zeiten',          icon: Clock3 },
-  { to: '/spesen',        label: 'Spesen',          icon: Receipt },
-  { to: '/auswertungen',  label: 'Auswertungen',    icon: BarChart3 },
-  { to: '/perioden',      label: 'Perioden',        icon: CalendarCheck },
-  { to: '/export',        label: 'Export',          icon: Download },
-  { to: '/uebersicht',    label: 'Übersicht',       icon: LayoutDashboard },
-  { to: '/kunden',        label: 'Kunden',          icon: Building2 },
-  { to: '/projekte',      label: 'Projekte',        icon: FolderKanban },
-  { to: '/taetigkeiten',  label: 'Tätigkeitsarten', icon: Tags },
-  { to: '/spesenarten',   label: 'Spesenarten',     icon: Wallet },
-  { to: '/einstellungen', label: 'Arbeitszeit',     icon: SlidersHorizontal },
-  { to: '/konto',         label: 'Konto',           icon: UserCog, nurMobil: true },
+/**
+ * Die Navigation trennt nach Haeufigkeit, nicht nach Thema.
+ *
+ * Vier Seiten benutzt der Nutzer taeglich, alles andere richtet er einmal ein.
+ * Frueher standen zwoelf gleichrangige Eintraege in einer Zeile, die auf dem
+ * Telefon ueber zwei Bildschirmbreiten quer lief. Jetzt liegen die taeglichen
+ * Ziele unten in Daumenreichweite und der Rest hinter "Mehr".
+ */
+const TAEGLICH: NavEintrag[] = [
+  { to: '/',             label: 'Zeiten',       icon: Clock3 },
+  { to: '/spesen',       label: 'Spesen',       icon: Receipt },
+  { to: '/auswertungen', label: 'Auswertungen', icon: BarChart3, kurz: 'Auswertung' },
+  { to: '/perioden',     label: 'Perioden',     icon: CalendarCheck },
 ]
+
+/** Seltener gebraucht: breit unter einem Strich, schmal hinter "Mehr". */
+const WEITER: NavEintrag[] = [
+  { to: '/stammdaten', label: 'Stammdaten', icon: Boxes },
+  { to: '/export',     label: 'Export',     icon: Download },
+  { to: '/konto',      label: 'Konto',      icon: UserCog },
+]
+
+/** Die Startseite trifft sonst auf jeden Pfad zu. */
+function istAktiv(path: string, to: string) {
+  return to === '/' ? path === '/' : path.startsWith(to)
+}
 
 export function AppShell({ children, email }: { children: ReactNode; email?: string }) {
   const path = useRouterState({ select: (s) => s.location.pathname })
+  const [mehrOffen, setMehrOffen] = useState(false)
 
   return (
     <div className="flex min-h-full flex-col sm:flex-row">
-      {/* min-w-0: ohne das waechst ein Flex-Element auf seinen Inhalt und schiebt
-          die ganze Seite seitwaerts, statt die Leiste in sich scrollen zu lassen. */}
-      <nav className="flex min-w-0 shrink-0 flex-col border-b border-ink-200 bg-surface sm:w-56 sm:border-r sm:border-b-0">
+      {/* Breit bleibt es bei der Seitenleiste: dort ist Platz, und ein Menue,
+          das man aufklappen muss, waere mit der Maus nur ein Klick mehr. */}
+      <nav
+        aria-label="Bereiche"
+        className="hidden shrink-0 flex-col border-ink-200 bg-surface sm:flex sm:w-56 sm:border-r"
+      >
         <div className="flex items-center gap-2 px-5 py-4">
           <span className="rounded bg-accent-500 px-1.5 py-0.5 text-xs font-bold text-on-strong">ZE</span>
           <span className="text-sm font-semibold text-ink-800">Zeiterfassung</span>
         </div>
 
-        <ul className="flex min-w-0 gap-1 overflow-x-auto px-3 pb-3 sm:flex-1 sm:flex-col sm:overflow-visible">
-          {NAV.map(({ to, label, icon: Icon, nurMobil }) => {
-            const active = to === '/' ? path === '/' : path.startsWith(to)
-            return (
-              // Das Konto steht auf breiten Schirmen unten bei der Adresse.
-              <li key={to} className={nurMobil ? 'sm:hidden' : undefined}>
-                <Link
-                  to={to}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm whitespace-nowrap transition',
-                    active
-                      ? 'bg-accent-50 font-medium text-accent-700'
-                      : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800',
-                  )}
-                >
-                  <Icon className="size-4" />
-                  {label}
-                </Link>
-              </li>
-            )
-          })}
+        <ul className="flex flex-1 flex-col gap-1 px-3 pb-3">
+          {TAEGLICH.map((eintrag) => (
+            <li key={eintrag.to}>
+              <SeitenLink eintrag={eintrag} aktiv={istAktiv(path, eintrag.to)} />
+            </li>
+          ))}
+          <li className="my-2 border-t border-ink-100" aria-hidden />
+          {WEITER.filter((e) => e.to !== '/konto').map((eintrag) => (
+            <li key={eintrag.to}>
+              <SeitenLink eintrag={eintrag} aktiv={istAktiv(path, eintrag.to)} />
+            </li>
+          ))}
         </ul>
 
         {/* Das Konto steht unten bei der Adresse, nicht zwischen den Daten -
-            dort sucht man Darstellung und Anmeldung. Auf schmalen Schirmen
-            gehoert es in die Leiste, sonst waere es unerreichbar. */}
-        <div className="hidden border-t border-ink-100 px-3 py-3 sm:block">
+            dort sucht man Darstellung und Anmeldung. */}
+        <div className="border-t border-ink-100 px-3 py-3">
           {email && <p className="truncate px-3 pb-2 text-xs text-ink-400">{email}</p>}
           <Link
             to="/konto"
             className={cn(
               'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition',
-              path.startsWith('/konto')
+              istAktiv(path, '/konto')
                 ? 'bg-accent-50 font-medium text-accent-700'
                 : 'text-ink-500 hover:bg-ink-50 hover:text-ink-800',
             )}
@@ -84,9 +89,214 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
         </div>
       </nav>
 
-      <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 sm:py-8">
+      {/* Unten Platz fuer die feste Leiste, sonst verdeckt sie die letzte Zeile.
+          env(safe-area-inset-bottom) haelt sie ueber dem Home-Indikator. */}
+      <main className="min-w-0 flex-1 px-5 py-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] sm:px-8 sm:py-8">
         <div className="mx-auto max-w-5xl">{children}</div>
       </main>
+
+      <TabLeiste path={path} onMehr={() => setMehrOffen(true)} mehrOffen={mehrOffen} />
+      {mehrOffen && <MehrBlatt path={path} email={email} onClose={() => setMehrOffen(false)} />}
+    </div>
+  )
+}
+
+function SeitenLink({ eintrag, aktiv }: { eintrag: NavEintrag; aktiv: boolean }) {
+  const Icon = eintrag.icon
+  return (
+    <Link
+      to={eintrag.to}
+      className={cn(
+        'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm whitespace-nowrap transition',
+        aktiv
+          ? 'bg-accent-50 font-medium text-accent-700'
+          : 'text-ink-600 hover:bg-ink-50 hover:text-ink-800',
+      )}
+    >
+      <Icon className="size-4" />
+      {eintrag.label}
+    </Link>
+  )
+}
+
+/**
+ * Die feste Leiste am unteren Rand. Fuenf Felder gleicher Breite - vier Ziele
+ * und "Mehr" - damit auf 320 px nichts quer laufen muss.
+ */
+function TabLeiste({
+  path, onMehr, mehrOffen,
+}: { path: string; onMehr: () => void; mehrOffen: boolean }) {
+  const imBlatt = WEITER.some((e) => istAktiv(path, e.to))
+
+  return (
+    <nav
+      aria-label="Hauptbereiche"
+      className={cn(
+        'fixed inset-x-0 bottom-0 z-40 border-t border-ink-200 bg-surface sm:hidden',
+        'pb-[env(safe-area-inset-bottom)]',
+      )}
+    >
+      <ul className="flex">
+        {TAEGLICH.map((eintrag) => {
+          const aktiv = istAktiv(path, eintrag.to)
+          const Icon = eintrag.icon
+          return (
+            <li key={eintrag.to} className="min-w-0 flex-1">
+              <Link
+                to={eintrag.to}
+                aria-current={aktiv ? 'page' : undefined}
+                className="flex flex-col items-center gap-0.5 px-0.5 pt-1.5 pb-1.5"
+              >
+                <span
+                  className={cn(
+                    'flex h-6 items-center justify-center rounded-full px-4 transition',
+                    aktiv ? 'bg-accent-50 text-accent-700' : 'text-ink-500',
+                  )}
+                >
+                  <Icon className="size-[18px]" />
+                </span>
+                <span
+                  className={cn(
+                    'block max-w-full truncate text-[10px] leading-tight',
+                    aktiv ? 'font-medium text-accent-700' : 'text-ink-500',
+                  )}
+                >
+                  {eintrag.kurz ?? eintrag.label}
+                </span>
+              </Link>
+            </li>
+          )
+        })}
+        <li className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onMehr}
+            aria-expanded={mehrOffen}
+            aria-haspopup="dialog"
+            className="flex w-full flex-col items-center gap-0.5 px-0.5 pt-1.5 pb-1.5"
+          >
+            <span
+              className={cn(
+                'flex h-6 items-center justify-center rounded-full px-4 transition',
+                imBlatt ? 'bg-accent-50 text-accent-700' : 'text-ink-500',
+              )}
+            >
+              <Ellipsis className="size-[18px]" />
+            </span>
+            <span
+              className={cn(
+                'block max-w-full truncate text-[10px] leading-tight',
+                imBlatt ? 'font-medium text-accent-700' : 'text-ink-500',
+              )}
+            >
+              Mehr
+            </span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  )
+}
+
+/**
+ * Was selten gebraucht wird, faehrt von unten auf - in derselben Formensprache
+ * wie die Rueckfrage, damit auf dem Telefon nur eine Art Blatt existiert.
+ */
+function MehrBlatt({
+  path, email, onClose,
+}: { path: string; email?: string; onClose: () => void }) {
+  const karte = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const vorher = document.activeElement as HTMLElement | null
+    karte.current?.querySelector<HTMLElement>('a,button')?.focus()
+    // Die Seite dahinter soll nicht mitscrollen, waehrend das Blatt oben liegt.
+    const vorigesOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = vorigesOverflow
+      vorher?.focus?.()
+    }
+  }, [])
+
+  useEffect(() => {
+    // Der Zurueck-Schalter des Browsers wechselt die Seite unter dem Blatt -
+    // es soll dann nicht darueber stehen bleiben.
+    window.addEventListener('popstate', onClose)
+    return () => window.removeEventListener('popstate', onClose)
+  }, [onClose])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return onClose()
+      if (e.key !== 'Tab') return
+      const ziele = karte.current?.querySelectorAll<HTMLElement>('a,button')
+      if (!ziele?.length) return
+      const erstes = ziele[0]!
+      const letztes = ziele[ziele.length - 1]!
+      if (!e.shiftKey && document.activeElement === letztes) {
+        e.preventDefault()
+        erstes.focus()
+      } else if (e.shiftKey && document.activeElement === erstes) {
+        e.preventDefault()
+        letztes.focus()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-overlay/50 backdrop-blur-[2px] sm:hidden"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        ref={karte}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Weitere Bereiche"
+        className={cn(
+          'w-full rounded-t-2xl border-t border-ink-200 bg-surface shadow-2xl',
+          'motion-safe:animate-[confirm-auf_.18s_ease-out]',
+          'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+        )}
+      >
+        <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-ink-200" />
+
+        <ul className="px-3 py-2">
+          {WEITER.map(({ to, label, icon: Icon }) => {
+            const aktiv = istAktiv(path, to)
+            return (
+              <li key={to}>
+                <Link
+                  to={to}
+                  onClick={onClose}
+                  aria-current={aktiv ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-3 text-sm transition',
+                    aktiv ? 'bg-accent-50 font-medium text-accent-700' : 'text-ink-700',
+                  )}
+                >
+                  <Icon className="size-5 shrink-0" />
+                  {label}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+
+        <div className="border-t border-ink-100 px-6 pt-3">
+          {email && <p className="truncate text-xs text-ink-400">{email}</p>}
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-2 w-full rounded-md py-2 text-sm font-medium text-ink-500"
+          >
+            Schließen
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

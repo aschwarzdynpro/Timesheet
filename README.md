@@ -106,7 +106,7 @@ scripts/test-db.sh        Testlauf gegen eine frische Datenbank
 src/
   features/               Schnitt nach Fachthema, nicht nach technischer Schicht
     time-entry/ expenses/ reporting/ periods/ export/
-    auth/ customers/ projects/ activity-types/ overview/ settings/ account/
+    auth/ customers/ projects/ activity-types/ master-data/ settings/ account/
   components/ui/          schlanke Bausteine (Button, Dialog, Feld …)
   lib/                    Supabase-Client, Formatierung, Feiertagsberechnung
   types/database.ts       Typen zum Schema
