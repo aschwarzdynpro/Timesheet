@@ -104,7 +104,7 @@ function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-ink-900/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-overlay/50 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onAntwort(false) }}
     >
       <div
@@ -116,7 +116,7 @@ function ConfirmDialog({
         // Auf dem Telefon faehrt die Karte von unten auf und sitzt in
         // Daumenreichweite; ab Tablet steht sie mittig.
         className={cn(
-          'w-full max-w-md rounded-t-2xl border border-ink-200 bg-white shadow-2xl',
+          'w-full max-w-md rounded-t-2xl border border-ink-200 bg-surface shadow-2xl',
           'motion-safe:animate-[confirm-auf_.18s_ease-out]',
           'sm:rounded-2xl',
         )}

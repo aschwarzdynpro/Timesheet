@@ -148,7 +148,7 @@ function QuickEntryForm({
           <div className="flex flex-wrap gap-1.5">
             {suggestions.slice(0, 4).map((text) => (
               <button key={text} type="button" onClick={() => setDescription(text)}
-                      className="max-w-full truncate rounded border border-ink-200 bg-white px-2 py-1 text-xs text-ink-600 hover:border-accent-500 hover:text-accent-700">
+                      className="max-w-full truncate rounded border border-ink-200 bg-surface px-2 py-1 text-xs text-ink-600 hover:border-accent-500 hover:text-accent-700">
                 {text}
               </button>
             ))}

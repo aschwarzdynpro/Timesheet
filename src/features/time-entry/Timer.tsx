@@ -114,7 +114,7 @@ export function Timer({
   }
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2 rounded-md border border-ink-200 bg-white px-3 py-2 sm:w-auto sm:flex-nowrap">
+    <div className="flex w-full flex-wrap items-center gap-2 rounded-md border border-ink-200 bg-surface px-3 py-2 sm:w-auto sm:flex-nowrap">
       <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}
               className={cn('min-w-0 flex-1 sm:w-44 sm:flex-none', !projectId && 'text-ink-400')} aria-label="Projekt für den Timer">
         <option value="">Projekt wählen …</option>

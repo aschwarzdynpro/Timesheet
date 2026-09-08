@@ -30,8 +30,13 @@ cp .env.example .env        # Werte siehe unten
 npm run dev                 # http://localhost:5173
 ```
 
-Die Anmeldung läuft über einen Link per E-Mail. Beim ersten Aufruf legst du dir mit
-deiner E-Mail-Adresse ein Konto an; ein weiterer Schritt ist nicht nötig.
+Die Anmeldung geht auf zwei Wegen: mit **E-Mail und Passwort** oder über einen
+**Link per E-Mail**. Beim ersten Aufruf legst du dir mit deiner Adresse per Link ein
+Konto an und setzt dir danach unter **Konto** ein Passwort — der Link bleibt daneben
+gültig und ist auch der Weg zurück, falls du das Passwort vergisst.
+
+Unter **Konto** steht außerdem die Darstellung: hell, dunkel oder wie das Gerät. Die
+Wahl liegt in der Datenbank und gilt damit auf allen Geräten.
 
 ### Supabase
 
@@ -101,7 +106,7 @@ scripts/test-db.sh        Testlauf gegen eine frische Datenbank
 src/
   features/               Schnitt nach Fachthema, nicht nach technischer Schicht
     time-entry/ expenses/ reporting/ periods/ export/
-    auth/ customers/ projects/ activity-types/ overview/ settings/
+    auth/ customers/ projects/ activity-types/ overview/ settings/ account/
   components/ui/          schlanke Bausteine (Button, Dialog, Feld …)
   lib/                    Supabase-Client, Formatierung, Feiertagsberechnung
   types/database.ts       Typen zum Schema

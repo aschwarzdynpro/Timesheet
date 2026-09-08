@@ -247,3 +247,55 @@ Auswahl `null` statt eines leeren Textes gesendet wird.
 - Die Prozentzahl der Ampel rechnete `(used / budget) * 100`. Bei genau 127,5 % liefert
   das im Binärformat 127,49999… und rundet auf 127 ab. Erst multiplizieren, dann teilen.
   Die Projektampel hatte denselben Fehler und ist mit derselben Zeile behoben.
+
+## Nachtrag: Dunkler Modus, Konto und Passwort
+
+### Der dunkle Modus ist kein Umdrehen
+
+Alle Farben laufen jetzt über Variablen in `src/index.css`: heller Satz unter `:root`,
+dunkler unter `:root[data-theme='dark']`. Die Tailwind-Klassen in den Bauteilen heißen
+unverändert `bg-ink-50`, `text-ink-800` — 415 Fundstellen mussten dafür nicht angefasst
+werden.
+
+Die dunklen Werte sind **eigene Stufen, keine gespiegelten**. Geprüft statt geschätzt:
+
+- Jeder Textton hält auf der Kartenfläche `#1a2129` mindestens 4,5:1 — der gedämpfteste
+  (`ink-400`) kommt auf 4,68:1.
+- Die Diagrammfarben sind die dunklen Stufen derselben zwei Farbtöne (`#3987e5` /
+  `#d95926`) und bestehen gegen diese Fläche Helligkeitsband, Chroma-Untergrenze,
+  Farbsehschwächen-Abstand (ΔE 26,8) und Kontrast.
+
+Drei Tokens kamen dazu, weil die alten Annahmen dunkel nicht mehr tragen:
+
+| Token | Warum |
+|---|---|
+| `surface` | `bg-white` wäre im dunklen Modus eine Leuchtfläche (22 Fundstellen) |
+| `overlay` | der Dialogschleier war `ink-900` — dunkel die *hellste* Farbe, also ein weißer Schleier |
+| `on-strong` | Weiß auf dem hellen Akzent hätte nur 2,9:1; dunkel steht dort fast-Schwarz |
+
+**Beim Bauen gefunden.** Der Testlauf misst jeden sichtbaren Text gegen den Grund, der
+tatsächlich unter ihm liegt — alle Ebenen übereinandergelegt. Er fand drei Stellen, die
+schon im hellen Modus grenzwertig waren und dunkel unbrauchbar wurden: die
+Wochenend-Kopfzeile, das Schloss der gesperrten Zelle und der Gedankenstrich für „nichts
+erfasst", alle bei 1,7:1. Das Wochenende erkennt man jetzt an der getönten Spalte statt
+an blasser Schrift.
+
+Zweimal hat sich dabei die *Messung* geirrt, nicht die App: Chromium meldet
+`color-mix`-Farben als `oklab(…)`, und ein Ziffern-Auslesen macht daraus Unsinn. Seitdem
+läuft jede Farbe durch ein Canvas, bevor sie verglichen wird.
+
+### Konto
+
+`/konto` trägt Darstellung, Passwort und Abmelden. Die Wahl der Darstellung liegt
+**doppelt**: in `app_settings` — dort ist sie die Wahrheit und gilt auf allen Geräten —
+und in `localStorage`, damit ein kurzes Skript in `index.html` sie setzen kann, bevor
+React läuft. Ohne das blitzt beim Start die helle Fassung auf.
+
+### Passwort
+
+Supabase hängt es an denselben Benutzer, der bisher nur den Anmeldelink hatte. Der Link
+funktioniert weiter — das Passwort ist ein zweiter Weg hinein, kein Ersatz, und der Link
+bleibt der Ausweg bei einem vergessenen Passwort. Genau das steht auch im Dialog.
+
+Die Anmeldeseite zeigt zuerst Passwort und daneben den Weg über den Link. Ein falsches
+Passwort erklärt beides in einem Satz, statt „Invalid login credentials" zu zeigen.

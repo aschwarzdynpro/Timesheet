@@ -260,16 +260,16 @@ export function ExportPage() {
                   <span className="min-w-0 flex-1 truncate text-sm text-ink-800">{def.label}</span>
                   <button onClick={() => move(key, -1)} disabled={index === 0}
                           aria-label={`${def.label} nach oben`}
-                          className="rounded p-0.5 text-ink-400 hover:bg-white disabled:opacity-30">
+                          className="rounded p-0.5 text-ink-400 hover:bg-surface disabled:opacity-30">
                     <ArrowUp className="size-3.5" />
                   </button>
                   <button onClick={() => move(key, 1)} disabled={index === columns.length - 1}
                           aria-label={`${def.label} nach unten`}
-                          className="rounded p-0.5 text-ink-400 hover:bg-white disabled:opacity-30">
+                          className="rounded p-0.5 text-ink-400 hover:bg-surface disabled:opacity-30">
                     <ArrowDown className="size-3.5" />
                   </button>
                   <button onClick={() => toggleColumn(key)} aria-label={`${def.label} entfernen`}
-                          className="rounded p-0.5 text-ink-400 hover:bg-white hover:text-red-600">
+                          className="rounded p-0.5 text-ink-400 hover:bg-surface hover:text-red-600">
                     <Trash2 className="size-3.5" />
                   </button>
                 </li>
@@ -284,7 +284,7 @@ export function ExportPage() {
             {COLUMNS.filter((c) => !columns.includes(c.key)).map((def) => (
               <li key={def.key}>
                 <button onClick={() => toggleColumn(def.key)}
-                        className="inline-flex items-center gap-1 rounded border border-ink-200 bg-white px-2 py-1 text-xs text-ink-600 hover:border-accent-500 hover:text-accent-700">
+                        className="inline-flex items-center gap-1 rounded border border-ink-200 bg-surface px-2 py-1 text-xs text-ink-600 hover:border-accent-500 hover:text-accent-700">
                   <Plus className="size-3" /> {def.label}
                 </button>
               </li>

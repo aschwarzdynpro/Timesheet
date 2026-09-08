@@ -189,7 +189,7 @@ export function WorkPackagePanel({ project }: { project: Project }) {
           hint="Ohne Pakete wird schlicht auf das Projekt gebucht — das reicht, solange du nichts feiner auswerten willst."
         />
       ) : (
-        <ul className="divide-y divide-ink-200 rounded-md border border-ink-200 bg-white">
+        <ul className="divide-y divide-ink-200 rounded-md border border-ink-200 bg-surface">
           {packages.map((w) => (
             <li key={w.work_package_id} className="px-3 py-2">
               <div className="flex flex-wrap items-center gap-3">

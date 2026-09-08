@@ -19,11 +19,11 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500',
         'disabled:cursor-not-allowed disabled:opacity-50',
         size === 'sm' ? 'h-8 px-3 text-sm' : 'h-9 px-4 text-sm',
-        variant === 'primary' && 'border-accent-600 bg-accent-500 text-white hover:bg-accent-600',
-        variant === 'secondary' && 'border-ink-200 bg-white text-ink-700 hover:bg-ink-50',
+        variant === 'primary' && 'border-accent-600 bg-accent-500 text-on-strong hover:bg-accent-600',
+        variant === 'secondary' && 'border-ink-200 bg-surface text-ink-700 hover:bg-ink-50',
         variant === 'ghost' && 'border-transparent bg-transparent text-ink-500 hover:bg-ink-100',
-        variant === 'danger' && 'border-red-200 bg-white text-red-700 hover:bg-red-50',
-        variant === 'destructive' && 'border-red-700 bg-red-600 text-white hover:bg-red-700',
+        variant === 'danger' && 'border-red-200 bg-surface text-red-700 hover:bg-red-50',
+        variant === 'destructive' && 'border-red-700 bg-red-600 text-on-strong hover:bg-red-700',
         className,
       )}
       {...props}
@@ -37,7 +37,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
       className={cn(
         // min-w-0: ein Feld vom Typ date bringt auf iOS eine eigene Mindestbreite
         // mit und stuende sonst ueber seine Rasterspalte hinaus.
-        'h-9 w-full min-w-0 rounded-md border border-ink-200 bg-white px-3 text-sm text-ink-800',
+        'h-9 w-full min-w-0 rounded-md border border-ink-200 bg-surface px-3 text-sm text-ink-800',
         'placeholder:text-ink-400 focus:border-accent-500 focus:outline-none',
         'focus:ring-2 focus:ring-accent-100 disabled:bg-ink-50',
         className,
@@ -51,7 +51,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cn(
-        'w-full rounded-md border border-ink-200 bg-white px-3 py-2 text-sm text-ink-800',
+        'w-full rounded-md border border-ink-200 bg-surface px-3 py-2 text-sm text-ink-800',
         'placeholder:text-ink-400 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-100',
         className,
       )}
@@ -64,7 +64,7 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
   return (
     <select
       className={cn(
-        'h-9 w-full rounded-md border border-ink-200 bg-white px-2 text-sm text-ink-800',
+        'h-9 w-full rounded-md border border-ink-200 bg-surface px-2 text-sm text-ink-800',
         'focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-100',
         className,
       )}
@@ -107,7 +107,7 @@ export function Badge({
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('rounded-lg border border-ink-200 bg-white', className)}>{children}</div>
+  return <div className={cn('rounded-lg border border-ink-200 bg-surface', className)}>{children}</div>
 }
 
 export function ErrorNote({ message }: { message?: string | null }) {
@@ -157,12 +157,12 @@ export function Dialog({
 
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink-900/40 p-4 sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay/40 p-4 sm:p-8">
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-lg rounded-lg border border-ink-200 bg-white shadow-xl"
+        className="w-full max-w-lg rounded-lg border border-ink-200 bg-surface shadow-xl"
       >
         <div className="border-b border-ink-100 px-5 py-4">
           <h2 className="text-base font-semibold text-ink-800">{title}</h2>

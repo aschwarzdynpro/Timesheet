@@ -196,7 +196,7 @@ export function RatePanel({
           {rates.map((r) => {
             const activity = activityTypes.find((a) => a.id === r.activity_type_id)
             return (
-              <li key={r.id} className="rounded-md border border-ink-200 bg-white p-3">
+              <li key={r.id} className="rounded-md border border-ink-200 bg-surface p-3">
                 <div className="flex items-start justify-between gap-2">
                   <span className="tabular font-medium text-ink-800">
                     {formatRate(r.hourly_rate)}

@@ -225,7 +225,7 @@ export function ExpenseCategoriesPage() {
               <li key={v.code}>
                 <button
                   onClick={() => setDialog({ open: true, category: null, preset: v })}
-                  className="inline-flex items-center gap-1.5 rounded border border-ink-200 bg-white px-2.5 py-1.5 text-sm text-ink-600 hover:border-accent-500 hover:text-accent-700"
+                  className="inline-flex items-center gap-1.5 rounded border border-ink-200 bg-surface px-2.5 py-1.5 text-sm text-ink-600 hover:border-accent-500 hover:text-accent-700"
                 >
                   <Plus className="size-3.5" />
                   {v.name}

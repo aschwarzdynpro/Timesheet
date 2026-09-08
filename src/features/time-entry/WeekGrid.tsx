@@ -132,7 +132,11 @@ export function WeekGrid({
               <th key={toIsoDate(day)}
                   className={cn(
                     'w-24 border-b border-ink-200 px-2 py-2 text-center text-xs font-semibold',
-                    isWeekend(day) ? 'text-ink-300' : 'text-ink-500',
+                    // Das Wochenende erkennt man an der getoenten Spalte, nicht an
+                    // blasser Schrift: ink-300 kam auf 1,7:1 und war praktisch
+                    // unlesbar, im dunklen Modus erst recht.
+                    'text-ink-500',
+                    isWeekend(day) && 'bg-ink-50/50',
                     isToday(day) && 'bg-accent-50 text-accent-700',
                   )}>
                 <span className="block">{WEEKDAY_SHORT[day.getDay() === 0 ? 6 : day.getDay() - 1]}</span>
@@ -196,7 +200,7 @@ export function WeekGrid({
                           }}
                           className={cn(
                             'tabular h-9 w-full border-0 bg-transparent px-2 text-center text-ink-800',
-                            'focus:bg-white focus:ring-2 focus:ring-accent-500 focus:outline-none',
+                            'focus:bg-surface focus:ring-2 focus:ring-accent-500 focus:outline-none',
                             'disabled:cursor-not-allowed disabled:text-ink-400',
                             list.length > 1 && 'font-medium',
                           )}
@@ -211,7 +215,7 @@ export function WeekGrid({
                           </button>
                         )}
                         {locked && (
-                          <Lock className="pointer-events-none absolute top-1 right-1 size-3 text-ink-300" />
+                          <Lock className="pointer-events-none absolute top-1 right-1 size-3 text-ink-400" />
                         )}
                       </div>
                     </td>
@@ -233,7 +237,7 @@ export function WeekGrid({
             </td>
             {dayTotals.map((total, i) => (
               <td key={i} className={cn('tabular px-2 py-2 text-center font-medium',
-                                        total > 0 ? 'text-ink-800' : 'text-ink-300',
+                                        total > 0 ? 'text-ink-800' : 'text-ink-500',
                                         isToday(days[i]!) && 'bg-accent-50/40')}>
                 {total > 0 ? minutesToHours(total) : '–'}
               </td>

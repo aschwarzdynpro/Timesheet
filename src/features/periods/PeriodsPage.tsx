@@ -30,7 +30,7 @@ function PeriodHistory({ periodId }: { periodId: string }) {
   if (!events || events.length < 2) return null
 
   return (
-    <div className="border-t border-ink-100 bg-white px-5 py-3">
+    <div className="border-t border-ink-100 bg-surface px-5 py-3">
       <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-ink-500 uppercase">
         <History className="size-3.5" /> Verlauf
       </p>

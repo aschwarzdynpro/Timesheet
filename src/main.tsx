@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ConfirmProvider } from '@/components/ui/confirm'
+import { ThemeProvider } from '@/features/account/theme'
 import { router } from '@/router'
 import './index.css'
 
@@ -23,11 +24,13 @@ if (!container) throw new Error('Kein Wurzelelement gefunden')
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ConfirmProvider>
-          <RouterProvider router={router} />
-        </ConfirmProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ConfirmProvider>
+            <RouterProvider router={router} />
+          </ConfirmProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

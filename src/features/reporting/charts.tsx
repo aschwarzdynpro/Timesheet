@@ -10,16 +10,17 @@ import { cn } from '@/lib/utils'
  * Beschriftungen, zuruecktretende Achsen.
  *
  * Die Farben stammen aus der geprueften Kategorienpalette (Slot 1 Blau,
- * Slot 2 Orange). Beide bestehen Helligkeitsband, Chroma-Untergrenze,
- * Farbsehschwaechen-Abstand und Kontrast gegen weisse Flaeche.
+ * Slot 2 Orange) und stehen in index.css. Der dunkle Modus benutzt nicht
+ * dieselben Werte, sondern die dunklen Stufen derselben zwei Farbtoene -
+ * beide gegen die dunkle Kartenflaeche geprueft, nicht umgedreht.
  */
 export const SERIES = {
-  billable: '#2a78d6',
-  internal: '#eb6834',
+  billable: 'var(--serie-abrechenbar)',
+  internal: 'var(--serie-intern)',
 } as const
 
-const AXIS = '#d6dce3'
-const GRID = '#eef1f4'
+const AXIS = 'var(--diagramm-achse)'
+const GRID = 'var(--diagramm-gitter)'
 
 /** Position in Prozent der Zeichenflaeche, damit sie beim Skalieren des SVG stimmt. */
 function Tooltip({ left, top, lines }: { left: string; top: string; lines: string[] }) {
@@ -27,7 +28,7 @@ function Tooltip({ left, top, lines }: { left: string; top: string; lines: strin
     <div
       role="tooltip"
       style={{ left, top }}
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md border border-ink-200 bg-white px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg"
+      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md border border-ink-200 bg-surface px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lg"
     >
       {lines.map((line, i) => (
         <span key={i} className={cn('block', i === 0 ? 'font-semibold text-ink-800' : 'text-ink-600')}>
@@ -76,7 +77,7 @@ export function TrendChart({ points, unit }: { points: TrendPoint[]; unit: strin
           return (
             <g key={i}>
               <line x1={padLeft} y1={y} x2={width} y2={y} stroke={i === 0 ? AXIS : GRID} strokeWidth={1} />
-              <text x={padLeft - 8} y={y + 3.5} textAnchor="end" fontSize={10} fill="#7c8998">
+              <text x={padLeft - 8} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-400)">
                 {step * i}
               </text>
             </g>
@@ -104,7 +105,7 @@ export function TrendChart({ points, unit }: { points: TrendPoint[]; unit: strin
                     onMouseLeave={() => setHover(null)} />
               {i % labelEvery === 0 && (
                 <text x={padLeft + slot * i + slot / 2} y={height - 8} textAnchor="middle"
-                      fontSize={10} fill="#7c8998">
+                      fontSize={10} fill="var(--ink-400)">
                   {p.label}
                 </text>
               )}

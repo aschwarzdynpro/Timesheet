@@ -6,6 +6,20 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Zeiterfassung</title>
+    <!-- Vor dem ersten Anstrich: sonst blitzt die helle Fassung kurz auf, bevor
+         React die Einstellung gelesen hat. Bewusst inline und winzig. -->
+    <script>
+      (function () {
+        try {
+          var wahl = localStorage.getItem('ze-theme') || 'system'
+          var dunkel = wahl === 'dark' || (wahl === 'system'
+            && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.dataset.theme = dunkel ? 'dark' : 'light'
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light'
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

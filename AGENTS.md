@@ -14,9 +14,12 @@ danach den Abschnitt zum betroffenen Thema. Der Rest ist Nachschlagewerk.
 2. **Bausteine statt eigenes CSS.** Alles Sichtbare kommt aus
    `src/components/ui/primitives.tsx` und Tailwind-Klassen. Keine handgeschriebene
    Klassenwelt daneben, keine zweite Formensprache.
-3. **Farben und Palette bleiben, wo sie sind.** Die Akzentfarbe steht in
-   `src/index.css` unter `@theme`, die Diagrammfarben in `charts.tsx`. Beide sind
-   geprüft. Nicht ohne ausdrücklichen Auftrag ändern.
+3. **Farben stehen in `src/index.css`, nirgends sonst.** Jede Farbe ist eine
+   Variable und hat zwei Werte: hell unter `:root`, dunkel unter
+   `:root[data-theme='dark']`. Wer eine Farbe braucht, nimmt ein vorhandenes
+   Token (`ink-*`, `accent-*`, `surface`, `on-strong`) — kein `bg-white`, kein
+   Hex im Bauteil. Die Werte selbst sind geprüft und ändern sich nicht ohne
+   ausdrücklichen Auftrag.
 4. **Der `service_role`-Key gehört nie ins Frontend**, auch nicht in `.env`. Im
    Browser lebt ausschließlich der `sb_publishable_…`-Key. Sonst hängt RLS aus.
 5. **Schema-Änderungen nur als neue Datei** in `supabase/migrations/`. Bestehende
@@ -40,7 +43,7 @@ scripts/test-db.sh        spielt alle Migrationen in eine frische DB und testet
 src/
   features/               Schnitt nach Fachthema, nicht nach Schicht
     time-entry/ expenses/ reporting/ periods/ export/ settings/
-    auth/ customers/ projects/ activity-types/ overview/
+    auth/ customers/ projects/ activity-types/ overview/ account/
   components/ui/          Button, Input, Select, Field, Dialog, Badge, Card …
   lib/                    Supabase-Client, Formatierung, Wochenlogik, Feiertage
   types/database.ts       Typen zum Schema
@@ -82,6 +85,24 @@ Der Nutzer erfasst unterwegs auf dem Telefon. Wiederkehrende Fallen aus diesem R
 
 Neue Ansichten werden auf **320, 390, 768 und 1400 px** geprüft — kein seitliches
 Scrollen, keine Konsolenfehler.
+
+## Heller und dunkler Modus
+
+Der dunkle Modus ist **keine Umkehrung**, sondern ein eigener Satz Werte, der gegen
+die dunkle Fläche geprüft wurde. Beim Ändern gilt:
+
+- Nie `bg-white` — das ist im dunklen Modus eine Leuchtfläche. `bg-surface` nehmen.
+- Schrift auf gefülltem Akzent oder Rot ist `text-on-strong`, nicht `text-white`:
+  die Flächen sind dunkel hell, dort hätte Weiß nur 2,9:1.
+- Der Schleier hinter einem Dialog ist `bg-overlay/50`, nicht `bg-ink-900/50`.
+  `ink-900` ist dunkel die *hellste* Farbe.
+- `ink-300` ist eine Rahmenfarbe. Als Schriftfarbe kommt sie dunkel auf 1,7:1 —
+  für Text mindestens `ink-400`, besser `ink-500`.
+- Eine Unterscheidung darf nicht an blasser Schrift hängen (Wochenende, „kein
+  Wert"). Fläche tönen oder Gewicht ändern.
+
+Wer Farben anfasst, prüft beide Modi im Browser — der Testlauf misst jeden
+sichtbaren Text gegen seinen tatsächlichen Grund und schlägt unter 4,5:1 an.
 
 ## Datenbank
 
