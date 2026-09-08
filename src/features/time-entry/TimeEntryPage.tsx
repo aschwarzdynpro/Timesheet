@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { CalendarDays, ChevronLeft, ChevronRight, CopyPlus, Plus } from 'lucide-react'
 import {
-  Button, Card, EmptyState, ErrorNote, Select,
+  Button, Card, EmptyState, ErrorNote, Select, WarnNote,
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
@@ -104,6 +105,9 @@ export function TimeEntryPage() {
       tracked: list.reduce((n, e) => n + e.duration_minutes, 0),
       billable: list.reduce((n, e) => n + e.billable_minutes, 0),
       fees: list.reduce((n, e) => n + Number(e.amount ?? 0), 0),
+      // Abrechenbare Zeit ohne Satz zaehlt mit 0,00 EUR ins Honorar. Ohne
+      // Hinweis sieht das aus wie "nichts verdient" statt "Satz fehlt".
+      ohneSatz: list.filter((e) => e.is_billable && e.rate === null),
     }
   }, [entries])
 
@@ -177,6 +181,21 @@ export function TimeEntryPage() {
           </div>
         </dl>
       </div>
+
+      {totals.ohneSatz.length > 0 && (
+        <div className="mt-3">
+          <WarnNote>
+            {totals.ohneSatz.length === 1
+              ? 'Ein abrechenbarer Eintrag dieser Woche hat keinen Stundensatz'
+              : `${totals.ohneSatz.length} abrechenbare Einträge dieser Woche haben keinen Stundensatz`}
+            {' '}und zählt mit 0,00 € ins Honorar:{' '}
+            {[...new Set(totals.ohneSatz.map(
+              (e) => `${e.project_code} ${e.activity_name ? `· ${e.activity_name}` : 'ohne Tätigkeitsart'}`,
+            ))].join(', ')}. Der Satz hängt an Projekt <em>und</em> Tätigkeitsart — unter{' '}
+            <Link to="/projekte" className="underline">Projekte</Link> lässt er sich ergänzen.
+          </WarnNote>
+        </div>
+      )}
 
       {/* Eine fehlgeschlagene Abfrage sah bisher aus wie eine leere Woche.
           Genau so blieben gespeicherte Zeiten unbemerkt unsichtbar. */}

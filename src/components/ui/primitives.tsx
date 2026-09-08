@@ -1,5 +1,6 @@
 import { type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes,
          type SelectHTMLAttributes, type TextareaHTMLAttributes, useEffect } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /* Bewusst schlanke Bausteine statt eines Generatorlaufs: sie halten das Repo
@@ -114,6 +115,20 @@ export function ErrorNote({ message }: { message?: string | null }) {
   return (
     <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
       {message}
+    </p>
+  )
+}
+
+/**
+ * Hinweis, der keine Stoerung meldet, sondern eine Folge: etwas ist so, wie es
+ * ist, in Ordnung - kostet den Nutzer aber spaeter etwas, wenn er es nicht
+ * weiss. Deshalb Bernstein und kein Rot.
+ */
+export function WarnNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>{children}</span>
     </p>
   )
 }

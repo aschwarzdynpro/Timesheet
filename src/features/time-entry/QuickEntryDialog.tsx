@@ -1,12 +1,13 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import {
-  Button, Dialog, ErrorNote, Field, Input, Select, Textarea,
+  Button, Dialog, ErrorNote, Field, Input, Select, Textarea, WarnNote,
 } from '@/components/ui/primitives'
 import { describeError } from '@/lib/supabase'
+import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration, toIsoDate } from '@/lib/week'
 import type { ActivityType, Project } from '@/types/database'
 import { useWorkPackages } from '@/features/projects/api'
-import { useRecentDescriptions, useSaveTimeEntry } from './api'
+import { useRateFor, useRecentDescriptions, useSaveTimeEntry } from './api'
 
 /**
  * Schnelleintrag: eine Zeile - Projekt, Datum, Dauer, Text.
@@ -40,6 +41,9 @@ function QuickEntryForm({
   // Nur die Pakete des gewaehlten Projekts - ein fremdes lehnt die Datenbank ab.
   const { data: workPackages } = useWorkPackages(projectId || null)
   const waehlbarePakete = (workPackages ?? []).filter((w) => w.is_active)
+  const [date, setDate] = useState(workDate ?? toIsoDate(new Date()))
+  const { data: satz, isPending: satzLaeuft } =
+    useRateFor(projectId || null, activityId || null, date)
   const [duration, setDuration] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,12 +54,12 @@ function QuickEntryForm({
     [projects, projectId],
   )
   const minutes = parseDuration(duration)
+  // Nur bei abrechenbaren Projekten ein Thema: intern sind 0,00 EUR richtig.
+  const ohneSatz = Boolean(projectId) && !satzLaeuft && satz === null && (project?.is_billable ?? false)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
-    const form = new FormData(event.currentTarget)
-    const date = String(form.get('work_date') ?? '')
 
     if (!projectId) return setError('Bitte ein Projekt wählen.')
     if (minutes === null || minutes <= 0) {
@@ -121,7 +125,7 @@ function QuickEntryForm({
           </Field>
           <Field label="Datum">
             <Input type="date" name="work_date" required
-                   defaultValue={workDate ?? toIsoDate(new Date())} />
+                   value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
         </div>
 
@@ -155,6 +159,16 @@ function QuickEntryForm({
           <p className="text-xs text-ink-500">
             Dieses Projekt ist nicht abrechenbar — der Eintrag zählt zur internen Zeit.
           </p>
+        )}
+
+        {/* Ohne Satz waere die Zeit 0,00 EUR wert. Das faellt sonst erst in der
+            Auswertung auf - dort steht dann eine Null ohne Erklaerung. */}
+        {ohneSatz && (
+          <WarnNote>
+            Für dieses Projekt gibt es {activityId ? 'mit dieser Tätigkeitsart ' : 'ohne Tätigkeitsart '}
+            keinen Stundensatz zum {formatDate(date)}. Die Zeit wird gespeichert, aber mit 0,00 €
+            bewertet.
+          </WarnNote>
         )}
 
         <ErrorNote message={error} />

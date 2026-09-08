@@ -178,3 +178,29 @@ Zeilen hinzu — unter 640 px gibt es das Raster aber nicht, dort steht die Tage
 einzige sichtbare Effekt war, dass nach einem Klick der Leerzustand verschwand und eine
 leere Karte zurückblieb. Beide Schaltflächen sind jetzt unter 640 px ausgeblendet, und der
 Leerzustand nennt den Weg über die Vorwoche nur noch als Laptop-Möglichkeit.
+
+## Nachtrag: 0,00 € ohne Erklärung
+
+Gemeldet als „Zeiten aus einem Arbeitspaket laufen nicht in die Honorar-Summen". Der
+Verdacht traf nicht zu — das Arbeitspaket ist an der Bewertung gar nicht beteiligt.
+Nachgesehen im echten Datenstand: Die beiden bewerteten Einträge trugen die
+Tätigkeitsart `WORK`, der unbewertete keine. Beide Sätze des Nutzers hängen an genau
+dieser Tätigkeitsart; ein allgemeiner Projektsatz fehlt. `fn_rate_for` findet für die
+Kombination *ohne* Tätigkeitsart deshalb nichts, und ohne Satz sind 0,00 € rechnerisch
+richtig.
+
+**Der Fehler lag trotzdem in der App:** Sie hat eine abrechenbare Zeit ohne Satz
+kommentarlos gespeichert und still mit null bewertet. Aus Sicht des Nutzers sieht das aus
+wie „nichts verdient", nicht wie „ein Satz fehlt". Drei Stellen sagen es jetzt:
+
+- **Vor dem Speichern.** Beide Erfassungsdialoge fragen über `fn_rate_for` — dieselbe
+  Funktion, die auch Trigger und Auswertungssicht benutzen; die Oberfläche rechnet nichts
+  nach, sie fragt. Fehlt ein Satz, steht die Folge im Dialog, bevor gespeichert wird.
+- **In der Wochenansicht.** Ein Hinweis über der Liste zählt die betroffenen Einträge,
+  nennt Projekt und fehlende Tätigkeitsart und erklärt die Ursache in einem Satz: der Satz
+  hängt an Projekt *und* Tätigkeitsart.
+- Beides in Bernstein, nicht in Rot — es ist keine Störung, sondern eine Folge, die man
+  kennen muss.
+
+Die Warnung erscheint nur bei **abrechenbaren** Projekten. Bei interner Zeit sind 0,00 €
+richtig und ein Hinweis wäre Lärm.

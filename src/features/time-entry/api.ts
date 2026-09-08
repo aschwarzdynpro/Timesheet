@@ -106,3 +106,29 @@ export function useRecentDescriptions(projectId: string | null) {
     },
   })
 }
+
+/**
+ * Der Satz, mit dem diese Kombination bewertet wuerde.
+ *
+ * Dieselbe Funktion, die auch der Trigger und die Auswertungssicht benutzen -
+ * die Oberflaeche rechnet nichts nach, sie fragt. null heisst: fuer diese
+ * Kombination steht kein Satz in der Historie, die Zeit waere 0,00 EUR wert.
+ */
+export function useRateFor(
+  projectId: string | null, activityTypeId: string | null, onDate: string | null,
+) {
+  return useQuery({
+    queryKey: ['rate-for', projectId, activityTypeId, onDate],
+    enabled: Boolean(projectId && onDate),
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<number | null> => {
+      const { data, error } = await supabase.rpc('fn_rate_for', {
+        p_project_id: projectId,
+        p_activity_type_id: activityTypeId,
+        p_on_date: onDate,
+      })
+      if (error) throw error
+      return data === null ? null : Number(data)
+    },
+  })
+}

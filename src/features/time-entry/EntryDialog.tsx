@@ -1,12 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { Trash2 } from 'lucide-react'
-import { Button, Dialog, ErrorNote, Field, Input, Textarea } from '@/components/ui/primitives'
+import {
+  Button, Dialog, ErrorNote, Field, Input, Textarea, WarnNote,
+} from '@/components/ui/primitives'
 import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration } from '@/lib/week'
 import type { ActivityType, Project, TimeEntryFull, WorkPackage } from '@/types/database'
-import { useDeleteTimeEntry, useRecentDescriptions, useSaveTimeEntry } from './api'
+import {
+  useDeleteTimeEntry, useRateFor, useRecentDescriptions, useSaveTimeEntry,
+} from './api'
 
 /** Identitaet der Zelle. Die Eintraege kommen getrennt und immer frisch dazu. */
 export type EntryDialogTarget = {
@@ -51,6 +55,8 @@ function EntryDialogForm({
   const [error, setError] = useState<string | null>(null)
 
   const { project, activity, workPackage, workDate } = target
+  const { data: satz, isPending: satzLaeuft } = useRateFor(project.id, activity?.id ?? null, workDate)
+  const ohneSatz = !satzLaeuft && satz === null && project.is_billable
   const locked = entries.some((e) => e.status !== 'draft')
 
   function startEdit(entry: TimeEntryFull) {
@@ -188,6 +194,14 @@ function EntryDialogForm({
               <span className="text-xs text-ink-400">— das Projekt ist nicht abrechenbar</span>
             )}
           </label>
+
+          {ohneSatz && (
+            <WarnNote>
+              Für dieses Projekt gibt es {activity ? `mit „${activity.name}" ` : 'ohne Tätigkeitsart '}
+              keinen Stundensatz zum {formatDate(workDate)}. Die Zeit wird gespeichert, aber mit
+              0,00 € bewertet.
+            </WarnNote>
+          )}
 
           <ErrorNote message={error} />
 
