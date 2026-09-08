@@ -4,6 +4,7 @@ import {
   Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Input, Select,
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
+import { ZU_STAMMDATEN } from '@/components/navigation'
 import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatEuro } from '@/lib/format'
@@ -146,6 +147,7 @@ export function ExpenseCategoriesPage() {
   return (
     <>
       <PageHeader
+        parent={ZU_STAMMDATEN}
         title="Spesenarten"
         subtitle="Legt fest, ob ein Beleg erfasst wird oder eine Pauschale aus Menge mal Satz entsteht."
         action={

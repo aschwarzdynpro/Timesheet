@@ -5,6 +5,7 @@ import {
   Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Input,
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
+import { ZU_STAMMDATEN } from '@/components/navigation'
 import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import type { ActivityType, ActivityTypeInsert } from '@/types/database'
@@ -118,6 +119,7 @@ export function ActivityTypesPage() {
   return (
     <>
       <PageHeader
+        parent={ZU_STAMMDATEN}
         title="Tätigkeitsarten"
         subtitle="Grundlage für abweichende Sätze und später für die FinOps-Kategorie."
         action={

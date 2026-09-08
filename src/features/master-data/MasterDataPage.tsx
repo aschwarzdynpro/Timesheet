@@ -1,9 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import {
-  ArrowRight, Building2, FolderKanban, SlidersHorizontal, Tags, Wallet,
-} from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Card, ErrorNote } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
+import { STAMMDATEN } from '@/components/navigation'
 import { describeError } from '@/lib/supabase'
 import { useCustomers } from '@/features/customers/api'
 import { useProjects } from '@/features/projects/api'
@@ -27,33 +26,12 @@ export function MasterDataPage() {
 
   // Die Arbeitszeit zaehlt bewusst nichts: dort stehen Modell, Feiertage und
   // Abwesenheiten nebeneinander, eine einzelne Zahl waere davon nur ein Drittel.
-  const bereiche = [
-    {
-      to: '/kunden', label: 'Kunden', icon: Building2,
-      hint: 'Wer beauftragt, wie oft gemeldet und wie gerundet wird',
-      count: customers.data?.length,
-    },
-    {
-      to: '/projekte', label: 'Projekte', icon: FolderKanban,
-      hint: 'Projekte mit ihren Sätzen und Arbeitspaketen',
-      count: projects.data?.length,
-    },
-    {
-      to: '/taetigkeiten', label: 'Tätigkeitsarten', icon: Tags,
-      hint: 'Welcher Art die Arbeit ist — Beratung, Reise, intern',
-      count: activities.data?.length,
-    },
-    {
-      to: '/spesenarten', label: 'Spesenarten', icon: Wallet,
-      hint: 'Was an Auslagen anfällt und mit welchem Aufschlag',
-      count: categories.data?.length,
-    },
-    {
-      to: '/einstellungen', label: 'Arbeitszeit', icon: SlidersHorizontal,
-      hint: 'Sollzeit, Feiertage und Abwesenheiten',
-      count: undefined,
-    },
-  ] as const
+  const anzahl: Record<string, number | undefined> = {
+    '/kunden': customers.data?.length,
+    '/projekte': projects.data?.length,
+    '/taetigkeiten': activities.data?.length,
+    '/spesenarten': categories.data?.length,
+  }
 
   return (
     <>
@@ -65,7 +43,7 @@ export function MasterDataPage() {
       {error && <div className="mt-4"><ErrorNote message={describeError(error)} /></div>}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {bereiche.map(({ to, label, icon: Icon, hint, count }) => (
+        {STAMMDATEN.map(({ to, label, icon: Icon, hint }) => (
           <Link key={to} to={to} className="group min-w-0">
             <Card className="flex items-center gap-4 p-4 transition group-hover:border-accent-500">
               <span className="shrink-0 rounded-md bg-accent-50 p-2.5 text-accent-500">
@@ -75,11 +53,11 @@ export function MasterDataPage() {
                 <span className="block text-sm font-medium text-ink-800">{label}</span>
                 <span className="block text-xs text-ink-500">{hint}</span>
               </span>
-              {count === undefined ? (
+              {anzahl[to] === undefined ? (
                 <ArrowRight className="size-4 shrink-0 text-ink-400" aria-hidden />
               ) : (
                 <span className="tabular shrink-0 text-2xl font-semibold text-ink-800">
-                  {count}
+                  {anzahl[to]}
                 </span>
               )}
             </Card>

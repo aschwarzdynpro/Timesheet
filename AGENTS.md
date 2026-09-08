@@ -98,6 +98,16 @@ braucht, verdraengt unten etwas anderes — sonst gehoert sie zu den Stammdaten.
 **Fuenf Felder sind das Maximum**, bei mehr faengt das Quergeschiebe wieder an,
 das diese Leiste abgeloest hat.
 
+Die Liste steht **einmal** in `src/components/navigation.ts` — Leiste,
+Stammdatenkacheln und Rueckwege lesen dieselbe. Eine Seite, die nicht in der
+Leiste steht, ist sonst eine Sackgasse: sie bekommt `parent` im `PageHeader`
+(„‹ Stammdaten"), und ihr Elternteil traegt sie in `unter` ein, damit die Leiste
+zeigt, wo man ist. Auf dem Telefon gibt es keine Ruecktaste des Browsers.
+
+Zugehoerigkeit wird **abschnittsweise** verglichen, nicht als Praefix:
+`/spesenarten` faengt mit `/spesen` an, und beide Eintraege leuchteten. Dafuer
+gibt es `passt()` in derselben Datei.
+
 Wer die Leiste anfasst, prueft auf **320 px**: dort hat ein Feld 60 px, und
 „Auswertungen" braucht 64 — deshalb das Feld `kurz` in `NavEintrag`. Der Inhalt
 darunter braucht `padding-bottom` in Hoehe der Leiste plus

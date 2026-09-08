@@ -1,17 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import {
-  BarChart3, Boxes, CalendarCheck, Clock3, Download, Ellipsis, Receipt, UserCog,
-} from 'lucide-react'
+import { Ellipsis, UserCog } from 'lucide-react'
+import { istAktiv, TAEGLICH, WEITER, type NavEintrag } from './navigation'
 import { cn } from '@/lib/utils'
-
-type NavEintrag = {
-  to: string
-  label: string
-  icon: typeof Clock3
-  /** Beschriftung in der schmalen Leiste unten, wenn der Name dort nicht passt. */
-  kurz?: string
-}
 
 /**
  * Die Navigation trennt nach Haeufigkeit, nicht nach Thema.
@@ -19,26 +10,9 @@ type NavEintrag = {
  * Vier Seiten benutzt der Nutzer taeglich, alles andere richtet er einmal ein.
  * Frueher standen zwoelf gleichrangige Eintraege in einer Zeile, die auf dem
  * Telefon ueber zwei Bildschirmbreiten quer lief. Jetzt liegen die taeglichen
- * Ziele unten in Daumenreichweite und der Rest hinter "Mehr".
+ * Ziele unten in Daumenreichweite und der Rest hinter "Mehr"; die Liste selbst
+ * steht in `navigation.ts`, weil die Stammdatenseite dieselbe braucht.
  */
-const TAEGLICH: NavEintrag[] = [
-  { to: '/',             label: 'Zeiten',       icon: Clock3 },
-  { to: '/spesen',       label: 'Spesen',       icon: Receipt },
-  { to: '/auswertungen', label: 'Auswertungen', icon: BarChart3, kurz: 'Auswertung' },
-  { to: '/perioden',     label: 'Perioden',     icon: CalendarCheck },
-]
-
-/** Seltener gebraucht: breit unter einem Strich, schmal hinter "Mehr". */
-const WEITER: NavEintrag[] = [
-  { to: '/stammdaten', label: 'Stammdaten', icon: Boxes },
-  { to: '/export',     label: 'Export',     icon: Download },
-  { to: '/konto',      label: 'Konto',      icon: UserCog },
-]
-
-/** Die Startseite trifft sonst auf jeden Pfad zu. */
-function istAktiv(path: string, to: string) {
-  return to === '/' ? path === '/' : path.startsWith(to)
-}
 
 export function AppShell({ children, email }: { children: ReactNode; email?: string }) {
   const path = useRouterState({ select: (s) => s.location.pathname })
@@ -60,13 +34,13 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
         <ul className="flex flex-1 flex-col gap-1 px-3 pb-3">
           {TAEGLICH.map((eintrag) => (
             <li key={eintrag.to}>
-              <SeitenLink eintrag={eintrag} aktiv={istAktiv(path, eintrag.to)} />
+              <SeitenLink eintrag={eintrag} aktiv={istAktiv(path, eintrag)} />
             </li>
           ))}
           <li className="my-2 border-t border-ink-100" aria-hidden />
           {WEITER.filter((e) => e.to !== '/konto').map((eintrag) => (
             <li key={eintrag.to}>
-              <SeitenLink eintrag={eintrag} aktiv={istAktiv(path, eintrag.to)} />
+              <SeitenLink eintrag={eintrag} aktiv={istAktiv(path, eintrag)} />
             </li>
           ))}
         </ul>
@@ -126,7 +100,7 @@ function SeitenLink({ eintrag, aktiv }: { eintrag: NavEintrag; aktiv: boolean })
 function TabLeiste({
   path, onMehr, mehrOffen,
 }: { path: string; onMehr: () => void; mehrOffen: boolean }) {
-  const imBlatt = WEITER.some((e) => istAktiv(path, e.to))
+  const imBlatt = WEITER.some((e) => istAktiv(path, e))
 
   return (
     <nav
@@ -138,7 +112,7 @@ function TabLeiste({
     >
       <ul className="flex">
         {TAEGLICH.map((eintrag) => {
-          const aktiv = istAktiv(path, eintrag.to)
+          const aktiv = istAktiv(path, eintrag)
           const Icon = eintrag.icon
           return (
             <li key={eintrag.to} className="min-w-0 flex-1">
@@ -265,8 +239,9 @@ function MehrBlatt({
         <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-ink-200" />
 
         <ul className="px-3 py-2">
-          {WEITER.map(({ to, label, icon: Icon }) => {
-            const aktiv = istAktiv(path, to)
+          {WEITER.map((eintrag) => {
+            const { to, label, icon: Icon } = eintrag
+            const aktiv = istAktiv(path, eintrag)
             return (
               <li key={to}>
                 <Link

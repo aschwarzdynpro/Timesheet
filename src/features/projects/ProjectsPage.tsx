@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, ErrorNote, Select } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
+import { ZU_STAMMDATEN } from '@/components/navigation'
 import {
   CYCLE_LABEL, ROUNDING_LABEL, STATUS_LABEL, formatEuro, formatHours, formatRate,
 } from '@/lib/format'
@@ -77,6 +78,7 @@ export function ProjectsPage() {
   return (
     <>
       <PageHeader
+        parent={ZU_STAMMDATEN}
         title="Projekte"
         subtitle="Der Stundensatz hängt am Projekt, nicht am Projektformular — tippe auf eine Zeile, um ihn anzulegen oder zu ändern."
         action={

@@ -6,6 +6,7 @@ import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import type { Customer } from '@/types/database'
 import { PageHeader } from '@/components/PageHeader'
+import { ZU_STAMMDATEN } from '@/components/navigation'
 import { CustomerDialog } from './CustomerDialog'
 import { useCustomers, useDeleteCustomer } from './api'
 
@@ -31,6 +32,7 @@ export function CustomersPage() {
   return (
     <>
       <PageHeader
+        parent={ZU_STAMMDATEN}
         title="Kunden"
         subtitle="Meldungsrhythmus und Rundung werden hier gepflegt und von Projekten geerbt."
         action={
