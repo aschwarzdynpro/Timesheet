@@ -4,10 +4,15 @@ import { z } from 'zod'
 import {
   Badge, Button, Dialog, EmptyState, ErrorNote, Field, Input, Textarea,
 } from '@/components/ui/primitives'
+import { BudgetBadge } from '@/components/ui/BudgetBadge'
+import { formatEuro } from '@/lib/format'
+import { minutesToHours, parseDuration } from '@/lib/week'
 import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
-import type { Project, WorkPackage, WorkPackageInsert } from '@/types/database'
-import { useDeleteWorkPackage, useSaveWorkPackage, useWorkPackages } from './api'
+import type {
+  Project, WorkPackage, WorkPackageBudget, WorkPackageInsert,
+} from '@/types/database'
+import { useDeleteWorkPackage, useSaveWorkPackage, useWorkPackageBudget } from './api'
 
 const schema = z.object({
   code: z.string().trim().min(1, 'Kürzel fehlt').max(20, 'Höchstens 20 Zeichen'),
@@ -16,6 +21,18 @@ const schema = z.object({
   sort_order: z.coerce.number().int().min(0, 'Keine negative Reihenfolge'),
   is_active: z.boolean(),
 })
+
+/** Leer heisst "kein Budget", nicht "null". */
+function budgetWert(roh: string, alsStunden: boolean): number | null | 'fehler' {
+  const text = roh.trim()
+  if (!text) return null
+  if (alsStunden) {
+    const minuten = parseDuration(text)
+    return minuten === null || minuten <= 0 ? 'fehler' : Math.round((minuten / 60) * 100) / 100
+  }
+  const zahl = Number(text.replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(zahl) && zahl > 0 ? zahl : 'fehler'
+}
 
 function WorkPackageDialog({
   projectId, item, onClose,
@@ -38,6 +55,16 @@ function WorkPackageDialog({
       return
     }
 
+    const stunden = budgetWert(String(raw.budget_hours ?? ''), true)
+    const betrag = budgetWert(String(raw.budget_amount ?? ''), false)
+    if (stunden === 'fehler' || betrag === 'fehler') {
+      setErrors({
+        ...(stunden === 'fehler' ? { budget_hours: 'Stundenzahl nicht verstanden' } : {}),
+        ...(betrag === 'fehler' ? { budget_amount: 'Betrag nicht verstanden' } : {}),
+      })
+      return
+    }
+
     const values: WorkPackageInsert = {
       project_id: projectId,
       code: parsed.data.code,
@@ -45,9 +72,8 @@ function WorkPackageDialog({
       description: parsed.data.description.trim() || null,
       sort_order: parsed.data.sort_order,
       is_active: parsed.data.is_active,
-      // Budgets kommen spaeter; die Spalten sind schon da.
-      budget_hours: item?.budget_hours ?? null,
-      budget_amount: item?.budget_amount ?? null,
+      budget_hours: stunden,
+      budget_amount: betrag,
     }
 
     try {
@@ -79,10 +105,23 @@ function WorkPackageDialog({
           <Textarea name="description" rows={2} defaultValue={item?.description ?? ''} />
         </Field>
 
-        <Field label="Reihenfolge" hint="kleinere Zahl steht in der Auswahl weiter oben"
-               error={errors.sort_order} className="sm:max-w-40">
-          <Input name="sort_order" type="number" min={0} defaultValue={item?.sort_order ?? 0} />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Budget (Stunden)" hint="optional" error={errors.budget_hours}>
+            <Input name="budget_hours" inputMode="decimal" placeholder="40"
+                   defaultValue={item?.budget_hours ?? ''} />
+          </Field>
+          <Field label="Budget (EUR)" hint="optional" error={errors.budget_amount}>
+            <Input name="budget_amount" inputMode="decimal" placeholder="6.000"
+                   defaultValue={item?.budget_amount ?? ''} />
+          </Field>
+          <Field label="Reihenfolge" hint="kleinere Zahl steht oben" error={errors.sort_order}>
+            <Input name="sort_order" type="number" min={0} defaultValue={item?.sort_order ?? 0} />
+          </Field>
+        </div>
+        <p className="text-xs text-ink-400">
+          Beides ist optional und lässt sich auch gemeinsam setzen. Der Stand zählt über die
+          gesamte Laufzeit des Pakets, nicht je Jahr.
+        </p>
 
         <label className="flex items-center gap-2 text-sm text-ink-700">
           <input type="checkbox" name="is_active" defaultChecked={item?.is_active ?? true}
@@ -105,18 +144,20 @@ function WorkPackageDialog({
 }
 
 export function WorkPackagePanel({ project }: { project: Project }) {
-  const { data: packages, isPending } = useWorkPackages(project.id)
+  // Die Sicht liefert Stammdaten und Verbrauch in einem Zug - zwei Abfragen
+  // waeren zwei Zeitpunkte und koennten sich widersprechen.
+  const { data: packages, isPending } = useWorkPackageBudget(project.id)
   const remove = useDeleteWorkPackage(project.id)
   const confirm = useConfirm()
   const [dialog, setDialog] = useState<{ open: boolean; item: WorkPackage | null }>(
     { open: false, item: null })
   const [error, setError] = useState<string | null>(null)
 
-  async function onDelete(item: WorkPackage) {
+  async function onDelete(item: WorkPackageBudget) {
     if (!await confirm(loeschFrage('Arbeitspaket', `${item.code} · ${item.name}`))) return
     setError(null)
     try {
-      await remove.mutateAsync(item.id)
+      await remove.mutateAsync(item.work_package_id)
     } catch (err) {
       setError(describeError(err))
     }
@@ -150,24 +191,53 @@ export function WorkPackagePanel({ project }: { project: Project }) {
       ) : (
         <ul className="divide-y divide-ink-200 rounded-md border border-ink-200 bg-white">
           {packages.map((w) => (
-            <li key={w.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
-              <span className="font-mono text-xs font-semibold text-ink-700">{w.code}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-ink-800">{w.name}</span>
-                {w.description && (
-                  <span className="block truncate text-xs text-ink-400">{w.description}</span>
-                )}
-              </span>
-              {!w.is_active && <Badge tone="muted">inaktiv</Badge>}
-              <span className="shrink-0">
-                <Button size="sm" variant="ghost" aria-label="Bearbeiten"
-                        onClick={() => setDialog({ open: true, item: w })}>
-                  <Pencil className="size-4" />
-                </Button>
-                <Button size="sm" variant="ghost" aria-label="Löschen" onClick={() => void onDelete(w)}>
-                  <Trash2 className="size-4" />
-                </Button>
-              </span>
+            <li key={w.work_package_id} className="px-3 py-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono text-xs font-semibold text-ink-700">{w.code}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm text-ink-800">{w.name}</span>
+                  {w.description && (
+                    <span className="block truncate text-xs text-ink-400">{w.description}</span>
+                  )}
+                </span>
+                <span className="tabular shrink-0 text-xs text-ink-500">
+                  {minutesToHours(w.tracked_minutes)} h
+                  {w.fees > 0 && ` · ${formatEuro(Number(w.fees))}`}
+                </span>
+                {!w.is_active && <Badge tone="muted">inaktiv</Badge>}
+                <span className="shrink-0">
+                  <Button size="sm" variant="ghost" aria-label="Bearbeiten"
+                          onClick={() => setDialog({
+                            open: true,
+                            item: {
+                              id: w.work_package_id, project_id: w.project_id, code: w.code,
+                              name: w.name, description: w.description, is_active: w.is_active,
+                              sort_order: w.sort_order, budget_hours: w.budget_hours,
+                              budget_amount: w.budget_amount, created_at: '',
+                            },
+                          })}>
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" aria-label="Löschen"
+                          onClick={() => void onDelete(w)}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </span>
+              </div>
+
+              {/* Beide Budgets koennen gesetzt sein - dann stehen beide da. */}
+              {(w.budget_hours || w.budget_amount) && (
+                <div className="mt-1.5 flex flex-wrap gap-x-6 gap-y-1">
+                  {w.budget_hours && (
+                    <BudgetBadge used={w.tracked_minutes / 60} budget={Number(w.budget_hours)}
+                                 unit={`von ${minutesToHours(Number(w.budget_hours) * 60)} h`} />
+                  )}
+                  {w.budget_amount && (
+                    <BudgetBadge used={Number(w.fees)} budget={Number(w.budget_amount)}
+                                 unit={`von ${formatEuro(Number(w.budget_amount))}`} />
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>

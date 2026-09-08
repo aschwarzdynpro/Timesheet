@@ -327,6 +327,7 @@ Feiertagen und Abwesenheiten – Grundlage der Auslastungsquote.
 | `fn_ensure_period(customer, cycle, date)` | Periode finden oder anlegen, Wochenbeginn vom Kunden |
 | `trg_customer_week_start_*` (BEFORE/AFTER UPD) | Wochenbeginn ab der ersten Meldung sperren, offene Wochen neu schneiden |
 | `fn_target_minutes(from, to)` | Sollarbeitszeit abzüglich Feiertagen/Abwesenheiten |
+| `v_work_package_budget` | Arbeitspaket mit Budget und Verbrauch über die gesamte Laufzeit |
 | `trg_assign_period` (BEFORE INS/UPD) | `period_id` und `billable_minutes` setzen – auf Zeiten **und** Spesen |
 | `trg_lock_closed_period` (BEFORE INS/UPD/DEL) | Änderung ablehnen, wenn Periode ≠ `open` |
 | `fn_submit_period(period)` | Sätze einfrieren, Summen schreiben, Status setzen, protokollieren |

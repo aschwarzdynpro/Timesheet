@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type {
-  Project, ProjectInsert, ProjectRate, ProjectRateInsert, WorkPackage, WorkPackageInsert,
+  Project, ProjectInsert, ProjectRate, ProjectRateInsert, WorkPackage, WorkPackageBudget,
+  WorkPackageInsert,
 } from '@/types/database'
 
 const PROJECTS = ['projects'] as const
@@ -155,6 +156,7 @@ export function useSaveWorkPackage(projectId: string) {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['work-packages', projectId] })
+      void qc.invalidateQueries({ queryKey: ['work-package-budget', projectId] })
       void qc.invalidateQueries({ queryKey: ['time-entries'] })
     },
   })
@@ -169,6 +171,7 @@ export function useDeleteWorkPackage(projectId: string) {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['work-packages', projectId] })
+      void qc.invalidateQueries({ queryKey: ['work-package-budget', projectId] })
     },
   })
 }
@@ -185,6 +188,24 @@ export function useAllWorkPackages() {
         .from('work_packages').select('*').order('sort_order').order('code')
       if (error) throw error
       return (data ?? []) as WorkPackage[]
+    },
+  })
+}
+
+/** Budget und Verbrauch je Arbeitspaket - ueber die gesamte Laufzeit. */
+export function useWorkPackageBudget(projectId: string | null) {
+  return useQuery({
+    queryKey: ['work-package-budget', projectId],
+    enabled: Boolean(projectId),
+    queryFn: async (): Promise<WorkPackageBudget[]> => {
+      const { data, error } = await supabase
+        .from('v_work_package_budget')
+        .select('*')
+        .eq('project_id', projectId as string)
+        .order('sort_order')
+        .order('code')
+      if (error) throw error
+      return (data ?? []) as WorkPackageBudget[]
     },
   })
 }

@@ -207,10 +207,27 @@ halbe Wahrheit.
 Tätigkeitsart *und* Arbeitspaket. Ohne das fänden zwei Buchungen auf verschiedene Pakete
 in derselben Zelle zusammen und ließen sich dort nicht mehr auseinanderhalten.
 
-**Was bewusst fehlt.** Die Budgetfelder (`budget_hours`, `budget_amount`) sind in der
-Tabelle angelegt, in der Oberfläche aber nicht sichtbar — Budgets und Auswertungen je
-Paket kommen als eigener Schritt. Die Spalten stehen schon da, damit dieser Schritt keine
-Migration mehr braucht.
+### Budget je Arbeitspaket
+
+Beide Budgets sind optional und lassen sich einzeln oder gemeinsam setzen: **Stunden**,
+**Betrag** oder beides. Steht keines da, zeigt die Liste nur den Verbrauch.
+
+**Der Stand zählt über die gesamte Laufzeit**, nicht je Jahr — anders als die Projektampel
+in den Auswertungen, die dem gewählten Jahr folgt. Ein Arbeitspaket läuft, bis es fertig
+ist; ein Budget, das im Januar von vorn begänne, wäre keines.
+
+`v_work_package_budget` legt Stammdaten und Verbrauch in einen Zug. Zwei getrennte
+Abfragen wären zwei Zeitpunkte und könnten sich widersprechen. Das Honorar entsteht mit
+demselben Ausdruck wie in `v_time_entries_full`, eingefrorener Satz zuerst — sonst
+zeigten Budget und Auswertung verschiedene Zahlen für dieselbe Zeit.
+
+**Weiterberechnete Spesen stehen daneben, nicht im Honorar.** Ob sie ein Budget belasten,
+ist eine kaufmännische Frage; die Sicht führt sie als eigene Spalte mit, statt sie still
+für den Nutzer zu entscheiden.
+
+Die Budgetampel ist von den Auswertungen nach `components/ui/BudgetBadge.tsx` gewandert —
+sie wird jetzt an zwei Stellen gebraucht, und eine zweite Kopie wäre der Anfang zweier
+Formensprachen.
 
 Die Auswahl erscheint nur, wenn das Projekt überhaupt gegliedert ist. Wer keine Pakete
 anlegt, merkt von der ganzen Sache nichts.
@@ -221,3 +238,12 @@ beim Anlegen *und* beim Ändern abgelehnt, ohne Paket geht es weiterhin, ein beb
 Paket lässt sich nicht löschen) und elf Browserschritte auf vier Breiten — darunter die
 Gegenprobe, dass ein Projekt ohne Pakete die Auswahl gar nicht erst zeigt und dass ohne
 Auswahl `null` statt eines leeren Textes gesendet wird.
+
+**Beim Bauen gefunden.** Zwei Dinge, die der Test zeigte und ein Blick nicht:
+
+- Die Sicht führte anfangs keine `description`. Die Oberfläche bearbeitet ein Paket
+  direkt aus ihr heraus — ein Speichern hätte die Beschreibung stillschweigend geleert.
+  Jetzt steht sie in der Sicht, und die Spaltenzusicherung im Schematest hält das fest.
+- Die Prozentzahl der Ampel rechnete `(used / budget) * 100`. Bei genau 127,5 % liefert
+  das im Binärformat 127,49999… und rundet auf 127 ab. Erst multiplizieren, dann teilen.
+  Die Projektampel hatte denselben Fehler und ist mit derselben Zeile behoben.

@@ -323,6 +323,38 @@ begin
     (select count(*) from work_packages where project_id = v_p_migr) = 2,
     'Nordwind hat zwei Arbeitspakete');
 
+  raise notice 'Budget je Arbeitspaket';
+  update work_packages set budget_hours = 10, budget_amount = 2000 where id = v_paket;
+
+  select * into r from v_work_package_budget where work_package_id = v_paket;
+  perform test_assert(r.tracked_minutes = 120,  'die Sicht zaehlt die erfassten Minuten');
+  perform test_assert(r.billable_minutes = 120, 'und die abrechenbaren');
+  perform test_assert(r.entry_count = 1,        'ein Eintrag auf dem Paket');
+  perform test_assert(r.budget_hours = 10,      'das Budget steht daneben');
+  -- 120 min zu 140 EUR (Satz bis 30.06.2026) ergeben 280,00.
+  perform test_assert(r.fees = 280.00,          'Honorar wie in der Eintragssicht');
+  perform test_assert(r.expenses_recharged = 0, 'ohne Spesen bleibt der Posten leer');
+
+  -- Ein zweiter Eintrag zaehlt mit.
+  insert into time_entries (owner_id, project_id, work_package_id, work_date,
+                            duration_minutes, description)
+  values (v_owner, v_p_crm, v_paket, date '2026-06-09', 60, 'Nachlauf');
+  select * into r from v_work_package_budget where work_package_id = v_paket;
+  perform test_assert(r.tracked_minutes = 180, 'ein zweiter Eintrag zaehlt mit');
+  perform test_assert(r.entry_count = 2,       'und wird gezaehlt');
+  perform test_assert(r.fees = 420.00,         '180 min zu 140 EUR ergeben 420,00');
+
+  -- Ein Paket ohne Buchungen steht mit Nullen da, nicht mit NULL.
+  select * into r from v_work_package_budget where work_package_id = v_fremd;
+  perform test_assert(r.tracked_minutes = 0 and r.fees = 0 and r.entry_count = 0,
+                      'ein unbebuchtes Paket steht auf null, nicht auf NULL');
+  perform test_assert(r.budget_hours is null, 'und ohne Budget bleibt die Spalte leer');
+
+  perform test_expect_error(
+    format('update work_packages set budget_hours = 0 where id = %L', v_paket),
+    'ein Budget von null wird abgelehnt');
+
+  delete from time_entries where work_package_id = v_paket;
   delete from time_entries where id = v_entry;
   delete from work_packages where id = v_paket;
 
@@ -383,6 +415,19 @@ begin
     end if;
 
     -- Die Periodenseite liest den Zaehler und sortiert das Protokoll.
+    -- Die Projektseite liest den Budgetstand aus der Sicht und bearbeitet das
+    -- Paket direkt daraus - fehlt eine Spalte, leert ein Speichern sie still.
+    foreach v_spalte in array array[
+      'work_package_id','project_id','code','name','description','is_active','sort_order',
+      'budget_hours','budget_amount','tracked_minutes','fees','entry_count'
+    ] loop
+      if not exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='v_work_package_budget'
+                       and column_name=v_spalte) then
+        v_fehlend := v_fehlend || ('v_work_package_budget.' || v_spalte);
+      end if;
+    end loop;
+
     foreach v_spalte in array array['reopen_count','reopened_at'] loop
       if not exists (select 1 from information_schema.columns
                      where table_schema='public' and table_name='reporting_periods'

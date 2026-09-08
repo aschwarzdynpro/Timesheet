@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Card, EmptyState, ErrorNote, Select } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
+import { BudgetBadge } from '@/components/ui/BudgetBadge'
 import { describeError } from '@/lib/supabase'
 import { formatEuro } from '@/lib/format'
 import { minutesToHours } from '@/lib/week'
-import { cn } from '@/lib/utils'
 import { useCustomers } from '@/features/customers/api'
 import { useProjects } from '@/features/projects/api'
 import { RankChart, TrendChart, type RankPoint, type TrendPoint } from './charts'
@@ -22,33 +22,6 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
       <p className="tabular mt-1 text-2xl font-semibold text-ink-800">{value}</p>
       {hint && <p className="mt-0.5 text-xs text-ink-400">{hint}</p>}
     </div>
-  )
-}
-
-/** Budgetampel: Zustand steckt in Form und Wort, nicht allein in der Farbe. */
-function BudgetBadge({ used, budget }: { used: number; budget: number }) {
-  const share = budget > 0 ? used / budget : 0
-  const pct = Math.round(share * 100)
-  const level = share >= 1 ? 'critical' : share >= 0.8 ? 'warning' : 'good'
-  const label = level === 'critical' ? 'überschritten' : level === 'warning' ? 'knapp' : 'im Rahmen'
-
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span className="h-1.5 w-16 overflow-hidden rounded-full bg-ink-100">
-        <span className={cn('block h-1.5 rounded-full',
-                            level === 'critical' && 'bg-red-600',
-                            level === 'warning' && 'bg-amber-500',
-                            level === 'good' && 'bg-emerald-600')}
-              style={{ width: `${Math.min(100, pct)}%` }} />
-      </span>
-      <span className="tabular text-xs text-ink-600">{pct} %</span>
-      <span className={cn('text-xs',
-                          level === 'critical' && 'font-medium text-red-700',
-                          level === 'warning' && 'font-medium text-amber-700',
-                          level === 'good' && 'text-ink-400')}>
-        {label}
-      </span>
-    </span>
   )
 }
 

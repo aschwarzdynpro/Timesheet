@@ -96,6 +96,24 @@ export type CustomerInsert = Insertable<Customer, 'owner_id' | 'currency' | 'is_
 export type ActivityTypeInsert = Insertable<ActivityType, 'owner_id' | 'is_active'>
 export type ProjectInsert = Insertable<Project, never>
 export type ProjectRateInsert = Insertable<ProjectRate, 'currency'>
+
+/** Sicht v_work_package_budget: Budget und Verbrauch ueber die Laufzeit. */
+export interface WorkPackageBudget {
+  work_package_id: string
+  project_id: string
+  code: string
+  name: string
+  is_active: boolean
+  sort_order: number
+  budget_hours: number | null
+  budget_amount: number | null
+  tracked_minutes: number
+  billable_minutes: number
+  fees: number
+  entry_count: number
+  expenses_recharged: number
+  description: string | null
+}
 export type WorkPackageInsert = Insertable<WorkPackage, 'is_active' | 'sort_order'>
 
 export type TimeEntryStatus = 'draft' | 'submitted' | 'invoiced'
