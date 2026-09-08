@@ -204,3 +204,18 @@ wie „nichts verdient", nicht wie „ein Satz fehlt". Drei Stellen sagen es jet
 
 Die Warnung erscheint nur bei **abrechenbaren** Projekten. Bei interner Zeit sind 0,00 €
 richtig und ein Hinweis wäre Lärm.
+
+**Die Tätigkeitsart eines Eintrags war mobil nicht änderbar.** Der Bearbeiten-Dialog war
+als *Zellendialog* gebaut: Projekt, Tätigkeitsart, Arbeitspaket und Datum kamen aus der
+Rasterzeile und standen fest, änderbar waren nur Dauer, Beschreibung und der
+Abrechenbar-Haken. Am Laptop fiel das nicht auf — dort legt man eine zweite Rasterzeile an
+und bucht neu. Mobil gibt es kein Raster und damit gar keinen Weg.
+
+Tätigkeitsart und Arbeitspaket gehören aber dem **Eintrag**, nicht der Zeile. Beide stehen
+jetzt als Auswahl im Dialog; die Zelle gibt nur noch die Vorbelegung. Wer sie ändert,
+verschiebt den Eintrag in die passende Rasterzeile — am Laptop sichtbar, mobil ohne Belang.
+
+Zwei Kleinigkeiten dabei: Ein inaktives Arbeitspaket oder eine inaktive Tätigkeitsart
+bleibt in der Auswahl, solange der Eintrag sie trägt — sonst fände sich die eigene
+Einstellung beim Bearbeiten nicht wieder. Und die Satzwarnung folgt der Auswahl statt der
+Zelle: Sie verschwindet in dem Moment, in dem eine Tätigkeitsart mit Satz gewählt wird.

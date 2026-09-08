@@ -1,13 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { Trash2 } from 'lucide-react'
 import {
-  Button, Dialog, ErrorNote, Field, Input, Textarea, WarnNote,
+  Button, Dialog, ErrorNote, Field, Input, Select, Textarea, WarnNote,
 } from '@/components/ui/primitives'
 import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration } from '@/lib/week'
 import type { ActivityType, Project, TimeEntryFull, WorkPackage } from '@/types/database'
+import { useActivityTypes } from '@/features/activity-types/api'
+import { useWorkPackages } from '@/features/projects/api'
 import {
   useDeleteTimeEntry, useRateFor, useRecentDescriptions, useSaveTimeEntry,
 } from './api'
@@ -47,6 +49,11 @@ function EntryDialogForm({
   const confirm = useConfirm()
   const { data: suggestions } = useRecentDescriptions(target?.project.id ?? null)
 
+  // Taetigkeitsart und Arbeitspaket gehoeren dem Eintrag, nicht der Rasterzeile.
+  // Die Zelle gibt nur die Vorbelegung; wer sie aendert, verschiebt den Eintrag
+  // in eine andere Zeile - genau das war mobil bisher nicht moeglich.
+  const [activityId, setActivityId] = useState(target.activity?.id ?? '')
+  const [packageId, setPackageId] = useState(target.workPackage?.id ?? '')
   const [duration, setDuration] = useState(
     target.presetMinutes ? minutesToHours(target.presetMinutes) : '')
   const [description, setDescription] = useState('')
@@ -54,13 +61,23 @@ function EntryDialogForm({
   const [editing, setEditing] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { project, activity, workPackage, workDate } = target
-  const { data: satz, isPending: satzLaeuft } = useRateFor(project.id, activity?.id ?? null, workDate)
+  const { project, workDate } = target
+  const { data: activityTypes } = useActivityTypes()
+  const { data: workPackages } = useWorkPackages(project.id)
+  // Inaktive bleiben sichtbar, solange der Eintrag sie traegt - sonst faende
+  // sich beim Bearbeiten die eigene Auswahl nicht wieder.
+  const waehlbareArten = (activityTypes ?? []).filter((a) => a.is_active || a.id === activityId)
+  const waehlbarePakete = (workPackages ?? []).filter((w) => w.is_active || w.id === packageId)
+
+  const { data: satz, isPending: satzLaeuft } = useRateFor(project.id, activityId || null, workDate)
   const ohneSatz = !satzLaeuft && satz === null && project.is_billable
+  const gewaehlteArt = waehlbareArten.find((a) => a.id === activityId) ?? null
   const locked = entries.some((e) => e.status !== 'draft')
 
   function startEdit(entry: TimeEntryFull) {
     setEditing(entry.id)
+    setActivityId(entry.activity_type_id ?? '')
+    setPackageId(entry.work_package_id ?? '')
     setDuration(minutesToHours(entry.duration_minutes))
     setDescription(entry.description)
     setBillable(entry.is_billable)
@@ -69,6 +86,8 @@ function EntryDialogForm({
 
   function resetForm() {
     setEditing(null)
+    setActivityId(target.activity?.id ?? '')
+    setPackageId(target.workPackage?.id ?? '')
     setDuration('')
     setDescription('')
     setBillable(project.is_billable)
@@ -97,8 +116,8 @@ function EntryDialogForm({
         id: editing ?? undefined,
         values: {
           project_id: project.id,
-          activity_type_id: activity?.id ?? null,
-          work_package_id: workPackage?.id ?? null,
+          activity_type_id: activityId || null,
+          work_package_id: packageId || null,
           work_date: workDate,
           duration_minutes: minutes,
           description: description.trim(),
@@ -128,8 +147,7 @@ function EntryDialogForm({
       open
       onClose={onClose}
       title={`${project.name} · ${formatDate(workDate)}`}
-      description={[workPackage && `${workPackage.code} · ${workPackage.name}`,
-                    activity ? activity.name : 'ohne Tätigkeitsart'].filter(Boolean).join('  —  ')}
+      description="Tätigkeitsart und Arbeitspaket lassen sich hier ändern — der Eintrag wandert dann in die passende Rasterzeile."
     >
       {entries.length > 0 && (
         <ul className="mb-4 divide-y divide-ink-100 border-y border-ink-100">
@@ -163,12 +181,33 @@ function EntryDialogForm({
         </p>
       ) : (
         <form onSubmit={onSubmit} className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Tätigkeitsart" hint="optional">
+              <Select value={activityId} onChange={(e) => setActivityId(e.target.value)}>
+                <option value="">ohne Tätigkeitsart</option>
+                {waehlbareArten.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </Select>
+            </Field>
+            {waehlbarePakete.length > 0 && (
+              <Field label="Arbeitspaket" hint="optional">
+                <Select value={packageId} onChange={(e) => setPackageId(e.target.value)}>
+                  <option value="">ohne Arbeitspaket</option>
+                  {waehlbarePakete.map((w) => (
+                    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Dauer" hint="1,5 · 1:30 · 90m">
               <Input value={duration} onChange={(e) => setDuration(e.target.value)}
                      placeholder="1,5" autoFocus inputMode="decimal" />
             </Field>
-            <Field label="Beschreibung" className="col-span-2">
+            <Field label="Beschreibung" className="sm:col-span-2">
               <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)}
                         placeholder="Was wurde gemacht?" />
             </Field>
@@ -197,7 +236,7 @@ function EntryDialogForm({
 
           {ohneSatz && (
             <WarnNote>
-              Für dieses Projekt gibt es {activity ? `mit „${activity.name}" ` : 'ohne Tätigkeitsart '}
+              Für dieses Projekt gibt es {gewaehlteArt ? `mit „${gewaehlteArt.name}" ` : 'ohne Tätigkeitsart '}
               keinen Stundensatz zum {formatDate(workDate)}. Die Zeit wird gespeichert, aber mit
               0,00 € bewertet.
             </WarnNote>
