@@ -5,13 +5,14 @@ import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
 import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration } from '@/lib/week'
-import type { ActivityType, Project, TimeEntryFull } from '@/types/database'
+import type { ActivityType, Project, TimeEntryFull, WorkPackage } from '@/types/database'
 import { useDeleteTimeEntry, useRecentDescriptions, useSaveTimeEntry } from './api'
 
 /** Identitaet der Zelle. Die Eintraege kommen getrennt und immer frisch dazu. */
 export type EntryDialogTarget = {
   project: Project
   activity: ActivityType | null
+  workPackage: WorkPackage | null
   workDate: string
   /** Vorbelegte Dauer, wenn die Zelle direkt im Raster getippt wurde. */
   presetMinutes?: number
@@ -29,7 +30,8 @@ export function EntryDialog(props: {
   if (!props.target) return null
   // Der Schluessel setzt den Formularzustand zurueck, sobald eine andere Zelle
   // geoeffnet wird - ohne Effekt, der beim Rendern nachtraeglich State setzt.
-  const key = `${props.target.project.id}|${props.target.activity?.id ?? ''}|${props.target.workDate}`
+  const key = `${props.target.project.id}|${props.target.activity?.id ?? ''}`
+    + `|${props.target.workPackage?.id ?? ''}|${props.target.workDate}`
   return <EntryDialogForm key={key} {...props} target={props.target} />
 }
 
@@ -48,7 +50,7 @@ function EntryDialogForm({
   const [editing, setEditing] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { project, activity, workDate } = target
+  const { project, activity, workPackage, workDate } = target
   const locked = entries.some((e) => e.status !== 'draft')
 
   function startEdit(entry: TimeEntryFull) {
@@ -90,6 +92,7 @@ function EntryDialogForm({
         values: {
           project_id: project.id,
           activity_type_id: activity?.id ?? null,
+          work_package_id: workPackage?.id ?? null,
           work_date: workDate,
           duration_minutes: minutes,
           description: description.trim(),
@@ -119,7 +122,8 @@ function EntryDialogForm({
       open
       onClose={onClose}
       title={`${project.name} · ${formatDate(workDate)}`}
-      description={activity ? activity.name : 'ohne Tätigkeitsart'}
+      description={[workPackage && `${workPackage.code} · ${workPackage.name}`,
+                    activity ? activity.name : 'ohne Tätigkeitsart'].filter(Boolean).join('  —  ')}
     >
       {entries.length > 0 && (
         <ul className="mb-4 divide-y divide-ink-100 border-y border-ink-100">

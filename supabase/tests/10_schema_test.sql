@@ -15,6 +15,8 @@ declare
   v_travel   uuid;
   v_period   uuid;
   v_entry    uuid;
+  v_paket    uuid;
+  v_fremd    uuid;
   r          record;
 begin
   select id into v_owner from auth.users order by created_at limit 1;
@@ -270,6 +272,60 @@ begin
     'eine abgerechnete Periode laesst sich nicht wieder oeffnen');
   update reporting_periods set status = 'submitted' where id = v_period;
 
+  raise notice 'Arbeitspakete';
+  insert into work_packages (project_id, code, name, sort_order)
+  values (v_p_crm, 'MIGR', 'Datenmigration', 1) returning id into v_paket;
+  insert into work_packages (project_id, code, name)
+  values (v_p_migr, 'ROLL', 'Rollout') returning id into v_fremd;
+
+  perform test_expect_error(
+    format('insert into work_packages (project_id, code, name) values (%L, ''MIGR'', ''Doppelt'')', v_p_crm),
+    'zwei Arbeitspakete mit gleichem Kuerzel im Projekt werden abgelehnt');
+  insert into work_packages (project_id, code, name) values (v_p_migr, 'MIGR', 'Gleiches Kuerzel, anderes Projekt');
+  perform test_assert(true, 'dasselbe Kuerzel in einem anderen Projekt ist erlaubt');
+
+  -- Buchen auf ein Paket des eigenen Projekts.
+  insert into time_entries (owner_id, project_id, work_package_id, work_date, duration_minutes, description)
+  values (v_owner, v_p_crm, v_paket, date '2026-06-08', 120, 'Feldmapping')
+  returning id into v_entry;
+  select * into r from v_time_entries_full where id = v_entry;
+  perform test_assert(r.work_package_code = 'MIGR', 'die Sicht fuehrt das Kuerzel mit');
+  perform test_assert(r.work_package_name = 'Datenmigration', 'und den Namen');
+
+  -- Das Paket eines fremden Projekts waere eine stille Fehlbuchung.
+  perform test_expect_error(
+    format('insert into time_entries (owner_id, project_id, work_package_id, work_date,
+                                      duration_minutes, description)
+            values (%L, %L, %L, date ''2026-06-09'', 60, ''Fehlbuchung'')',
+           v_owner, v_p_crm, v_fremd),
+    'ein Arbeitspaket aus einem anderen Projekt wird abgelehnt');
+  perform test_expect_error(
+    format('update time_entries set work_package_id = %L where id = %L', v_fremd, v_entry),
+    'auch nachtraeglich laesst es sich nicht umhaengen');
+
+  -- Ohne Paket bleibt alles wie bisher.
+  perform test_assert(
+    (select work_package_id from time_entries where id = v_entry) = v_paket,
+    'das eigene Paket bleibt stehen');
+  update time_entries set work_package_id = null where id = v_entry;
+  perform test_assert(
+    (select work_package_id from time_entries where id = v_entry) is null,
+    'ein Arbeitspaket ist optional');
+
+  -- Ein bebuchtes Paket darf nicht verschwinden.
+  update time_entries set work_package_id = v_paket where id = v_entry;
+  perform test_expect_error(
+    format('delete from work_packages where id = %L', v_paket),
+    'ein bebuchtes Arbeitspaket kann nicht geloescht werden');
+
+  -- Mit dem Projekt geht es allerdings mit.
+  perform test_assert(
+    (select count(*) from work_packages where project_id = v_p_migr) = 2,
+    'Nordwind hat zwei Arbeitspakete');
+
+  delete from time_entries where id = v_entry;
+  delete from work_packages where id = v_paket;
+
   raise notice 'Spalten, auf die sich die Oberflaeche verlaesst';
   -- Die Oberflaeche filtert und sortiert ueber PostgREST nach diesen Spalten.
   -- Fehlt eine, weist PostgREST die gesamte Abfrage mit 42703 ab - und die
@@ -285,7 +341,8 @@ begin
         'work_date','created_at','project_id','activity_type_id','customer_id',
         'period_id','billable_minutes','duration_minutes','amount','rate','status',
         'is_billable','description','iso_year','iso_week','week_start','month_start','year',
-        'customer_code','project_code','activity_name'
+        'customer_code','project_code','activity_name',
+        'work_package_id','work_package_code','work_package_name'
       ] loop
         if not exists (
           select 1 from information_schema.columns

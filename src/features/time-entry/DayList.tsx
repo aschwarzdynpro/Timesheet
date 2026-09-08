@@ -85,6 +85,7 @@ export function DayList({
                             der Kunde uebrig, und der ist meist ohnehin klar. */}
                         <span className="block truncate text-xs text-ink-400">
                           {e.customer_code} · {e.project_code}
+                          {e.work_package_code && ` · ${e.work_package_code}`}
                           {e.activity_name && ` · ${e.activity_name}`}
                         </span>
                       </span>

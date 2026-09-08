@@ -172,3 +172,9 @@ Fehler daher nicht nachstellen. Der automatische Test misst deshalb, was sich pr
 lässt: jedes sichtbare Datumsfeld gegen den Rand seines Dialogs und gegen den eigenen
 Platzbedarf, auf vier Breiten und in fünf Dialogen. Dass die zweite Maßnahme trägt, folgt
 aus der Geometrie, nicht aus dem Testlauf.
+
+**„Zeile" und „Vorwoche" waren mobil wirkungslos.** Beide fügen dem Wochenraster leere
+Zeilen hinzu — unter 640 px gibt es das Raster aber nicht, dort steht die Tagesliste. Der
+einzige sichtbare Effekt war, dass nach einem Klick der Leerzustand verschwand und eine
+leere Karte zurückblieb. Beide Schaltflächen sind jetzt unter 640 px ausgeblendet, und der
+Leerzustand nennt den Weg über die Vorwoche nur noch als Laptop-Möglichkeit.

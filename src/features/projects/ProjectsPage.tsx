@@ -12,6 +12,7 @@ import { useCustomers } from '@/features/customers/api'
 import { useActivityTypes } from '@/features/activity-types/api'
 import { ProjectDialog } from './ProjectDialog'
 import { RatePanel } from './RatePanel'
+import { WorkPackagePanel } from './WorkPackagePanel'
 import { useCurrentRates, useDeleteProject, useProjects } from './api'
 
 export function ProjectsPage() {
@@ -235,7 +236,12 @@ export function ProjectsPage() {
                     </div>
                   </div>
 
-                  {isOpen && <RatePanel project={p} activityTypes={activityTypes ?? []} />}
+                  {isOpen && (
+                    <>
+                      <RatePanel project={p} activityTypes={activityTypes ?? []} />
+                      <WorkPackagePanel project={p} />
+                    </>
+                  )}
                 </li>
               )
             })}

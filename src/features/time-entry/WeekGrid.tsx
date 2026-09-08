@@ -4,13 +4,27 @@ import { cn } from '@/lib/utils'
 import {
   WEEKDAY_SHORT, isToday, isWeekend, minutesToHours, parseDuration, toIsoDate, weekDays,
 } from '@/lib/week'
-import type { ActivityType, Project, ReportingPeriod, TimeEntryFull } from '@/types/database'
+import type {
+  ActivityType, Project, ReportingPeriod, TimeEntryFull, WorkPackage,
+} from '@/types/database'
 import type { EntryDialogTarget } from './EntryDialog'
 
-export type GridRow = { key: string; project: Project; activity: ActivityType | null }
+export type GridRow = {
+  key: string
+  project: Project
+  activity: ActivityType | null
+  workPackage: WorkPackage | null
+}
 
-export function rowKey(projectId: string, activityId: string | null): string {
-  return `${projectId}|${activityId ?? ''}`
+/**
+ * Eine Rasterzeile ist eine buchbare Kombination. Das Arbeitspaket gehoert
+ * dazu: sonst faenden zwei Buchungen auf verschiedene Pakete in derselben
+ * Zelle zusammen und liessen sich dort nicht mehr auseinanderhalten.
+ */
+export function rowKey(
+  projectId: string, activityId: string | null, workPackageId: string | null = null,
+): string {
+  return `${projectId}|${activityId ?? ''}|${workPackageId ?? ''}`
 }
 
 /**
@@ -37,7 +51,7 @@ export function WeekGrid({
   const cells = useMemo(() => {
     const map = new Map<string, TimeEntryFull[]>()
     for (const e of entries) {
-      const key = `${rowKey(e.project_id, e.activity_type_id)}@${e.work_date}`
+      const key = `${rowKey(e.project_id, e.activity_type_id, e.work_package_id)}@${e.work_date}`
       const list = map.get(key)
       if (list) list.push(e)
       else map.set(key, [e])
@@ -62,7 +76,8 @@ export function WeekGrid({
 
   const customerOfRow = useMemo(() => {
     const map = new Map<string, string>()
-    for (const e of entries) map.set(rowKey(e.project_id, e.activity_type_id), e.customer_id)
+    for (const e of entries)
+      map.set(rowKey(e.project_id, e.activity_type_id, e.work_package_id), e.customer_id)
     return map
   }, [entries])
 
@@ -95,8 +110,8 @@ export function WeekGrid({
       onQuickUpdate(list[0]!, minutes)   // genau ein Eintrag: direkt aendern
       return
     }
-    onOpen({ project: row.project, activity: row.activity, workDate: iso,
-             presetMinutes: minutes })
+    onOpen({ project: row.project, activity: row.activity, workPackage: row.workPackage,
+             workDate: iso, presetMinutes: minutes })
   }
 
   const dayTotals = days.map((day) => {
@@ -140,6 +155,9 @@ export function WeekGrid({
                 <td className="border-b border-ink-100 px-3 py-1.5">
                   <span className="block truncate font-medium text-ink-800">{row.project.name}</span>
                   <span className="block truncate text-xs text-ink-400">
+                    {row.workPackage && (
+                      <span className="font-medium text-ink-500">{row.workPackage.code} · </span>
+                    )}
                     {row.activity?.name ?? 'ohne Tätigkeitsart'}
                     {!row.project.is_billable && ' · nicht abrechenbar'}
                   </span>
@@ -186,7 +204,7 @@ export function WeekGrid({
                         {list.length > 1 && (
                           <button type="button"
                                   onClick={() => onOpen({ project: row.project, activity: row.activity,
-                                                          workDate: iso })}
+                                                          workPackage: row.workPackage, workDate: iso })}
                                   title={`${list.length} Einträge — anzeigen`}
                                   className="absolute top-0.5 right-0.5 rounded bg-accent-100 px-1 text-[10px] font-semibold text-accent-700">
                             {list.length}

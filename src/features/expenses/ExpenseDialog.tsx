@@ -8,6 +8,7 @@ import { formatEuro, today } from '@/lib/format'
 import type {
   ExpenseCategory, ExpenseFull, ExpenseInput, Project,
 } from '@/types/database'
+import { useWorkPackages } from '@/features/projects/api'
 import { uploadReceipt, useSaveExpense } from './api'
 
 const MAX_BYTES = 10 * 1024 * 1024
@@ -40,6 +41,10 @@ function ExpenseDialogForm({
   onClose: () => void
 }) {
   const save = useSaveExpense()
+  const [projectId, setProjectId] = useState(expense?.project_id ?? '')
+  const [packageId, setPackageId] = useState(expense?.work_package_id ?? '')
+  const { data: workPackages } = useWorkPackages(projectId || null)
+  const waehlbarePakete = (workPackages ?? []).filter((w) => w.is_active)
   const [categoryId, setCategoryId] = useState(expense?.category_code
     ? categories.find((c) => c.code === expense.category_code)?.id ?? '' : '')
   const [quantity, setQuantity] = useState(expense?.quantity?.toString().replace('.', ',') ?? '')
@@ -110,6 +115,7 @@ function ExpenseDialogForm({
 
     const values: ExpenseInput = {
       project_id: projectId,
+      work_package_id: packageId || null,
       category_id: categoryId,
       expense_date: expenseDate,
       description,
@@ -138,7 +144,8 @@ function ExpenseDialogForm({
       <form onSubmit={onSubmit} className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Projekt">
-            <Select name="project_id" defaultValue={expense?.project_id ?? ''} required>
+            <Select name="project_id" required value={projectId}
+                    onChange={(e) => { setProjectId(e.target.value); setPackageId('') }}>
               <option value="">Bitte wählen</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </Select>
@@ -148,6 +155,18 @@ function ExpenseDialogForm({
                    defaultValue={expense?.expense_date ?? today()} />
           </Field>
         </div>
+
+        {/* Nur zeigen, wenn das Projekt ueberhaupt gegliedert ist. */}
+        {waehlbarePakete.length > 0 && (
+          <Field label="Arbeitspaket" hint="optional">
+            <Select value={packageId} onChange={(e) => setPackageId(e.target.value)}>
+              <option value="">ohne Arbeitspaket</option>
+              {waehlbarePakete.map((w) => (
+                <option key={w.id} value={w.id}>{w.code} · {w.name}</option>
+              ))}
+            </Select>
+          </Field>
+        )}
 
         <Field label="Spesenart">
           <Select value={categoryId} onChange={(e) => onPickCategory(e.target.value)} required>

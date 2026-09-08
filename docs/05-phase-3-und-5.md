@@ -184,3 +184,40 @@ Nicht geprüft: das Verhalten gegen die echte API im Browser. Die Browsertests m
 `/rest/v1/**`; Vertragsfehler zwischen App und PostgREST — eine Spalte, die es nicht
 gibt — bleiben darin unsichtbar. Deshalb der SQL-Gegentest oben und die
 Spaltenprüfung in `supabase/tests/10_schema_test.sql`.
+
+## Nachtrag: Arbeitspakete
+
+Projekt und Tätigkeitsart sagten bisher nicht, **woran** gearbeitet wurde. Genau darauf
+sollen später Budgets und Auswertungen laufen, deshalb ist das Arbeitspaket eine eigene
+Tabelle am Projekt und kein Textfeld an der Buchung.
+
+Die Tätigkeitsart bleibt daneben bestehen — sie beschreibt die **Art** der Arbeit
+(Beratung, Reisezeit) und trägt die Satzlogik, das Arbeitspaket den **Gegenstand**. Ein
+Reisetag zum Paket „Schulung" ist beides zugleich, deshalb sind es zwei Felder und nicht
+eines.
+
+**Die Regel, die in der Datenbank sitzt:** Ein Arbeitspaket muss zum Projekt der Buchung
+gehören. Ein fremdes wäre eine stille Fehlbuchung, die erst in der Auswertung auffiele.
+`fn_assert_work_package_fits()` prüft das, und die beiden Vorbereitungs-Trigger rufen es
+auf — damit greift die Regel auf jedem Schreibweg, auch bei einem direkten API-Aufruf.
+Zeiten *und* Spesen tragen das Feld; ein Budget, das die Spesen ausließe, wäre nur die
+halbe Wahrheit.
+
+**Die Rasterzeile bekommt ein drittes Merkmal.** `rowKey` besteht jetzt aus Projekt,
+Tätigkeitsart *und* Arbeitspaket. Ohne das fänden zwei Buchungen auf verschiedene Pakete
+in derselben Zelle zusammen und ließen sich dort nicht mehr auseinanderhalten.
+
+**Was bewusst fehlt.** Die Budgetfelder (`budget_hours`, `budget_amount`) sind in der
+Tabelle angelegt, in der Oberfläche aber nicht sichtbar — Budgets und Auswertungen je
+Paket kommen als eigener Schritt. Die Spalten stehen schon da, damit dieser Schritt keine
+Migration mehr braucht.
+
+Die Auswahl erscheint nur, wenn das Projekt überhaupt gegliedert ist. Wer keine Pakete
+anlegt, merkt von der ganzen Sache nichts.
+
+**Geprüft:** neun Datenbankzusicherungen (Kürzel je Projekt eindeutig, dasselbe Kürzel in
+einem anderen Projekt erlaubt, die Sicht führt Kürzel und Name, ein fremdes Paket wird
+beim Anlegen *und* beim Ändern abgelehnt, ohne Paket geht es weiterhin, ein bebuchtes
+Paket lässt sich nicht löschen) und elf Browserschritte auf vier Breiten — darunter die
+Gegenprobe, dass ein Projekt ohne Pakete die Auswahl gar nicht erst zeigt und dass ohne
+Auswahl `null` statt eines leeren Textes gesendet wird.

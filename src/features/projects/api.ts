@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { Project, ProjectInsert, ProjectRate, ProjectRateInsert } from '@/types/database'
+import type {
+  Project, ProjectInsert, ProjectRate, ProjectRateInsert, WorkPackage, WorkPackageInsert,
+} from '@/types/database'
 
 const PROJECTS = ['projects'] as const
 const rateKey = (projectId: string) => ['project-rates', projectId] as const
@@ -113,6 +115,76 @@ export function useDeleteProjectRate(projectId: string) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: rateKey(projectId) })
       void qc.invalidateQueries({ queryKey: ['current-rates'] })
+    },
+  })
+}
+
+/* -------------------------------------------------------------- Arbeitspakete */
+
+/**
+ * Die Gliederung eines Projekts. Aktive zuerst, dann nach Sortierung und
+ * Kuerzel - so steht in der Auswahl oben, was man taeglich braucht.
+ */
+export function useWorkPackages(projectId: string | null) {
+  return useQuery({
+    queryKey: ['work-packages', projectId],
+    enabled: Boolean(projectId),
+    queryFn: async (): Promise<WorkPackage[]> => {
+      const { data, error } = await supabase
+        .from('work_packages')
+        .select('*')
+        .eq('project_id', projectId as string)
+        .order('sort_order')
+        .order('code')
+      if (error) throw error
+      return (data ?? []) as WorkPackage[]
+    },
+  })
+}
+
+export function useSaveWorkPackage(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, values }: { id?: string; values: WorkPackageInsert }) => {
+      const query = id
+        ? supabase.from('work_packages').update(values).eq('id', id).select().single()
+        : supabase.from('work_packages').insert(values).select().single()
+      const { data, error } = await query
+      if (error) throw error
+      return data as WorkPackage
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['work-packages', projectId] })
+      void qc.invalidateQueries({ queryKey: ['time-entries'] })
+    },
+  })
+}
+
+export function useDeleteWorkPackage(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('work_packages').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['work-packages', projectId] })
+    },
+  })
+}
+
+/**
+ * Alle Arbeitspakete auf einmal. Das Wochenraster loest damit die Pakete
+ * beliebiger Buchungen auf, ohne je Projekt einzeln nachzufragen.
+ */
+export function useAllWorkPackages() {
+  return useQuery({
+    queryKey: ['work-packages', 'alle'],
+    queryFn: async (): Promise<WorkPackage[]> => {
+      const { data, error } = await supabase
+        .from('work_packages').select('*').order('sort_order').order('code')
+      if (error) throw error
+      return (data ?? []) as WorkPackage[]
     },
   })
 }

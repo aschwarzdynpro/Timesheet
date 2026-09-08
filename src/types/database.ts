@@ -63,6 +63,20 @@ export interface Project {
   created_at: string
 }
 
+/** Gliederung innerhalb eines Projekts; traegt spaeter Budgets und Auswertungen. */
+export interface WorkPackage {
+  id: string
+  project_id: string
+  code: string
+  name: string
+  description: string | null
+  is_active: boolean
+  sort_order: number
+  budget_hours: number | null
+  budget_amount: number | null
+  created_at: string
+}
+
 export interface ProjectRate {
   id: string
   project_id: string
@@ -82,6 +96,7 @@ export type CustomerInsert = Insertable<Customer, 'owner_id' | 'currency' | 'is_
 export type ActivityTypeInsert = Insertable<ActivityType, 'owner_id' | 'is_active'>
 export type ProjectInsert = Insertable<Project, never>
 export type ProjectRateInsert = Insertable<ProjectRate, 'currency'>
+export type WorkPackageInsert = Insertable<WorkPackage, 'is_active' | 'sort_order'>
 
 export type TimeEntryStatus = 'draft' | 'submitted' | 'invoiced'
 
@@ -90,6 +105,8 @@ export interface TimeEntry {
   owner_id: string
   project_id: string
   activity_type_id: string | null
+  /** Optional; muss zum Projekt gehoeren - die Datenbank prueft das mit. */
+  work_package_id: string | null
   work_date: string
   start_time: string | null
   end_time: string | null
@@ -108,6 +125,8 @@ export interface TimeEntry {
 
 /** Angereicherte Sicht v_time_entries_full – enthaelt Satz und Betrag. */
 export interface TimeEntryFull extends Omit<TimeEntry, 'created_at' | 'updated_at'> {
+  work_package_code: string | null
+  work_package_name: string | null
   project_code: string
   project_name: string
   customer_id: string
@@ -129,6 +148,7 @@ export interface TimeEntryFull extends Omit<TimeEntry, 'created_at' | 'updated_a
 export interface TimeEntryInput {
   project_id: string
   activity_type_id: string | null
+  work_package_id: string | null
   work_date: string
   duration_minutes: number
   description: string
@@ -185,6 +205,8 @@ export interface Expense {
   id: string
   owner_id: string
   project_id: string
+  /** Optional; muss zum Projekt gehoeren - die Datenbank prueft das mit. */
+  work_package_id: string | null
   category_id: string
   expense_date: string
   description: string
@@ -206,6 +228,8 @@ export interface Expense {
 
 /** Angereicherte Sicht v_expenses_full. */
 export interface ExpenseFull extends Omit<Expense, 'created_at' | 'updated_at' | 'category_id'> {
+  work_package_code: string | null
+  work_package_name: string | null
   amount_recharged: number
   category_code: string
   category_name: string
@@ -224,6 +248,7 @@ export interface ExpenseFull extends Omit<Expense, 'created_at' | 'updated_at' |
 
 export interface ExpenseInput {
   project_id: string
+  work_package_id: string | null
   category_id: string
   expense_date: string
   description: string

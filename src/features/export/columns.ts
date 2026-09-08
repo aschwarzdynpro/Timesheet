@@ -12,7 +12,8 @@ import type { TimeEntryFull } from '@/types/database'
 
 export type ColumnKey =
   | 'work_date' | 'iso_week' | 'month' | 'customer_code' | 'customer_name'
-  | 'project_code' | 'project_name' | 'activity_name' | 'description'
+  | 'project_code' | 'project_name' | 'work_package_code' | 'work_package_name'
+  | 'activity_name' | 'description'
   | 'duration_hours' | 'billable_hours' | 'is_billable' | 'rate' | 'amount'
   | 'status' | 'period'
 
@@ -59,6 +60,12 @@ export const COLUMNS: ColumnDef[] = [
 
   { key: 'project_name', label: 'Projekt', width: 26, align: 'left',
     cell: (e) => ({ type: 'text', value: e.project_name }) },
+
+  { key: 'work_package_code', label: 'AP', width: 10, align: 'left',
+    cell: (e) => ({ type: 'text', value: e.work_package_code ?? '' }) },
+
+  { key: 'work_package_name', label: 'Arbeitspaket', width: 24, align: 'left',
+    cell: (e) => ({ type: 'text', value: e.work_package_name ?? '' }) },
 
   { key: 'activity_name', label: 'Tätigkeitsart', width: 18, align: 'left',
     cell: (e) => ({ type: 'text', value: e.activity_name ?? '' }) },

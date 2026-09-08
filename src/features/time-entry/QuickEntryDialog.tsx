@@ -5,6 +5,7 @@ import {
 import { describeError } from '@/lib/supabase'
 import { minutesToHours, parseDuration, toIsoDate } from '@/lib/week'
 import type { ActivityType, Project } from '@/types/database'
+import { useWorkPackages } from '@/features/projects/api'
 import { useRecentDescriptions, useSaveTimeEntry } from './api'
 
 /**
@@ -35,6 +36,10 @@ function QuickEntryForm({
   const save = useSaveTimeEntry()
   const [projectId, setProjectId] = useState(projects.length === 1 ? projects[0]!.id : '')
   const [activityId, setActivityId] = useState('')
+  const [packageId, setPackageId] = useState('')
+  // Nur die Pakete des gewaehlten Projekts - ein fremdes lehnt die Datenbank ab.
+  const { data: workPackages } = useWorkPackages(projectId || null)
+  const waehlbarePakete = (workPackages ?? []).filter((w) => w.is_active)
   const [duration, setDuration] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -66,6 +71,7 @@ function QuickEntryForm({
         values: {
           project_id: projectId,
           activity_type_id: activityId || null,
+          work_package_id: packageId || null,
           work_date: date,
           duration_minutes: minutes,
           description: description.trim(),
@@ -86,11 +92,24 @@ function QuickEntryForm({
         <Field label="Projekt">
           {/* Kein autoFocus: auf dem Telefon faehrt sonst beim Oeffnen sofort
               die Projektauswahl hoch und verdeckt den halben Dialog. */}
-          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <Select value={projectId}
+                  onChange={(e) => { setProjectId(e.target.value); setPackageId('') }}>
             <option value="">Bitte wählen</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Select>
         </Field>
+
+        {/* Nur zeigen, wenn das Projekt ueberhaupt gegliedert ist. */}
+        {waehlbarePakete.length > 0 && (
+          <Field label="Arbeitspaket" hint="optional">
+            <Select value={packageId} onChange={(e) => setPackageId(e.target.value)}>
+              <option value="">ohne Arbeitspaket</option>
+              {waehlbarePakete.map((w) => (
+                <option key={w.id} value={w.id}>{w.code} · {w.name}</option>
+              ))}
+            </Select>
+          </Field>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Tätigkeitsart" hint="optional">

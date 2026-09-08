@@ -321,6 +321,7 @@ Feiertagen und Abwesenheiten – Grundlage der Auslastungsquote.
 |---|---|
 | `fn_rate_for(project, activity, date)` | Gültigen Satz ermitteln, spezifischster Treffer gewinnt |
 | `fn_effective_rounding(project)` | Takt und Modus mit Kundenvererbung auflösen |
+| `fn_assert_work_package_fits(paket, projekt)` | Verhindert die Buchung auf ein Paket eines fremden Projekts |
 | `fn_round_minutes(minutes, incr, mode)` | Abrechenbare Minuten berechnen |
 | `fn_period_bounds(cycle, date, week_start)` | Grenzen der Meldeperiode; `week_start` wirkt nur bei `weekly` |
 | `fn_ensure_period(customer, cycle, date)` | Periode finden oder anlegen, Wochenbeginn vom Kunden |

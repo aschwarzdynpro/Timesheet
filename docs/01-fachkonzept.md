@@ -142,6 +142,7 @@ auf. Ein neues Kundenformat ist ein Datensatz, kein Release.
 
 | Objekt | Zweck | Wesentliche Merkmale |
 |---|---|---|
+| **Arbeitspaket** | Gliederung innerhalb eines Projekts | „Migration", „Schulung"; Träger späterer Budgets |
 | **Kunde** | Abrechnungsempfänger | Reporting-Rhythmus, Wochenbeginn, Rundungsregel, FinOps-Zuordnung |
 | **Periodenprotokoll** | Was wann gemeldet und zurückgenommen wurde | mit Grund und den Summen des Augenblicks |
 | **Projekt** | Leistungskontext beim Kunden | Budget, abrechenbar j/n, Überschreibungen der Kundenvorgaben |
