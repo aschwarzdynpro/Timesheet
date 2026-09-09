@@ -82,6 +82,12 @@ Der Nutzer erfasst unterwegs auf dem Telefon. Wiederkehrende Fallen aus diesem R
 - Kein `autoFocus` auf einem `<select>` in einem Dialog: iOS fährt sofort das
   Auswahlrad hoch und verdeckt den halben Dialog.
 - Lange Namen kürzen: in der mobilen Tagesliste stehen Kundenkürzel statt Namen.
+- **Eine Tabelle mit mehr als drei Spalten wird schmal zur Karte.** `hidden …
+  sm:table` an der Tabelle, daneben `MobileList`/`MobileListItem` aus
+  `components/ui/`. Ein `overflow-x-auto` ist kein Ersatz: die Seite läuft dann
+  zwar nicht quer, aber die Hälfte steht außerhalb, und dass da noch etwas
+  kommt, sieht man nicht. Die Karte zeigt **jeden** Wert der Zeile — was dort
+  fehlt, ist auf dem Telefon unerreichbar.
 
 Neue Ansichten werden auf **320, 390, 768 und 1400 px** geprüft — kein seitliches
 Scrollen, keine Konsolenfehler.

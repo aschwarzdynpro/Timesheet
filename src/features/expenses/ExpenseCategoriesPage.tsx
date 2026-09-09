@@ -3,6 +3,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import {
   Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Input, Select,
 } from '@/components/ui/primitives'
+import { MobileList, MobileListItem } from '@/components/ui/MobileList'
 import { PageHeader } from '@/components/PageHeader'
 import { ZU_STAMMDATEN } from '@/components/navigation'
 import { describeError } from '@/lib/supabase'
@@ -144,6 +145,25 @@ export function ExpenseCategoriesPage() {
   const vorhandeneCodes = new Set((categories ?? []).map((c) => c.code))
   const offeneVorschlaege = VORSCHLAEGE.filter((v) => !vorhandeneCodes.has(v.code))
 
+  // Dieselben Schaltflaechen stehen in der Tabelle und auf der Karte.
+  const aktionen = (c: ExpenseCategory) => (
+    <>
+      <Button size="sm" variant="ghost" aria-label="Bearbeiten"
+              onClick={() => setDialog({ open: true, category: c })}>
+        <Pencil className="size-4" />
+      </Button>
+      <Button size="sm" variant="ghost" aria-label="Löschen" onClick={() => void onDelete(c)}>
+        <Trash2 className="size-4" />
+      </Button>
+    </>
+  )
+
+  /** Die Erfassungsart - in der Tabelle eine eigene Spalte. */
+  const erfassung = (c: ExpenseCategory) =>
+    c.entry_mode === 'allowance'
+      ? `Pauschale · ${formatEuro(Number(c.default_unit_rate ?? 0))} je ${c.unit_label}`
+      : 'Beleg'
+
   return (
     <>
       <PageHeader
@@ -169,7 +189,8 @@ export function ExpenseCategoriesPage() {
             hint="Häufig genügen vier: Kilometergeld und Verpflegung als Pauschale, Übernachtung und Bahnfahrt als Beleg."
           />
         ) : (
-          <table className="w-full text-sm">
+          <>
+          <table className="hidden w-full text-sm sm:table">
             <thead>
               <tr className="border-b border-ink-200 text-left text-xs tracking-wide text-ink-400 uppercase">
                 <th className="px-5 py-2.5 font-semibold">Kürzel</th>
@@ -201,19 +222,30 @@ export function ExpenseCategoriesPage() {
                       ? <Badge tone="good">weiterberechenbar</Badge>
                       : <Badge tone="muted">eigene Kosten</Badge>}
                   </td>
-                  <td className="px-5 py-2.5 text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" aria-label="Bearbeiten"
-                            onClick={() => setDialog({ open: true, category: c })}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" aria-label="Löschen" onClick={() => void onDelete(c)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </td>
+                  <td className="px-5 py-2.5 text-right whitespace-nowrap">{aktionen(c)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          <MobileList>
+            {categories.map((c) => (
+              <MobileListItem
+                key={c.id}
+                code={c.code}
+                name={c.name}
+                inaktiv={!c.is_active}
+                aktionen={aktionen(c)}
+                zeilen={[
+                  <span className="tabular">{erfassung(c)}</span>,
+                  c.is_rechargeable_default
+                    ? <Badge tone="good">weiterberechenbar</Badge>
+                    : <Badge tone="muted">eigene Kosten</Badge>,
+                ]}
+              />
+            ))}
+          </MobileList>
+          </>
         )}
       </Card>
 

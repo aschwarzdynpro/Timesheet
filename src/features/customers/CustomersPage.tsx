@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, EmptyState, ErrorNote } from '@/components/ui/primitives'
+import { MobileList, MobileListItem } from '@/components/ui/MobileList'
 import { CYCLE_LABEL, ROUNDING_LABEL, WEEK_START_SHORT } from '@/lib/format'
 import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
@@ -28,6 +29,27 @@ export function CustomersPage() {
       setRemoveError(describeError(err))
     }
   }
+
+  // Dieselben Schaltflaechen stehen in der Tabelle und auf der Karte.
+  const aktionen = (c: Customer) => (
+    <>
+      <Button size="sm" variant="ghost" aria-label="Bearbeiten"
+              onClick={() => setDialog({ open: true, customer: c })}>
+        <Pencil className="size-4" />
+      </Button>
+      <Button size="sm" variant="ghost" aria-label="Löschen" onClick={() => onDelete(c)}>
+        <Trash2 className="size-4" />
+      </Button>
+    </>
+  )
+
+  /** Was in der Tabelle zwei Spalten sind, steht auf der Karte in einer Zeile. */
+  const takt = (c: Customer) => [
+    c.reporting_cycle === 'weekly' ? `ab ${WEEK_START_SHORT[c.week_start_day]}` : null,
+    c.rounding_mode === 'none'
+      ? 'minutengenau'
+      : `${c.rounding_minutes} Min., ${ROUNDING_LABEL[c.rounding_mode]}`,
+  ].filter(Boolean).join(' · ')
 
   return (
     <>
@@ -59,7 +81,8 @@ export function CustomersPage() {
             }
           />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ink-200 text-left text-xs tracking-wide text-ink-400 uppercase">
@@ -95,20 +118,33 @@ export function CustomersPage() {
                         : `${c.rounding_minutes} Min., ${ROUNDING_LABEL[c.rounding_mode]}`}
                     </td>
                     <td className="px-5 py-2.5 text-ink-500">{c.invoice_email ?? '–'}</td>
-                    <td className="px-5 py-2.5 text-right whitespace-nowrap">
-                      <Button size="sm" variant="ghost" aria-label="Bearbeiten"
-                              onClick={() => setDialog({ open: true, customer: c })}>
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" aria-label="Löschen" onClick={() => onDelete(c)}>
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </td>
+                    <td className="px-5 py-2.5 text-right whitespace-nowrap">{aktionen(c)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          <MobileList>
+            {customers.map((c) => (
+              <MobileListItem
+                key={c.id}
+                code={c.code}
+                name={c.name}
+                inaktiv={!c.is_active}
+                aktionen={aktionen(c)}
+                zeilen={[
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <Badge>{CYCLE_LABEL[c.reporting_cycle]}</Badge>
+                    <span className="tabular">{takt(c)}</span>
+                  </span>,
+                  // Eine Adresse bricht sonst nicht und schoebe die Karte auf.
+                  c.invoice_email && <span className="break-all">{c.invoice_email}</span>,
+                ]}
+              />
+            ))}
+          </MobileList>
+          </>
         )}
       </Card>
 

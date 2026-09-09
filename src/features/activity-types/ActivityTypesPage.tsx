@@ -4,6 +4,7 @@ import { z } from 'zod'
 import {
   Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Input,
 } from '@/components/ui/primitives'
+import { MobileList, MobileListItem } from '@/components/ui/MobileList'
 import { PageHeader } from '@/components/PageHeader'
 import { ZU_STAMMDATEN } from '@/components/navigation'
 import { describeError } from '@/lib/supabase'
@@ -116,6 +117,19 @@ export function ActivityTypesPage() {
     }
   }
 
+  // Dieselben Schaltflaechen stehen in der Tabelle und auf der Karte.
+  const aktionen = (a: ActivityType) => (
+    <>
+      <Button size="sm" variant="ghost" aria-label="Bearbeiten"
+              onClick={() => setDialog({ open: true, item: a })}>
+        <Pencil className="size-4" />
+      </Button>
+      <Button size="sm" variant="ghost" aria-label="Löschen" onClick={() => onDelete(a)}>
+        <Trash2 className="size-4" />
+      </Button>
+    </>
+  )
+
   return (
     <>
       <PageHeader
@@ -146,7 +160,8 @@ export function ActivityTypesPage() {
             }
           />
         ) : (
-          <table className="w-full text-sm">
+          <>
+          <table className="hidden w-full text-sm sm:table">
             <thead>
               <tr className="border-b border-ink-200 text-left text-xs tracking-wide text-ink-400 uppercase">
                 <th className="px-5 py-2.5 font-semibold">Kürzel</th>
@@ -168,19 +183,29 @@ export function ActivityTypesPage() {
                       ? <Badge tone="good">abrechenbar</Badge>
                       : <Badge tone="muted">nicht abrechenbar</Badge>}
                   </td>
-                  <td className="px-5 py-2.5 text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" aria-label="Bearbeiten"
-                            onClick={() => setDialog({ open: true, item: a })}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" aria-label="Löschen" onClick={() => onDelete(a)}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </td>
+                  <td className="px-5 py-2.5 text-right whitespace-nowrap">{aktionen(a)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          <MobileList>
+            {items.map((a) => (
+              <MobileListItem
+                key={a.id}
+                code={a.code}
+                name={a.name}
+                inaktiv={!a.is_active}
+                aktionen={aktionen(a)}
+                zeilen={[
+                  a.is_billable_default
+                    ? <Badge tone="good">abrechenbar</Badge>
+                    : <Badge tone="muted">nicht abrechenbar</Badge>,
+                ]}
+              />
+            ))}
+          </MobileList>
+          </>
         )}
       </Card>
 
