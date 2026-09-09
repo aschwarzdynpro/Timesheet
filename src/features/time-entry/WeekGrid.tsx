@@ -27,21 +27,33 @@ export function rowKey(
   return `${projectId}|${activityId ?? ''}|${workPackageId ?? ''}`
 }
 
+/** Zelle im Raster: Zeile und Tag. */
+export function cellKey(rowKey: string, iso: string) {
+  return `${rowKey}@${iso}`
+}
+
 /**
  * Matrix aus Zeilen (Projekt + Taetigkeitsart) und den sieben Wochentagen.
  *
  * Eine Zelle laesst sich direkt beschreiben. Bei genau einem vorhandenen
  * Eintrag wird dessen Dauer sofort geaendert; bei einem neuen oder mehreren
- * Eintraegen oeffnet der Dialog, weil dann eine Beschreibung dazugehoert.
+ * Eintraegen uebernimmt die Tafel darunter, weil dann eine Beschreibung
+ * dazugehoert.
+ *
+ * Ein Klick in eine Zelle waehlt sie aus - darunter stehen dann ihre Eintraege.
+ * Das Raster zeigt Summen; wer wissen will, woraus sie bestehen, musste bisher
+ * einen Dialog oeffnen, der genau die Woche verdeckte, um die es ging.
  */
 export function WeekGrid({
-  monday, rows, entries, periods, onOpen, onQuickUpdate,
+  monday, rows, entries, periods, selected, onSelect, onQuickUpdate,
 }: {
   monday: Date
   rows: GridRow[]
   entries: TimeEntryFull[]
   periods: ReportingPeriod[]
-  onOpen: (target: EntryDialogTarget) => void
+  /** Schluessel der gewaehlten Zelle, siehe `cellKey`. */
+  selected: string | null
+  onSelect: (target: EntryDialogTarget) => void
   onQuickUpdate: (entry: TimeEntryFull, minutes: number) => void
 }) {
   const days = useMemo(() => weekDays(monday), [monday])
@@ -81,7 +93,7 @@ export function WeekGrid({
     return map
   }, [entries])
 
-  const cellsOf = (row: GridRow, iso: string) => cells.get(`${row.key}@${iso}`) ?? []
+  const cellsOf = (row: GridRow, iso: string) => cells.get(cellKey(row.key, iso)) ?? []
   const sumOf = (list: TimeEntryFull[]) => list.reduce((n, e) => n + e.duration_minutes, 0)
 
   function isLocked(row: GridRow, iso: string): boolean {
@@ -91,8 +103,13 @@ export function WeekGrid({
     return lockedDays.get(customerId)?.has(iso) ?? false
   }
 
+  const zielVon = (row: GridRow, iso: string, presetMinutes?: number): EntryDialogTarget => ({
+    project: row.project, activity: row.activity, workPackage: row.workPackage,
+    workDate: iso, presetMinutes, locked: isLocked(row, iso),
+  })
+
   function commit(row: GridRow, iso: string, raw: string) {
-    const key = `${row.key}@${iso}`
+    const key = cellKey(row.key, iso)
     setDraft((d) => {
       const next = { ...d }
       delete next[key]
@@ -110,8 +127,7 @@ export function WeekGrid({
       onQuickUpdate(list[0]!, minutes)   // genau ein Eintrag: direkt aendern
       return
     }
-    onOpen({ project: row.project, activity: row.activity, workPackage: row.workPackage,
-             workDate: iso, presetMinutes: minutes })
+    onSelect(zielVon(row, iso, minutes))
   }
 
   const dayTotals = days.map((day) => {
@@ -171,22 +187,37 @@ export function WeekGrid({
                   const iso = toIsoDate(day)
                   const list = cellsOf(row, iso)
                   const sum = sumOf(list)
-                  const key = `${row.key}@${iso}`
+                  const key = cellKey(row.key, iso)
                   const locked = isLocked(row, iso)
                   const value = draft[key] ?? (sum > 0 ? minutesToHours(sum) : '')
+                  const gewaehlt = selected === key
 
                   return (
                     <td key={iso}
                         className={cn('border-b border-ink-100 p-0',
                           isWeekend(day) && 'bg-ink-50/50',
-                          isToday(day) && 'bg-accent-50/40')}>
+                          isToday(day) && 'bg-accent-50/40',
+                          // Die gewaehlte Zelle muss sichtbar bleiben, auch wenn
+                          // der Fokus unten in der Tafel steht.
+                          gewaehlt && 'bg-accent-100 ring-2 ring-accent-500 ring-inset')}>
                       <div className="relative">
                         <input
                           value={value}
-                          disabled={locked}
-                          aria-label={`${row.project.name}, ${iso}`}
-                          onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
-                          onBlur={(e) => commit(row, iso, e.target.value)}
+                          // Der Projektname allein reicht nicht: dasselbe
+                          // Projekt steht mehrfach im Raster, einmal je
+                          // Arbeitspaket und Taetigkeitsart.
+                          aria-label={`${row.project.name} · ${row.workPackage?.code ?? 'ohne Arbeitspaket'}`
+                            + ` · ${row.activity?.name ?? 'ohne Tätigkeitsart'}, ${iso}`}
+                          // Auch eine gesperrte Zelle laesst sich waehlen: was
+                          // gemeldet wurde, will man lesen koennen.
+                          readOnly={locked}
+                          aria-readonly={locked || undefined}
+                          onFocus={() => { if (!gewaehlt) onSelect(zielVon(row, iso)) }}
+                          onChange={(e) => {
+                            if (locked) return
+                            setDraft((d) => ({ ...d, [key]: e.target.value }))
+                          }}
+                          onBlur={(e) => { if (!locked) commit(row, iso, e.target.value) }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                             if (e.key === 'Escape') {
@@ -199,20 +230,17 @@ export function WeekGrid({
                             }
                           }}
                           className={cn(
-                            'tabular h-9 w-full border-0 bg-transparent px-2 text-center text-ink-800',
+                            'tabular h-9 w-full cursor-pointer border-0 bg-transparent px-2 text-center text-ink-800',
                             'focus:bg-surface focus:ring-2 focus:ring-accent-500 focus:outline-none',
-                            'disabled:cursor-not-allowed disabled:text-ink-400',
+                            locked && 'text-ink-500',
                             list.length > 1 && 'font-medium',
                           )}
                         />
                         {list.length > 1 && (
-                          <button type="button"
-                                  onClick={() => onOpen({ project: row.project, activity: row.activity,
-                                                          workPackage: row.workPackage, workDate: iso })}
-                                  title={`${list.length} Einträge — anzeigen`}
-                                  className="absolute top-0.5 right-0.5 rounded bg-accent-100 px-1 text-[10px] font-semibold text-accent-700">
+                          <span title={`${list.length} Einträge`}
+                                className="pointer-events-none absolute top-0.5 right-0.5 rounded bg-accent-100 px-1 text-[10px] font-semibold text-accent-700">
                             {list.length}
-                          </button>
+                          </span>
                         )}
                         {locked && (
                           <Lock className="pointer-events-none absolute top-1 right-1 size-3 text-ink-400" />

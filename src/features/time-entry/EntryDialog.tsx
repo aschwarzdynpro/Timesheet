@@ -22,11 +22,33 @@ export type EntryDialogTarget = {
   workDate: string
   /** Vorbelegte Dauer, wenn die Zelle direkt im Raster getippt wurde. */
   presetMinutes?: number
+  /**
+   * Die Periode dieses Tages ist gemeldet. Kommt aus dem Raster, weil nur dort
+   * die Perioden vorliegen: eine leere Zelle in einer gemeldeten Woche hat
+   * keine Eintraege, an deren Status man es ablesen koennte - das Formular
+   * haette dort etwas angeboten, das die Datenbank ablehnt.
+   */
+  locked?: boolean
+}
+
+/**
+ * Der Schluessel setzt den Formularzustand zurueck, sobald eine andere Zelle an
+ * die Reihe kommt - ohne Effekt, der beim Rendern nachtraeglich State setzt.
+ * Die vorbelegte Dauer gehoert dazu: wer in eine schon gewaehlte Zelle eine
+ * Zahl tippt, erwartet sie unten im Feld wiederzufinden.
+ */
+export function entryEditorKey(t: EntryDialogTarget): string {
+  return `${t.project.id}|${t.activity?.id ?? ''}|${t.workPackage?.id ?? ''}`
+    + `|${t.workDate}|${t.presetMinutes ?? ''}|${t.locked ? 'gesperrt' : ''}`
 }
 
 /**
  * Ein Tag einer Rasterzeile: bestehende Eintraege bearbeiten und neue anlegen.
  * Die Beschreibung ist Pflicht – sie ist die Position im Kundenreport.
+ *
+ * Auf dem Telefon steht das im Dialog, am Laptop unter dem Wochenraster - der
+ * Inhalt ist derselbe, sonst haetten wir zwei Formulare zu pflegen und eines
+ * davon waere bald das schlechtere.
  */
 export function EntryDialog(props: {
   target: EntryDialogTarget | null
@@ -34,16 +56,31 @@ export function EntryDialog(props: {
   onClose: () => void
 }) {
   if (!props.target) return null
-  // Der Schluessel setzt den Formularzustand zurueck, sobald eine andere Zelle
-  // geoeffnet wird - ohne Effekt, der beim Rendern nachtraeglich State setzt.
-  const key = `${props.target.project.id}|${props.target.activity?.id ?? ''}`
-    + `|${props.target.workPackage?.id ?? ''}|${props.target.workDate}`
-  return <EntryDialogForm key={key} {...props} target={props.target} />
+  const { target, entries, onClose } = props
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={`${target.project.name} · ${formatDate(target.workDate)}`}
+      description="Tätigkeitsart und Arbeitspaket lassen sich hier ändern — der Eintrag wandert dann in die passende Rasterzeile."
+    >
+      {/* Der Dialog schliesst sich nach dem Aendern: er verdeckt die Woche, und
+          das Ergebnis will man dahinter sehen. Die Tafel unten bleibt stehen. */}
+      <EntryEditor key={entryEditorKey(target)} target={target} entries={entries}
+                   onClose={onClose} onSaved={onClose} />
+    </Dialog>
+  )
 }
 
-function EntryDialogForm({
-  target, entries, onClose,
-}: { target: EntryDialogTarget; entries: TimeEntryFull[]; onClose: () => void }) {
+export function EntryEditor({
+  target, entries, onClose, onSaved,
+}: {
+  target: EntryDialogTarget
+  entries: TimeEntryFull[]
+  onClose: () => void
+  /** Wird nach dem Aendern eines vorhandenen Eintrags gerufen, nicht beim Anlegen. */
+  onSaved?: () => void
+}) {
   const save = useSaveTimeEntry()
   const remove = useDeleteTimeEntry()
   const confirm = useConfirm()
@@ -72,7 +109,7 @@ function EntryDialogForm({
   const { data: satz, isPending: satzLaeuft } = useRateFor(project.id, activityId || null, workDate)
   const ohneSatz = !satzLaeuft && satz === null && project.is_billable
   const gewaehlteArt = waehlbareArten.find((a) => a.id === activityId) ?? null
-  const locked = entries.some((e) => e.status !== 'draft')
+  const locked = target.locked === true || entries.some((e) => e.status !== 'draft')
 
   function startEdit(entry: TimeEntryFull) {
     setEditing(entry.id)
@@ -125,7 +162,7 @@ function EntryDialogForm({
         },
       })
       resetForm()
-      if (editing) onClose()
+      if (editing) onSaved?.()
     } catch (err) {
       setError(describeError(err))
     }
@@ -143,12 +180,7 @@ function EntryDialogForm({
   }
 
   return (
-    <Dialog
-      open
-      onClose={onClose}
-      title={`${project.name} · ${formatDate(workDate)}`}
-      description="Tätigkeitsart und Arbeitspaket lassen sich hier ändern — der Eintrag wandert dann in die passende Rasterzeile."
-    >
+    <>
       {entries.length > 0 && (
         <ul className="mb-4 divide-y divide-ink-100 border-y border-ink-100">
           {entries.map((e) => (
@@ -175,7 +207,7 @@ function EntryDialogForm({
         </ul>
       )}
 
-      {locked && entries.every((e) => e.status !== 'draft') ? (
+      {locked ? (
         <p className="rounded-md border border-ink-200 bg-ink-50 px-3 py-2 text-sm text-ink-600">
           Dieser Tag gehört zu einer bereits gemeldeten Periode und ist gesperrt.
         </p>
@@ -253,6 +285,6 @@ function EntryDialogForm({
           </div>
         </form>
       )}
-    </Dialog>
+    </>
   )
 }

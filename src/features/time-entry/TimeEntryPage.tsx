@@ -13,7 +13,8 @@ import { useCustomers } from '@/features/customers/api'
 import { useAllWorkPackages, useProjects } from '@/features/projects/api'
 import { useActivityTypes } from '@/features/activity-types/api'
 import { EntryDialog, type EntryDialogTarget } from './EntryDialog'
-import { WeekGrid, rowKey, type GridRow } from './WeekGrid'
+import { CellPanel } from './CellPanel'
+import { WeekGrid, cellKey, rowKey, type GridRow } from './WeekGrid'
 import { DayList } from './DayList'
 import { Timer } from './Timer'
 import { QuickEntryDialog } from './QuickEntryDialog'
@@ -23,6 +24,9 @@ export function TimeEntryPage() {
   const [monday, setMonday] = useState(() => mondayOf(new Date()))
   const [extraRows, setExtraRows] = useState<string[]>([])
   const [dialog, setDialog] = useState<EntryDialogTarget | null>(null)
+  // Die gewaehlte Rasterzelle. Getrennt vom Dialog: breit steht ihr Inhalt als
+  // Tafel unter dem Raster, schmal gibt es das Raster gar nicht.
+  const [zelle, setZelle] = useState<EntryDialogTarget | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [quickEntry, setQuickEntry] = useState<{ open: boolean; workDate?: string }>({
@@ -37,6 +41,13 @@ export function TimeEntryPage() {
   const { data: periods, error: periodError } = useWeekPeriods(monday)
   const previousWeek = useWeekEntries(addDays(monday, -7))
   const save = useSaveTimeEntry()
+
+  /** Ein Wochenwechsel nimmt die Auswahl mit - sonst zeigte die Tafel einen
+      Tag, der gar nicht mehr im Raster steht. */
+  function zeigeWoche(next: (m: Date) => Date) {
+    setMonday((m) => next(m))
+    setZelle(null)
+  }
 
   const { year, week } = isoWeek(monday)
   const sunday = addDays(monday, 6)
@@ -99,6 +110,15 @@ export function TimeEntryPage() {
              e.work_date === dialog.workDate)
   }, [dialog, entries])
 
+  const zellEntries = useMemo(() => {
+    if (!zelle) return []
+    return (entries ?? []).filter(
+      (e) => e.project_id === zelle.project.id &&
+             e.activity_type_id === (zelle.activity?.id ?? null) &&
+             e.work_package_id === (zelle.workPackage?.id ?? null) &&
+             e.work_date === zelle.workDate)
+  }, [zelle, entries])
+
   const totals = useMemo(() => {
     const list = entries ?? []
     return {
@@ -141,14 +161,14 @@ export function TimeEntryPage() {
               <Plus className="size-4" /> Erfassen
             </Button>
             <Button aria-label="Vorherige Woche"
-                    onClick={() => setMonday((m) => addDays(m, -7))}>
+                    onClick={() => zeigeWoche((m) => addDays(m, -7))}>
               <ChevronLeft className="size-4" />
             </Button>
-            <Button onClick={() => setMonday(mondayOf(new Date()))}>
+            <Button onClick={() => zeigeWoche(() => mondayOf(new Date()))}>
               <CalendarDays className="size-4" /> Heute
             </Button>
             <Button aria-label="Nächste Woche"
-                    onClick={() => setMonday((m) => addDays(m, 7))}>
+                    onClick={() => zeigeWoche((m) => addDays(m, 7))}>
               <ChevronRight className="size-4" />
             </Button>
           </div>
@@ -314,7 +334,11 @@ export function TimeEntryPage() {
                     rows={rows}
                     entries={entries ?? []}
                     periods={periods ?? []}
-                    onOpen={setDialog}
+                    selected={zelle
+                      ? cellKey(rowKey(zelle.project.id, zelle.activity?.id ?? null,
+                                       zelle.workPackage?.id ?? null), zelle.workDate)
+                      : null}
+                    onSelect={setZelle}
                     onQuickUpdate={(entry, minutes) =>
                       void run(() =>
                         save.mutateAsync({
@@ -353,6 +377,18 @@ export function TimeEntryPage() {
               </>
             )}
           </Card>
+
+          {/* Nur breit: schmal gibt es kein Raster, dort fuehrt die Tagesliste
+              in denselben Dialog. */}
+          <div className="hidden sm:block">
+            {zelle ? (
+              <CellPanel target={zelle} entries={zellEntries} onClose={() => setZelle(null)} />
+            ) : rows.length > 0 && (
+              <p className="mt-3 px-1 text-sm text-ink-500">
+                In eine Zelle klicken, um die Einträge dieses Tages zu sehen und zu bearbeiten.
+              </p>
+            )}
+          </div>
         </>
       )}
 

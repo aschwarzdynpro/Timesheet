@@ -65,6 +65,13 @@ liegt an einer Stelle.
   die Auslastungsquote ausgeblendet — eine erfundene Zahl wäre schlimmer als keine."
 - **Dialoge erst beim Öffnen einhängen** (`{offen && <Dialog …/>}`), sonst stehen
   Eingaben und Fehlermeldungen des vorigen Aufrufs wieder da.
+- **Ein Formular, zwei Rahmen.** Ein Zeiteintrag wird am Laptop in der Tafel
+  unter dem Wochenraster bearbeitet, auf dem Telefon im Dialog — beide zeigen
+  denselben `EntryEditor`. Wer dort etwas ergänzt, ergänzt es für beide.
+- **Die Periodensperre kommt aus dem Raster, nicht aus den Einträgen.** Eine
+  leere Zelle in einer gemeldeten Woche hat keinen Eintrag, an dessen Status man
+  sie ablesen könnte; ohne das Feld `locked` am Ziel böte das Formular dort
+  etwas an, das die Datenbank ablehnt.
 - **Minuten, keine Dezimalstunden.** Gerechnet wird in `int`; `minutesToHours()`
   formatiert erst zur Anzeige. Eingaben versteht `parseDuration()`: `1,5`, `1:30`, `90m`.
 - **Daten als `DATE`**, nie `timestamptz`. Ein Arbeitstag hat keine Zeitzone.
