@@ -118,14 +118,26 @@ export function WeekGrid({
     return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], 'de', { numeric: true }))
   }
 
-  /** Woran diese Woche gearbeitet wurde - die Kuerzel, die sonst je eine eigene
-      Rasterzeile hatten. */
+  /**
+   * Woran diese Woche gearbeitet wurde: die Kuerzel, die sonst je eine eigene
+   * Rasterzeile hatten - und gleich daneben, was vom Budget des Pakets noch
+   * offen ist. Vorher standen die Kuerzel einmal in dieser Liste und ein
+   * zweites Mal vor ihrem Restbudget.
+   */
   const beschriftung = (row: GridRow) => {
-    const teile = paketeDerWoche(row).map(([, code]) => code)
+    const stuecke = paketeDerWoche(row).map(([id, code]) => (
+      <span key={id} className="flex items-baseline gap-1">
+        <span>{code}</span>
+        <PackageBudget budget={budgets.get(id)} />
+      </span>
+    ))
     if (entries.some((e) => e.project_id === row.project.id && !e.work_package_id)) {
-      teile.push('ohne Paket')
+      stuecke.push(<span key="ohne">ohne Paket</span>)
     }
-    return teile.join(' · ')
+    if (!row.project.is_billable) {
+      stuecke.push(<span key="intern">nicht abrechenbar</span>)
+    }
+    return stuecke
   }
 
   const dayTotals = days.map((day) => {
@@ -169,7 +181,7 @@ export function WeekGrid({
           {rows.map((row) => {
             const rowTotal = days.reduce((sum, day) => sum + sumOf(cellsOf(row, toIsoDate(day))), 0)
             const offen = selected?.project.id === row.project.id ? selected : null
-            const pakete = paketeDerWoche(row)
+            const stuecke = beschriftung(row)
 
             return [
               <tr key={row.key} className={cn(!offen && 'hover:bg-ink-50/40')}>
@@ -185,29 +197,22 @@ export function WeekGrid({
                       <span className="block truncate font-medium text-ink-800">
                         {row.project.name}
                       </span>
-                      {/* Woran diese Woche gearbeitet wurde. Eine leere Zeile
-                          bekommt hier nichts: "ohne Arbeitspaket" waere eine
-                          Aussage ueber Buchungen, die es nicht gibt. */}
-                      {(beschriftung(row) || !row.project.is_billable) && (
-                        <span className="block truncate text-xs text-ink-400">
-                          {beschriftung(row)}
-                          {!row.project.is_billable
-                            && `${beschriftung(row) ? ' · ' : ''}nicht abrechenbar`}
+                      {/* Eine leere Zeile bekommt hier nichts: "ohne
+                          Arbeitspaket" waere eine Aussage ueber Buchungen, die
+                          es nicht gibt. */}
+                      {stuecke.length > 0 && (
+                        <span className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-xs text-ink-400">
+                          {/* Der Trenner steckt im selben Umbruchstueck wie sein
+                              Kuerzel. Als eigenes Element blieb er beim Umbruch
+                              allein am Zeilenende stehen. */}
+                          {stuecke.map((stueck, i) => (
+                            <span key={i} className="flex items-baseline gap-1.5">
+                              {i > 0 && <span aria-hidden className="text-ink-300">·</span>}
+                              {stueck}
+                            </span>
+                          ))}
                         </span>
                       )}
-                      {/* Nur die Pakete mit Budget, mit ihrem Kuerzel davor:
-                          in einer Projektzeile stehen sonst zwei Reste ohne
-                          Hinweis, zu wem sie gehoeren. */}
-                      {pakete.map(([id, code]) => {
-                        const budget = budgets.get(id)
-                        if (!budget || (!budget.budget_hours && !budget.budget_amount)) return null
-                        return (
-                          <span key={id} className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
-                            <span className="text-xs font-medium text-ink-500">{code}</span>
-                            <PackageBudget budget={budget} />
-                          </span>
-                        )
-                      })}
                     </span>
                   </span>
                 </td>

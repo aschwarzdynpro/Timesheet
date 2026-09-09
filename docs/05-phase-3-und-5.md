@@ -448,10 +448,10 @@ darunter stehen die Einträge dieses Tages, nach Arbeitspaket und Tätigkeitsart
 jede Gruppe mit ihrem Kopf, ihrem Restbudget und ihren Zeilen. Vorher stand dafür eine
 Tafel unter dem Raster — weit weg von der Zahl, aus der sie stammte.
 
-Die Zeilenbeschriftung nennt die Kürzel, auf die diese Woche gebucht wurde
-(`13206 DEV · 13834 · PMO`), und darunter das Restbudget der Pakete, die eines haben —
-mit dem Kürzel davor, weil in einer Projektzeile sonst zwei Reste ohne Hinweis stünden,
-zu wem sie gehören.
+Die Zeilenbeschriftung nennt die Kürzel, auf die diese Woche gebucht wurde, und hängt
+das Restbudget gleich an sein Kürzel: `13206 DEV 0 h / 2 h · 13834 14 h / 16 h · PMO`.
+Erst standen die Reste als eigene Zeilen darunter — und damit jedes Kürzel zweimal in
+derselben Spalte.
 
 **Was aus dem Umbau folgte, ohne dass es jemand verlangt hätte:**
 
