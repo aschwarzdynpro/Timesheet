@@ -235,55 +235,62 @@ export function WeekGrid({
 
                   return (
                     <td key={iso}
-                        className={cn('border-b border-ink-100 p-0',
+                        className={cn('relative border-b border-ink-100 p-0',
                           isWeekend(day) && 'bg-ink-50/50',
                           isToday(day) && 'bg-accent-50/40',
-                          // Die gewaehlte Zelle muss sichtbar bleiben, auch wenn
-                          // der Fokus unten im Editor steht.
-                          gewaehlt && 'bg-accent-100 ring-2 ring-accent-500 ring-inset')}>
-                      <div className="relative">
-                        <input
-                          value={value}
-                          aria-label={`${row.project.name}, ${iso}`}
-                          // Auch eine gesperrte Zelle laesst sich waehlen: was
-                          // gemeldet wurde, will man lesen koennen.
-                          readOnly={locked}
-                          aria-readonly={locked || undefined}
-                          aria-expanded={gewaehlt}
-                          onFocus={() => { if (!gewaehlt) onSelect(zielVon(row, iso)) }}
-                          onChange={(e) => {
-                            if (locked) return
-                            setDraft((d) => ({ ...d, [key]: e.target.value }))
-                          }}
-                          onBlur={(e) => { if (!locked) commit(row, iso, e.target.value) }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                            if (e.key === 'Escape') {
-                              setDraft((d) => {
-                                const next = { ...d }
-                                delete next[key]
-                                return next
-                              })
-                              ;(e.target as HTMLInputElement).blur()
-                            }
-                          }}
-                          className={cn(
-                            'tabular h-9 w-full cursor-pointer border-0 bg-transparent px-2 text-center text-ink-800',
-                            'focus:bg-surface focus:ring-2 focus:ring-accent-500 focus:outline-none',
-                            locked && 'text-ink-500',
-                            list.length > 1 && 'font-medium',
-                          )}
-                        />
-                        {list.length > 1 && (
-                          <span title={`${list.length} Einträge`}
-                                className="pointer-events-none absolute top-0.5 right-0.5 rounded bg-accent-100 px-1 text-[10px] font-semibold text-accent-700">
-                            {list.length}
-                          </span>
+                          gewaehlt && 'bg-accent-100')}>
+                      {/* Setzt die Mindesthoehe der Zelle. Das Feld darueber
+                          liegt deckend darin: `h-full` greift in einer
+                          Tabellenzelle nicht - die Prozentangabe findet keine
+                          aufgeloeste Hoehe und faellt auf die Zeilenhoehe des
+                          Inhalts zurueck. Der Rahmen der Auswahl stand dadurch
+                          um die ganze Zeile und das Feld mittig darin: zwei
+                          Rechtecke fuer eine Zelle. */}
+                      <div className="h-9" aria-hidden />
+                      <input
+                        value={value}
+                        aria-label={`${row.project.name}, ${iso}`}
+                        // Auch eine gesperrte Zelle laesst sich waehlen: was
+                        // gemeldet wurde, will man lesen koennen.
+                        readOnly={locked}
+                        aria-readonly={locked || undefined}
+                        aria-expanded={gewaehlt}
+                        onFocus={() => { if (!gewaehlt) onSelect(zielVon(row, iso)) }}
+                        onChange={(e) => {
+                          if (locked) return
+                          setDraft((d) => ({ ...d, [key]: e.target.value }))
+                        }}
+                        onBlur={(e) => { if (!locked) commit(row, iso, e.target.value) }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                          if (e.key === 'Escape') {
+                            setDraft((d) => {
+                              const next = { ...d }
+                              delete next[key]
+                              return next
+                            })
+                            ;(e.target as HTMLInputElement).blur()
+                          }
+                        }}
+                        className={cn(
+                          'tabular absolute inset-0 w-full cursor-pointer border-0 bg-transparent px-2 text-center text-ink-800',
+                          'focus:ring-2 focus:ring-accent-500 focus:outline-none focus:ring-inset',
+                          // Die gewaehlte Zelle bleibt markiert, auch wenn der
+                          // Fokus unten im Editor steht.
+                          gewaehlt && 'ring-2 ring-accent-500 ring-inset',
+                          locked && 'text-ink-500',
+                          list.length > 1 && 'font-medium',
                         )}
-                        {locked && (
-                          <Lock className="pointer-events-none absolute top-1 right-1 size-3 text-ink-400" />
-                        )}
-                      </div>
+                      />
+                      {list.length > 1 && (
+                        <span title={`${list.length} Einträge`}
+                              className="pointer-events-none absolute top-0.5 right-0.5 rounded bg-accent-100 px-1 text-[10px] font-semibold text-accent-700">
+                          {list.length}
+                        </span>
+                      )}
+                      {locked && (
+                        <Lock className="pointer-events-none absolute top-1 right-1 size-3 text-ink-400" />
+                      )}
                     </td>
                   )
                 })}
