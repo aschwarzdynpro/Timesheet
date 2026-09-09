@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Card, EmptyState, ErrorNote, Select } from '@/components/ui/primitives'
+import { Card, EmptyState, ErrorNote, Segmented, Select } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { BudgetBadge } from '@/components/ui/BudgetBadge'
 import { describeError } from '@/lib/supabase'
@@ -8,7 +8,9 @@ import { minutesToHours } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
 import { useProjects } from '@/features/projects/api'
 import { useIncomeTaxPercent } from '@/features/account/api'
-import { RankChart, TrendChart, type RankPoint, type TrendPoint } from './charts'
+import {
+  RankChart, TrendChart, type RankPoint, type TrendMetric, type TrendPoint,
+} from './charts'
 import { useTargetMinutes, useTrend, useYears, type Resolution } from './api'
 
 const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
@@ -39,6 +41,9 @@ export function ReportingPage() {
 
   const [year, setYear] = useState(() => new Date().getFullYear())
   const [resolution, setResolution] = useState<Resolution>('month')
+  // Stunden oder Honorar: ein Feld in voller Hoehe liest sich besser als zwei
+  // halbe, und beide Zahlen stehen ohnehin im Hinweis an der Saeule.
+  const [metric, setMetric] = useState<TrendMetric>('hours')
   const [customerId, setCustomerId] = useState('')
 
   const trend = useTrend(year, resolution)
@@ -206,16 +211,31 @@ export function ReportingPage() {
           )}
 
           <Card className="mt-3 p-5">
-            <h2 className="mb-1 text-sm font-semibold text-ink-700">
-              Stunden und Honorar je {resolution === 'month' ? 'Monat' : 'Kalenderwoche'}
-            </h2>
-            <p className="mb-3 text-xs text-ink-400">
-              Erfasste Zeit, aufgeteilt in abrechenbar und intern — darunter das daraus
-              bewertete Honorar. Zwei Felder statt zweier Achsen in einem: Stunden und Euro
-              haben keinen gemeinsamen Maßstab, und wo beide auseinandergehen, steckt der
-              Stundensatz dahinter, nicht die Skalierung.
-            </p>
-            <TrendChart points={trendPoints} unit="h" />
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="mb-1 text-sm font-semibold text-ink-700">
+                  {metric === 'hours' ? 'Stunden' : 'Honorar'} je{' '}
+                  {resolution === 'month' ? 'Monat' : 'Kalenderwoche'}
+                </h2>
+                <p className="text-xs text-ink-400">
+                  {metric === 'hours'
+                    ? 'Erfasste Zeit, aufgeteilt in abrechenbar und intern.'
+                    : 'Die abrechenbare Zeit, mit dem gültigen Satz bewertet.'}
+                  {' '}Der Hinweis an der Säule nennt beides.
+                </p>
+              </div>
+              <Segmented
+                size="sm"
+                label="Was die Säulen zeigen"
+                value={metric}
+                onChange={setMetric}
+                options={[
+                  { value: 'hours', label: 'Stunden' },
+                  { value: 'fees', label: 'Honorar' },
+                ]}
+              />
+            </div>
+            <TrendChart points={trendPoints} metric={metric} unit="h" />
           </Card>
 
           <Card className="mt-3 p-5">

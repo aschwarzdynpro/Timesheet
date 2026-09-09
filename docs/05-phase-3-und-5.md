@@ -338,20 +338,26 @@ damals, sondern schätzt, was heute übrig bleibt.
 
 ## Nachtrag: Honorar je Zeitraum im Verlauf
 
-Der Verlauf zeigt jetzt zwei Felder übereinander: oben die erfasste Zeit wie bisher,
-darunter das daraus bewertete Honorar. Dieselbe Zeitachse, dieselben Spaltenpositionen,
-ein gemeinsames Ziel für die Maus — der Hinweis nennt beide Zahlen zusammen.
+Der Verlauf zeigt wahlweise Stunden oder Honorar — ein Umschalter über dem Diagramm,
+ein Feld in voller Höhe. Der Hinweis an der Säule nennt immer beide Zahlen, sodass für
+den Vergleich eines einzelnen Zeitraums niemand umschalten muss.
 
-**Bewusst keine zweite Y-Achse.** Sie war die naheliegende Idee und ist der häufigste
-Fehler bei genau dieser Aufgabe: Stunden und Euro haben keinen gemeinsamen Maßstab, und
-zwei Skalen in einem Feld lassen sich immer so legen, dass die Kurven sich schneiden oder
-auseinanderlaufen. Die Aussage käme dann aus der Skalierung, nicht aus den Daten.
-Untereinander stehen beide Felder mit eigenem Maßstab; wo Stunden und Honorar
-auseinandergehen, steckt der Stundensatz dahinter — und das Diagramm behauptet nichts.
+**Zwei Wege wurden verworfen.** Eine zweite Y-Achse ist der häufigste Fehler bei genau
+dieser Aufgabe: Stunden und Euro haben keinen gemeinsamen Maßstab, und zwei Skalen in
+einem Feld lassen sich immer so legen, dass die Säulen zusammenlaufen — die Aussage käme
+aus der Skalierung, nicht aus den Daten. Zwei Felder übereinander waren der zweite
+Versuch und standen kurz im Code: fachlich sauber, aber jedes Feld bekam nur die halbe
+Höhe und war schlechter zu lesen als eines. Ein Umschalter kostet einen Klick und ist
+beides nicht.
 
-Das Blau ist in beiden Feldern dasselbe, weil es dieselbe Sache zeigt: die abrechenbare
+Das Blau ist in beiden Ansichten dasselbe, weil es dieselbe Sache zeigt: die abrechenbare
 Arbeit, einmal in Stunden und einmal bewertet. Interne Zeit hat kein Gegenstück in Euro
-und steht deshalb nur oben; das Honorarfeld hat nur eine Reihe und braucht keine Legende.
+und erscheint nur in der Stundenansicht; die Honoraransicht hat eine Reihe und kommt
+ohne Legende aus.
+
+Der Umschalter ist `Segmented` in `components/ui/` — derselbe Baustein trägt jetzt auch
+die Darstellungswahl im Konto, die dieselbe Formensprache bisher als eigene Klassenwelt
+im Bauteil stehen hatte.
 
 Nebenbei bekamen beide Achsen ein glattes Raster (1 · 1,5 · 2 · 2,5 · 3 · 4 · 5 · 6 · 8
 mal Zehnerpotenz). Vorher lieferte `ceil(max / 4)` Schritte wie 78 — bei Stunden gerade

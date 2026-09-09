@@ -1,4 +1,5 @@
-import { type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes,
+import { type ComponentType, type ReactNode, type ButtonHTMLAttributes,
+         type InputHTMLAttributes,
          type SelectHTMLAttributes, type TextareaHTMLAttributes, useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -28,6 +29,53 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
       )}
       {...props}
     />
+  )
+}
+
+/**
+ * Eine Wahl aus wenigen gleichwertigen Moeglichkeiten, nebeneinander sichtbar.
+ *
+ * Ein Select versteckt die Alternativen hinter einem Klick; bei zwei oder drei
+ * kurzen Woertern ist das ein Umweg. Die gewaehlte Schaltflaeche traegt
+ * aria-pressed, damit die Wahl auch angesagt wird und nicht nur farbig ist.
+ *
+ * `md` fuellt schmal die Zeile (Darstellungswahl im Konto), `sm` bleibt
+ * kompakt und steht neben einer Ueberschrift.
+ */
+export function Segmented<T extends string>({
+  value, onChange, options, size = 'md', label,
+}: {
+  value: T
+  onChange: (wert: T) => void
+  options: { value: T; label: string; icon?: ComponentType<{ className?: string }> }[]
+  size?: 'sm' | 'md'
+  label?: string
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-wrap gap-2">
+      {options.map((option) => {
+        const Icon = option.icon
+        const aktiv = option.value === value
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={aktiv}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'flex items-center justify-center gap-2 rounded-md border text-sm transition',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500',
+              size === 'md' ? 'min-w-28 flex-1 px-3 py-2.5 sm:flex-none' : 'h-8 px-3',
+              aktiv
+                ? 'border-accent-500 bg-accent-50 font-medium text-accent-700'
+                : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50',
+            )}
+          >
+            {Icon && <Icon className="size-4" />} {option.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

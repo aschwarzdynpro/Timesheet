@@ -40,24 +40,23 @@ function Tooltip({ left, top, lines }: { left: string; top: string; lines: strin
   )
 }
 
-/* ---------------------------------------- Verlauf: zwei Felder, eine Achse */
+/* -------------------------------------------- Verlauf, ein Mass zur Zeit */
 
 export type TrendPoint = {
   label: string; full: string; billable: number; internal: number; fees: number
 }
 
+/** Was die Saeulen zeigen. Beide Zahlen stehen immer im Hinweis, nur eine im Bild. */
+export type TrendMetric = 'hours' | 'fees'
+
 /**
  * Achsenschritt auf eine glatte Zahl runden.
  *
- * Ohne das stuenden am Honorarfeld Werte wie 19.837 an der Achse - Zahlen, die
- * niemand liest und an denen sich nichts ablesen laesst.
+ * Ohne das stuenden am Honorarverlauf Werte wie 19.837 an der Achse - Zahlen,
+ * die niemand liest und an denen sich nichts ablesen laesst.
  *
- * Die Leiter ist bewusst fein (bis hinauf zu 8): Bei nur zwei Schritten im
- * Honorarfeld liesse eine grobe Leiter die Saeulen auf halber Hoehe enden -
- * das Feld saehe leer aus, obwohl die Zahlen stimmen.
- *
- * Mindestens 1, damit ein leerer Zeitraum nicht "0, 0, 1, 1, 1" an die Achse
- * schreibt: ganze Zahlen aus Vierteln, dreimal dieselbe.
+ * Mindestens 1, damit ein leerer Zeitraum nicht "0, 0, 1, 1, 1" anschreibt:
+ * ganze Zahlen aus Vierteln, dreimal dieselbe.
  */
 function rasterSchritt(rohwert: number): number {
   if (!(rohwert > 0)) return 1
@@ -67,20 +66,27 @@ function rasterSchritt(rohwert: number): number {
 }
 
 /**
- * Stunden und Honorar uebereinander, auf derselben Zeitachse.
+ * Verlauf als Saeulen - Stunden oder Honorar, umgeschaltet statt nebeneinander.
  *
- * Bewusst zwei Felder und keine zweite Y-Achse: Stunden und Euro haben keinen
- * gemeinsamen Massstab, und zwei Skalen in einem Feld liessen sich immer so
- * legen, dass die Linien sich schneiden oder auseinanderlaufen - die Aussage
- * kaeme dann aus der Skalierung, nicht aus den Daten. Untereinander stehen die
- * Monate an derselben Stelle; wo Stunden und Honorar auseinandergehen, sieht
- * man es an den Saeulenhoehen, ohne dass das Diagramm eine Beziehung behauptet.
+ * Zwei Felder uebereinander waren der Versuch, beides zugleich zu zeigen; jedes
+ * bekam dabei nur die halbe Hoehe und war schlechter zu lesen als eines. Eine
+ * zweite Y-Achse loest das nicht, sondern verschlimmert es: Stunden und Euro
+ * haben keinen gemeinsamen Massstab, und zwei Skalen in einem Feld lassen sich
+ * immer so legen, dass die Saeulen zusammenlaufen - die Aussage kaeme dann aus
+ * der Skalierung und nicht aus den Daten.
  *
- * Das Blau ist in beiden Feldern dasselbe, weil es dieselbe Sache zeigt: die
+ * Deshalb ein Feld in voller Hoehe mit einem Umschalter darueber. Der Hinweis
+ * an der Saeule nennt beide Zahlen, sodass fuer den Vergleich eines einzelnen
+ * Zeitraums niemand umschalten muss.
+ *
+ * Das Blau ist in beiden Ansichten dasselbe, weil es dieselbe Sache zeigt: die
  * abrechenbare Arbeit, einmal in Stunden und einmal bewertet. Interne Zeit hat
- * kein Gegenstueck in Euro und steht deshalb nur oben.
+ * kein Gegenstueck in Euro und erscheint nur in der Stundenansicht - die
+ * Honoraransicht hat eine Reihe und braucht deshalb keine Legende.
  */
-export function TrendChart({ points, unit }: { points: TrendPoint[]; unit: string }) {
+export function TrendChart({
+  points, metric, unit,
+}: { points: TrendPoint[]; metric: TrendMetric; unit: string }) {
   const [hover, setHover] = useState<number | null>(null)
   const fmt = (n: number) =>
     n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -88,44 +94,25 @@ export function TrendChart({ points, unit }: { points: TrendPoint[]; unit: strin
   const titleId = useId()
 
   const width = 720
-  const padLeft = 52          // Platz fuer fuenfstellige Betraege an der Achse
-  const padTop = 24           // darueber steht die Beschriftung des Feldes
-  const stundenH = 140
-  const abstand = 32
-  const honorarH = 76
+  const height = 220
+  const padLeft = 52          // Platz auch fuer fuenfstellige Betraege an der Achse
   const padBottom = 26
-  const height = padTop + stundenH + abstand + honorarH + padBottom
+  const padTop = 12
 
+  const stunden = metric === 'hours'
+  const hoehe = (p: TrendPoint) => (stunden ? p.billable + p.internal : p.fees)
+  const schritt = rasterSchritt(Math.max(1, ...points.map(hoehe)) / 4)
+  const top = schritt * 4
+
+  const plotH = height - padBottom - padTop
   const plotW = width - padLeft
   const slot = plotW / Math.max(1, points.length)
   const barW = Math.min(28, Math.max(4, slot * 0.62))
-
-  const stundenSchritt = rasterSchritt(Math.max(1, ...points.map((p) => p.billable + p.internal)) / 4)
-  const honorarSchritt = rasterSchritt(Math.max(1, ...points.map((p) => p.fees)) / 2)
-  const stundenBasis = padTop + stundenH
-  const honorarOben = stundenBasis + abstand
-  const honorarBasis = honorarOben + honorarH
-  const skalaStunden = (v: number) => (v / (stundenSchritt * 4)) * stundenH
-  const skalaHonorar = (v: number) => (v / (honorarSchritt * 2)) * honorarH
+  const scale = (v: number) => (v / top) * plotH
+  const baseY = padTop + plotH
 
   // Nicht jede Saeule beschriften: bei vielen Punkten nur jede zweite oder vierte
   const labelEvery = points.length > 26 ? 4 : points.length > 14 ? 2 : 1
-
-  /** Waagerechte Linien mit Beschriftung fuer ein Feld. */
-  const raster = (
-    anzahl: number, schritt: number, basis: number,
-    skala: (v: number) => number, format: (v: number) => string,
-  ) => Array.from({ length: anzahl + 1 }, (_, i) => {
-    const y = basis - skala(schritt * i)
-    return (
-      <g key={`${basis}-${i}`}>
-        <line x1={padLeft} y1={y} x2={width} y2={y} stroke={i === 0 ? AXIS : GRID} strokeWidth={1} />
-        <text x={padLeft - 8} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-400)">
-          {format(schritt * i)}
-        </text>
-      </g>
-    )
-  })
 
   const aktiv = hover !== null ? points[hover] : undefined
 
@@ -133,37 +120,42 @@ export function TrendChart({ points, unit }: { points: TrendPoint[]; unit: strin
     <div className="relative">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-labelledby={titleId}>
         <title id={titleId}>
-          Zwei Felder auf derselben Zeitachse: oben die erfasste Zeit, aufgeteilt in
-          abrechenbar und intern, darunter das Honorar in Euro
+          {stunden
+            ? 'Erfasste Zeit je Zeitraum, aufgeteilt in abrechenbar und intern'
+            : 'Honorar je Zeitraum in Euro'}
         </title>
 
-        <text x={padLeft} y={padTop - 10} fontSize={10} fill="var(--ink-500)">Stunden</text>
-        {raster(4, stundenSchritt, stundenBasis, skalaStunden, ganz)}
-
-        <text x={padLeft} y={honorarOben - 10} fontSize={10} fill="var(--ink-500)">Honorar in €</text>
-        {raster(2, honorarSchritt, honorarBasis, skalaHonorar, ganz)}
+        {[0, 1, 2, 3, 4].map((i) => {
+          const y = padTop + plotH - scale(schritt * i)
+          return (
+            <g key={i}>
+              <line x1={padLeft} y1={y} x2={width} y2={y} stroke={i === 0 ? AXIS : GRID} strokeWidth={1} />
+              <text x={padLeft - 8} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-400)">
+                {ganz(schritt * i)}
+              </text>
+            </g>
+          )
+        })}
 
         {points.map((p, i) => {
           const x = padLeft + slot * i + (slot - barW) / 2
-          const hb = skalaStunden(p.billable)
-          const hi = skalaStunden(p.internal)
-          const hf = skalaHonorar(p.fees)
+          const hb = scale(stunden ? p.billable : p.fees)
+          const hi = stunden ? scale(p.internal) : 0
           return (
             <g key={p.full}>
               {/* Interne Zeit oben, mit 2px Luft zur abrechenbaren darunter */}
-              {p.internal > 0 && (
-                <rect x={x} y={stundenBasis - hb - hi} width={barW}
+              {stunden && p.internal > 0 && (
+                <rect x={x} y={baseY - hb - hi} width={barW}
                       height={Math.max(1, hi - (p.billable > 0 ? 2 : 0))}
                       rx={3} fill={SERIES.internal} />
               )}
-              {p.billable > 0 && (
-                <rect x={x} y={stundenBasis - hb} width={barW} height={Math.max(1, hb)}
+              {(stunden ? p.billable : p.fees) > 0 && (
+                <rect x={x} y={baseY - hb} width={barW} height={Math.max(1, hb)}
                       rx={3} fill={SERIES.billable} />
               )}
-              {p.fees > 0 && (
-                <rect x={x} y={honorarBasis - hf} width={barW} height={Math.max(1, hf)}
-                      rx={3} fill={SERIES.billable} />
-              )}
+              {/* Grosszuegiges Ziel fuer die Maus, unabhaengig von der Saeulenhoehe */}
+              <rect x={padLeft + slot * i} y={padTop} width={slot} height={plotH} fill="transparent"
+                    onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
               {i % labelEvery === 0 && (
                 <text x={padLeft + slot * i + slot / 2} y={height - 8} textAnchor="middle"
                       fontSize={10} fill="var(--ink-400)">
@@ -173,20 +165,12 @@ export function TrendChart({ points, unit }: { points: TrendPoint[]; unit: strin
             </g>
           )
         })}
-
-        {/* Ein Ziel je Zeitraum ueber beide Felder: die Maus trifft die Spalte,
-            nicht die einzelne Saeule, und beide Zahlen stehen zusammen. */}
-        {points.map((p, i) => (
-          <rect key={`ziel-${p.full}`} x={padLeft + slot * i} y={padTop} width={slot}
-                height={honorarBasis - padTop} fill="transparent"
-                onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
-        ))}
       </svg>
 
       {aktiv && hover !== null && (
         <Tooltip
           left={`${((padLeft + slot * hover + slot / 2) / width) * 100}%`}
-          top={`${((stundenBasis - skalaStunden(aktiv.billable + aktiv.internal)) / height) * 100}%`}
+          top={`${((baseY - scale(hoehe(aktiv))) / height) * 100}%`}
           lines={[
             aktiv.full,
             `abrechenbar ${fmt(aktiv.billable)} ${unit}`,
@@ -196,16 +180,19 @@ export function TrendChart({ points, unit }: { points: TrendPoint[]; unit: strin
         />
       )}
 
-      <ul className="mt-2 flex flex-wrap gap-4 pl-13 text-xs text-ink-600">
-        <li className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm" style={{ background: SERIES.billable }} />
-          abrechenbar
-        </li>
-        <li className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm" style={{ background: SERIES.internal }} />
-          intern
-        </li>
-      </ul>
+      {/* Eine Reihe braucht keine Legende - die Ueberschrift nennt sie. */}
+      {stunden && (
+        <ul className="mt-2 flex flex-wrap gap-4 pl-13 text-xs text-ink-600">
+          <li className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm" style={{ background: SERIES.billable }} />
+            abrechenbar
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm" style={{ background: SERIES.internal }} />
+            intern
+          </li>
+        </ul>
+      )}
     </div>
   )
 }

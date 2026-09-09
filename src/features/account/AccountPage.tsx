@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { KeyRound, LogOut, Monitor, Moon, Percent, Sun } from 'lucide-react'
 import {
-  Button, Card, ErrorNote, Field, Input, WarnNote,
+  Button, Card, ErrorNote, Field, Input, Segmented, WarnNote,
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
-import { cn } from '@/lib/utils'
 import { describeError, supabase } from '@/lib/supabase'
 import { formatPercent } from '@/lib/format'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -56,27 +55,15 @@ function Darstellung() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 px-5 py-4">
-        {(Object.keys(THEME_LABEL) as ThemeChoice[]).map((wahl) => {
-          const Icon = SYMBOL[wahl]
-          const aktiv = choice === wahl
-          return (
-            <button
-              key={wahl}
-              type="button"
-              aria-pressed={aktiv}
-              onClick={() => void waehle(wahl)}
-              className={cn(
-                'flex min-w-28 flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm transition sm:flex-none',
-                aktiv
-                  ? 'border-accent-500 bg-accent-50 font-medium text-accent-700'
-                  : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50',
-              )}
-            >
-              <Icon className="size-4" /> {THEME_LABEL[wahl]}
-            </button>
-          )
-        })}
+      <div className="px-5 py-4">
+        <Segmented
+          label="Darstellung"
+          value={choice}
+          onChange={(wahl) => void waehle(wahl)}
+          options={(Object.keys(THEME_LABEL) as ThemeChoice[]).map((wahl) => ({
+            value: wahl, label: THEME_LABEL[wahl], icon: SYMBOL[wahl],
+          }))}
+        />
       </div>
 
       {error && <div className="px-5 pb-4"><ErrorNote message={error} /></div>}
