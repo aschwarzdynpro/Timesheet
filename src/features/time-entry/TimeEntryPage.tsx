@@ -382,7 +382,8 @@ export function TimeEntryPage() {
               in denselben Dialog. */}
           <div className="hidden sm:block">
             {zelle ? (
-              <CellPanel target={zelle} entries={zellEntries} onClose={() => setZelle(null)} />
+              <CellPanel target={zelle} entries={zellEntries}
+                         onClose={() => setZelle(null)} onRetarget={setZelle} />
             ) : rows.length > 0 && (
               <p className="mt-3 px-1 text-sm text-ink-500">
                 In eine Zelle klicken, um die Einträge dieses Tages zu sehen und zu bearbeiten.
@@ -392,7 +393,8 @@ export function TimeEntryPage() {
         </>
       )}
 
-      <EntryDialog target={dialog} entries={dialogEntries} onClose={() => setDialog(null)} />
+      <EntryDialog target={dialog} entries={dialogEntries}
+                   onClose={() => setDialog(null)} onRetarget={setDialog} />
 
       <QuickEntryDialog
         open={quickEntry.open}

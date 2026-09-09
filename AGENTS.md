@@ -65,9 +65,14 @@ liegt an einer Stelle.
   die Auslastungsquote ausgeblendet — eine erfundene Zahl wäre schlimmer als keine."
 - **Dialoge erst beim Öffnen einhängen** (`{offen && <Dialog …/>}`), sonst stehen
   Eingaben und Fehlermeldungen des vorigen Aufrufs wieder da.
-- **Ein Formular, zwei Rahmen.** Ein Zeiteintrag wird am Laptop in der Tafel
+- **Ein Editor, zwei Rahmen.** Ein Zeiteintrag wird am Laptop in der Tafel
   unter dem Wochenraster bearbeitet, auf dem Telefon im Dialog — beide zeigen
   denselben `EntryEditor`. Wer dort etwas ergänzt, ergänzt es für beide.
+- **Zeiteinträge werden in der Zeile bearbeitet, nicht in einem Formular
+  darunter.** Dauer und Beschreibung stehen als Felder in der Zeile und
+  speichern beim Verlassen — wie die Zellen des Wochenrasters auch. Was für die
+  ganze Zelle gilt (Tätigkeitsart, Arbeitspaket), steht darüber und ändert alle
+  Einträge der Zelle auf einmal.
 - **Die Periodensperre kommt aus dem Raster, nicht aus den Einträgen.** Eine
   leere Zelle in einer gemeldeten Woche hat keinen Eintrag, an dessen Status man
   sie ablesen könnte; ohne das Feld `locked` am Ziel böte das Formular dort

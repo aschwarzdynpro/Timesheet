@@ -13,8 +13,14 @@ import { EntryEditor, entryEditorKey, type EntryDialogTarget } from './EntryDial
  * gleichzeitig sichtbar: oben die Zahl, unten woraus sie besteht.
  */
 export function CellPanel({
-  target, entries, onClose,
-}: { target: EntryDialogTarget; entries: TimeEntryFull[]; onClose: () => void }) {
+  target, entries, onClose, onRetarget,
+}: {
+  target: EntryDialogTarget
+  entries: TimeEntryFull[]
+  onClose: () => void
+  /** Die Zelle haengt um: die Auswahl im Raster muss mitwandern. */
+  onRetarget: (target: EntryDialogTarget) => void
+}) {
   const summe = entries.reduce((n, e) => n + e.duration_minutes, 0)
 
   return (
@@ -27,23 +33,14 @@ export function CellPanel({
               {formatDate(target.workDate)}
             </span>
           </h2>
-          <p className="mt-0.5 text-xs text-ink-500">
-            {target.workPackage && (
-              <span className="font-medium text-ink-600">
-                {target.workPackage.code} · {target.workPackage.name} ·{' '}
-              </span>
-            )}
-            {target.activity?.name ?? 'ohne Tätigkeitsart'}
-            {entries.length > 0 && (
-              <>
-                {' · '}
-                <span className="tabular">
-                  {entries.length === 1 ? '1 Eintrag' : `${entries.length} Einträge`},{' '}
-                  {minutesToHours(summe)} h
-                </span>
-              </>
-            )}
-          </p>
+          {/* Arbeitspaket und Taetigkeitsart stehen im Editor darunter, samt
+              Stift zum Aendern - hier waeren sie ein zweites Mal dasselbe. */}
+          {entries.length > 0 && (
+            <p className="tabular mt-0.5 text-xs text-ink-500">
+              {entries.length === 1 ? '1 Eintrag' : `${entries.length} Einträge`},{' '}
+              {minutesToHours(summe)} h
+            </p>
+          )}
         </div>
         <Button size="sm" variant="ghost" aria-label="Tafel schließen" onClick={onClose}>
           <X className="size-4" />
@@ -51,10 +48,9 @@ export function CellPanel({
       </div>
 
       <div className="px-5 py-4">
-        {/* Derselbe Editor wie im Dialog auf dem Telefon. Er bleibt nach dem
-            Aendern stehen: die Liste darueber zeigt das Ergebnis sofort. */}
+        {/* Derselbe Editor wie im Dialog auf dem Telefon. */}
         <EntryEditor key={entryEditorKey(target)} target={target} entries={entries}
-                     onClose={onClose} />
+                     onRetarget={onRetarget} />
       </div>
     </Card>
   )
