@@ -16,6 +16,9 @@ import type { WorkPackageBudget } from '@/types/database'
  * gegen das Stundenbudget, Honorar gegen das Betragsbudget. Zwei Ansichten
  * derselben Zahl duerfen nicht verschieden rechnen.
  */
+/** Ganze Stunden ohne ",00": Budgets sind meist glatt, und jede Stelle zaehlt. */
+const stunden = (wert: number) => `${minutesToHours(wert * 60).replace(',00', '')} h`
+
 export function PackageBudget({
   budget, className,
 }: { budget: WorkPackageBudget | undefined; className?: string }) {
@@ -25,7 +28,7 @@ export function PackageBudget({
     <span className={cn('flex flex-wrap gap-x-4 gap-y-0.5', className)}>
       {budget.budget_hours && (
         <BudgetRest used={budget.tracked_minutes / 60} budget={Number(budget.budget_hours)}
-                    format={(wert) => `${minutesToHours(wert * 60)} h`} />
+                    format={stunden} />
       )}
       {budget.budget_amount && (
         <BudgetRest used={Number(budget.fees)} budget={Number(budget.budget_amount)}

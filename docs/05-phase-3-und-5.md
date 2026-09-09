@@ -387,8 +387,11 @@ Betragsbudget — zwei Ansichten derselben Zahl dürfen nicht verschieden rechne
 
 Die Ampel `BudgetBadge` beantwortet „wie viel ist verbraucht“ und bleibt den Stammdaten
 vorbehalten. Beim Buchen zählt die andere Richtung — „wie viel kann ich noch buchen“ —,
-deshalb steht in `BudgetRest` der Rest vorn. Der Zustand steht als Wort da und nicht nur
-in der Farbe.
+deshalb steht in `BudgetRest` der Rest vorn, und zwar nackt: `14 h / 16 h`. Die Worte um
+die Zahlen („Rest … von … · aufgebraucht“) brachen in der schmalen Projektspalte um und
+kosteten eine Zeile je Paket. Der Zustand hängt trotzdem nicht allein an der Farbe — die
+Zahl selbst sagt ihn: 0 ist aufgebraucht, negativ ist überschritten. Der volle Satz steht
+als `title` daneben, für den Zeiger und für die Vorlesehilfe.
 
 Beide lesen dieselbe Funktion `budgetStufe()` mit vier Stufen: *im Rahmen*, *knapp* (ab
 vier Fünfteln, gelb), *aufgebraucht* (gelb) und *überschritten* (rot). Aufgebraucht trägt

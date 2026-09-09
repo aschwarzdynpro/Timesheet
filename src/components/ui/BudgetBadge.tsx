@@ -70,14 +70,17 @@ export function BudgetBadge({
 }
 
 /**
- * Restbudget: was noch da ist, und wovon.
+ * Restbudget: was noch da ist, und wovon - als "Rest / Budget".
  *
  * Die Ampel darueber beantwortet "wie viel ist verbraucht" - das ist die Frage
  * der Stammdaten. Beim Erfassen zaehlt die andere Richtung: "wie viel kann ich
- * noch buchen". Deshalb steht hier der Rest vorn, und das Gesamtbudget
- * daneben, damit die Zahl einen Bezug hat.
+ * noch buchen". Deshalb steht der Rest vorn.
  *
- * Der Zustand steht auch hier als Wort da und nicht nur in der Farbe.
+ * Ohne Worte um die Zahlen: "Rest 14,00 h von 16,00 h" brach in der schmalen
+ * Projektspalte um, "14 h / 16 h" passt in eine Zeile. Der Zustand haengt
+ * trotzdem nicht allein an der Farbe - die Zahl selbst sagt ihn: 0 ist
+ * aufgebraucht, negativ ist ueberschritten. Der volle Satz steht als
+ * `title` daneben, fuer den Zeiger und fuer die Vorlesehilfe.
  */
 export function BudgetRest({
   used, budget, format,
@@ -88,10 +91,12 @@ export function BudgetRest({
   const rest = stufe === 'exhausted' ? 0 : budget - used
 
   return (
-    <span className={cn('tabular text-xs',
-                        stufe === 'good' ? 'text-ink-500' : SCHRIFT[stufe])}>
-      Rest {format(rest)} von {format(budget)}
-      {(stufe === 'exhausted' || stufe === 'critical') && ` · ${WORT[stufe]}`}
+    <span
+      title={`Rest ${format(rest)} von ${format(budget)} · ${WORT[stufe]}`}
+      className={cn('tabular text-xs whitespace-nowrap',
+                    stufe === 'good' ? 'text-ink-500' : SCHRIFT[stufe])}
+    >
+      {format(rest)} / {format(budget)}
     </span>
   )
 }
