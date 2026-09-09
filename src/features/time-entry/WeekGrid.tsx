@@ -10,7 +10,7 @@ import type {
   Project, ReportingPeriod, TimeEntryFull, WorkPackageBudget,
 } from '@/types/database'
 import { EntryEditor, entryEditorKey, type EntryDialogTarget } from './EntryDialog'
-import { PaketChip } from './PackageBudget'
+import { hatBudget, PaketChip } from './PackageBudget'
 import { gesperrteTage } from './lock'
 
 /**
@@ -135,9 +135,11 @@ export function WeekGrid({
     const ohneBudget: Paket[] = []
 
     for (const [id, code] of paketeDerWoche(row)) {
+      // Der Datensatz geht in beiden Faellen mit: ohne Budget traegt er die
+      // gebuchte Zeit, und die steht auch dort im Plaettchen.
       const budget = budgets.get(id)
-      if (budget && (budget.budget_hours || budget.budget_amount)) mitBudget.push({ id, code, budget })
-      else ohneBudget.push({ id, code })
+      if (hatBudget(budget)) mitBudget.push({ id, code, budget })
+      else ohneBudget.push({ id, code, budget })
     }
     if (entries.some((e) => e.project_id === row.project.id && !e.work_package_id)) {
       ohneBudget.push({ id: 'ohne', code: 'ohne Paket' })

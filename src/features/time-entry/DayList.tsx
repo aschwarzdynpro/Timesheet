@@ -3,7 +3,7 @@ import { Button, EmptyState } from '@/components/ui/primitives'
 import { cn } from '@/lib/utils'
 import { WEEKDAY_SHORT, isToday, minutesToHours, toIsoDate, weekDays } from '@/lib/week'
 import type { TimeEntryFull, WorkPackageBudget } from '@/types/database'
-import { PackageBudget } from './PackageBudget'
+import { hatBudget, PackageBudget } from './PackageBudget'
 
 /**
  * Tagesliste fuer Mobil und Tablet. Das Wochenraster braucht Breite und bleibt
@@ -91,7 +91,10 @@ export function DayList({
                           {e.work_package_code && ` · ${e.work_package_code}`}
                           {e.activity_name && ` · ${e.activity_name}`}
                         </span>
-                        {e.work_package_id && (
+                        {/* Nur wo ein Budget hinterlegt ist: der Gesamtstand des
+                            Pakets neben der Dauer eines einzelnen Eintrags
+                            liesse sich fuer dessen Dauer halten. */}
+                        {e.work_package_id && hatBudget(budgets.get(e.work_package_id)) && (
                           <PackageBudget budget={budgets.get(e.work_package_id)} className="mt-0.5" />
                         )}
                       </span>

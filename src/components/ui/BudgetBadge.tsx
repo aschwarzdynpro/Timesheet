@@ -70,33 +70,32 @@ export function BudgetBadge({
 }
 
 /**
- * Restbudget: was noch da ist, und wovon - als "Rest / Budget".
+ * Der Stand eines Budgets als "Gebucht / Gesamt".
  *
- * Die Ampel darueber beantwortet "wie viel ist verbraucht" - das ist die Frage
- * der Stammdaten. Beim Erfassen zaehlt die andere Richtung: "wie viel kann ich
- * noch buchen". Deshalb steht der Rest vorn.
+ * Die Ampel darueber sagt dasselbe in Prozent und bleibt den Stammdaten
+ * vorbehalten; beim Erfassen zaehlen die Stunden selbst.
  *
- * Ohne Worte um die Zahlen: "Rest 14,00 h von 16,00 h" brach in der schmalen
- * Projektspalte um, "14 h / 16 h" passt in eine Zeile. Der Zustand haengt
- * trotzdem nicht allein an der Farbe - die Zahl selbst sagt ihn: 0 ist
- * aufgebraucht, negativ ist ueberschritten. Der volle Satz steht als
- * `title` daneben, fuer den Zeiger und fuer die Vorlesehilfe.
+ * Ohne Worte um die Zahlen: "Gebucht 14,00 h von 16,00 h" braeche in der
+ * schmalen Projektspalte um, "14 h / 16 h" passt in eine Zeile. Der Zustand
+ * haengt trotzdem nicht allein an der Farbe - die Zahlen sagen ihn: gleich ist
+ * aufgebraucht, groesser ist ueberschritten. Der volle Satz steht als `title`
+ * daneben, fuer den Zeiger und fuer die Vorlesehilfe.
  */
-export function BudgetRest({
+export function BudgetStand({
   used, budget, format,
 }: { used: number; budget: number; format: (wert: number) => string }) {
   const stufe = budgetStufe(used, budget)
-  // Aufgebraucht heisst aufgebraucht: ein Rest von -0,001 wuerde sonst als
-  // "-0,00" dastehen, mit einem Minus, das nichts bedeutet.
-  const rest = stufe === 'exhausted' ? 0 : budget - used
+  // Aufgebraucht heisst aufgebraucht: 1,9999 von 2 wuerde sonst als "2 h / 2 h"
+  // dastehen und trotzdem gruen leuchten.
+  const gebucht = stufe === 'exhausted' ? budget : used
 
   return (
     <span
-      title={`Rest ${format(rest)} von ${format(budget)} · ${WORT[stufe]}`}
+      title={`Gebucht ${format(gebucht)} von ${format(budget)} · ${WORT[stufe]}`}
       className={cn('tabular text-xs whitespace-nowrap',
                     stufe === 'good' ? 'text-ink-500' : SCHRIFT[stufe])}
     >
-      {format(rest)} / {format(budget)}
+      {format(gebucht)} / {format(budget)}
     </span>
   )
 }

@@ -381,17 +381,24 @@ wo das Alphabet es hinlegt. Sortiert wird mit `numeric`, sonst stünde AP10 vor 
 
 Wo ein Paket ein Budget hat, steht das **Restbudget neben dem Gesamtbudget** — in der
 Wochenliste (Raster am Laptop, Tagesliste am Telefon) und im Kopf des Tageseintrags.
-„Rest 62,00 von 120,00 h“; bei zwei Budgets zwei Angaben. Verbraucht wird gegen dieselben
+„58 h / 120 h“; bei zwei Budgets zwei Angaben. Verbraucht wird gegen dieselben
 Größen wie in den Stammdaten: erfasste Zeit gegen das Stundenbudget, Honorar gegen das
 Betragsbudget — zwei Ansichten derselben Zahl dürfen nicht verschieden rechnen.
 
-Die Ampel `BudgetBadge` beantwortet „wie viel ist verbraucht“ und bleibt den Stammdaten
-vorbehalten. Beim Buchen zählt die andere Richtung — „wie viel kann ich noch buchen“ —,
-deshalb steht in `BudgetRest` der Rest vorn, und zwar nackt: `14 h / 16 h`. Die Worte um
-die Zahlen („Rest … von … · aufgebraucht“) brachen in der schmalen Projektspalte um und
-kosteten eine Zeile je Paket. Der Zustand hängt trotzdem nicht allein an der Farbe — die
-Zahl selbst sagt ihn: 0 ist aufgebraucht, negativ ist überschritten. Der volle Satz steht
-als `title` daneben, für den Zeiger und für die Vorlesehilfe.
+Die Ampel `BudgetBadge` beantwortet dieselbe Frage in Prozent und bleibt den Stammdaten
+vorbehalten. Beim Buchen zählen die Stunden selbst, deshalb steht in `BudgetStand`
+**gebucht vor gesamt**, und zwar nackt: `2 h / 16 h`. Die Worte um die Zahlen brachen in
+der schmalen Projektspalte um und kosteten eine Zeile je Paket. Der Zustand hängt
+trotzdem nicht allein an der Farbe — die Zahlen sagen ihn: gleich ist aufgebraucht,
+größer ist überschritten. Der volle Satz steht als `title` daneben, für den Zeiger und
+für die Vorlesehilfe.
+
+Ein Paket **ohne** Budget zeigt nur die gebuchte Zeit (`PMO  12 h`). Dass auf einem Paket
+schon zwölf Stunden liegen, ist beim Buchen die häufigere Frage als die nach einem
+Budget, das die meisten Pakete gar nicht haben; `12 h / –` wäre ein Platzhalter für
+nichts. Gezählt wird über die gesamte Laufzeit des Pakets, nicht über die angezeigte
+Woche — ein Budget kennt keine Woche, und die Frage „wie viel ist da schon drauf“ auch
+nicht.
 
 Beide lesen dieselbe Funktion `budgetStufe()` mit vier Stufen: *im Rahmen*, *knapp* (ab
 vier Fünfteln, gelb), *aufgebraucht* (gelb) und *überschritten* (rot). Aufgebraucht trägt
