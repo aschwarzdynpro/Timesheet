@@ -433,3 +433,39 @@ In der Oberfläche steht die Wahl auf `null`, solange niemand etwas ausgewählt 
 daraus wird der Standard gelesen. Ein fester Anfangswert per `useState` wäre leer
 geblieben, wenn die Tätigkeitsarten erst nach dem ersten Rendern eintreffen — der Timer
 steht dauerhaft auf der Seite und rendert genau einmal zu früh.
+
+## Nachtrag: Eine Rasterzeile je Projekt, aufklappbar
+
+Das Wochenraster führte eine Zeile je **Kombination** aus Projekt, Arbeitspaket und
+Tätigkeitsart. Ein Projekt mit vier Paketen belegte damit vier Zeilen mit je einer Zahl
+darin, und die Woche geriet zur Liste — genau das, was ein Raster vermeiden soll.
+
+Jetzt ist eine Zeile ein **Projekt**. Ein Klick in eine Zelle klappt die Zeile auf: direkt
+darunter stehen die Einträge dieses Tages, nach Arbeitspaket und Tätigkeitsart gruppiert,
+jede Gruppe mit ihrem Kopf, ihrem Restbudget und ihren Zeilen. Vorher stand dafür eine
+Tafel unter dem Raster — weit weg von der Zahl, aus der sie stammte.
+
+Die Zeilenbeschriftung nennt die Kürzel, auf die diese Woche gebucht wurde
+(`13206 DEV · 13834 · PMO`), und darunter das Restbudget der Pakete, die eines haben —
+mit dem Kürzel davor, weil in einer Projektzeile sonst zwei Reste ohne Hinweis stünden,
+zu wem sie gehören.
+
+**Was aus dem Umbau folgte, ohne dass es jemand verlangt hätte:**
+
+- Die Tafel `CellPanel` entfällt ersatzlos; der `EntryEditor` steht jetzt in der
+  aufgeklappten Zeile und im Dialog des Telefons — weiterhin derselbe Editor in zwei
+  Rahmen.
+- `onRetarget` entfällt. Es hielt die Auswahl im Raster nach, wenn ein Eintrag das
+  Arbeitspaket wechselte und damit in eine andere Rasterzeile wanderte. Zeilen sind jetzt
+  Projekte: ein Paketwechsel bewegt nichts mehr.
+- Der Stundensatz hängt an der Tätigkeitsart der Gruppe, und `useRateFor` lässt sich
+  nicht in einer Schleife aufrufen. Jede Gruppe ist deshalb eine eigene Komponente —
+  was nebenbei Entwürfe und Fehlermeldungen dort hält, wo sie entstanden sind.
+- „Zeile hinzufügen" gibt es je Gruppe (dasselbe Paket) und einmal darunter als „Eintrag
+  hinzufügen" (Paket und Art wählbar). Ohne das zweite käme man an ein Paket, auf das an
+  diesem Tag noch nichts gebucht ist, gar nicht heran.
+- Eine getippte Dauer landet in der einzigen Gruppe des Tages — wie bisher, als die Zelle
+  selbst die Gruppe war. Bei mehreren oder keiner wäre jede Wahl geraten: dann öffnet
+  sich ein neuer Eintrag, in dem Paket und Art dabeistehen. Ein gestoppter Timer bringt
+  seine eigene Tätigkeitsart mit und bekommt deshalb immer einen neuen Eintrag.
+- „Zeile hinzufügen" über dem Raster wählt nur noch das Projekt.

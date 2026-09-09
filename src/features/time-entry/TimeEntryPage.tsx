@@ -8,16 +8,13 @@ import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
 import { formatDate, formatEuro, formatPercent, sumOrNull } from '@/lib/format'
 import { addDays, isoWeek, minutesToHours, mondayOf, toIsoDate } from '@/lib/week'
-import type { TimeEntryFull, WorkPackage, WorkPackageBudget } from '@/types/database'
+import type { TimeEntryFull, WorkPackageBudget } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
-import {
-  nachKuerzel, useAllWorkPackageBudgets, useAllWorkPackages, useProjects,
-} from '@/features/projects/api'
-import { standardArt, useActivityTypes } from '@/features/activity-types/api'
+import { useAllWorkPackageBudgets, useProjects } from '@/features/projects/api'
+import { useActivityTypes } from '@/features/activity-types/api'
 import { useIncomeTaxPercent } from '@/features/account/api'
 import { EntryDialog, type EntryDialogTarget } from './EntryDialog'
-import { CellPanel } from './CellPanel'
-import { WeekGrid, cellKey, rowKey, type GridRow } from './WeekGrid'
+import { WeekGrid, rowKey, type GridRow } from './WeekGrid'
 import { DayList } from './DayList'
 import { Timer } from './Timer'
 import { QuickEntryDialog } from './QuickEntryDialog'
@@ -27,8 +24,8 @@ export function TimeEntryPage() {
   const [monday, setMonday] = useState(() => mondayOf(new Date()))
   const [extraRows, setExtraRows] = useState<string[]>([])
   const [dialog, setDialog] = useState<EntryDialogTarget | null>(null)
-  // Die gewaehlte Rasterzelle. Getrennt vom Dialog: breit steht ihr Inhalt als
-  // Tafel unter dem Raster, schmal gibt es das Raster gar nicht.
+  // Die aufgeklappte Rasterzelle. Getrennt vom Dialog: breit klappt die Zeile
+  // im Raster auf, schmal gibt es das Raster gar nicht.
   const [zelle, setZelle] = useState<EntryDialogTarget | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -37,7 +34,6 @@ export function TimeEntryPage() {
   })
 
   const { data: projects } = useProjects()
-  const { data: workPackages } = useAllWorkPackages()
   const { data: budgets } = useAllWorkPackageBudgets()
   const { data: activityTypes } = useActivityTypes()
   const { data: customers } = useCustomers()
@@ -59,28 +55,10 @@ export function TimeEntryPage() {
   const { year, week } = isoWeek(monday)
   const sunday = addDays(monday, 6)
 
-  // Auswahl fuer "Zeile hinzufuegen". Als Zustand statt per querySelector: das
-  // Arbeitspaket haengt am gewaehlten Projekt und muss darauf reagieren.
-  // art: null heisst "noch nicht gewaehlt" - dann gilt die Standardart. Die
-  // Arten koennen erst nach dem ersten Rendern eintreffen; ein fester
-  // Anfangswert waere dann leer geblieben.
-  const [neueZeile, setNeueZeile] =
-    useState<{ projekt: string; art: string | null; paket: string }>(
-      { projekt: '', art: null, paket: '' })
-  const neueZeileArt = neueZeile.art ?? standardArt(activityTypes)
-
-  const paketeDesProjekts = useMemo(
-    () => (workPackages ?? [])
-      .filter((w) => w.project_id === neueZeile.projekt && w.is_active)
-      .sort(nachKuerzel),
-    [workPackages, neueZeile.projekt],
-  )
-
-  const paketVon = useMemo(() => {
-    const map = new Map<string, WorkPackage>()
-    for (const w of workPackages ?? []) map.set(w.id, w)
-    return map
-  }, [workPackages])
+  // Auswahl fuer "Zeile hinzufuegen". Eine Zeile ist ein Projekt; Arbeitspaket
+  // und Taetigkeitsart entscheidet man beim Eintrag selbst, in der
+  // aufgeklappten Zeile.
+  const [neuesProjekt, setNeuesProjekt] = useState('')
 
   /** Budgetstand je Arbeitspaket - Raster und Tagesliste zeigen daraus den Rest. */
   const budgetVon = useMemo(() => {
@@ -94,52 +72,30 @@ export function TimeEntryPage() {
     [projects],
   )
 
-  /** Zeilen: alles was diese Woche erfasst wurde, plus manuell ergaenzte. */
+  /** Zeilen: ein Projekt je Zeile - was diese Woche erfasst wurde, plus manuell
+      ergaenzte. Die Aufteilung nach Arbeitspaket steht in der aufgeklappten
+      Zeile, nicht im Raster. */
   const rows: GridRow[] = useMemo(() => {
     const map = new Map<string, GridRow>()
-    const add = (projectId: string, activityId: string | null, packageId: string | null) => {
+    const add = (projectId: string) => {
+      if (map.has(projectId)) return
       const project = projects?.find((p) => p.id === projectId)
       if (!project) return
-      const key = rowKey(projectId, activityId, packageId)
-      if (map.has(key)) return
-      map.set(key, {
-        key,
-        project,
-        activity: activityTypes?.find((a) => a.id === activityId) ?? null,
-        workPackage: packageId ? (paketVon.get(packageId) ?? null) : null,
-      })
+      map.set(projectId, { key: rowKey(projectId), project })
     }
-    for (const e of entries ?? []) add(e.project_id, e.activity_type_id, e.work_package_id)
-    for (const key of extraRows) {
-      const [projectId, activityId, packageId] = key.split('|')
-      add(projectId!, activityId || null, packageId || null)
-    }
-    // Nach Projekt, dann Arbeitspaket, dann Taetigkeitsart - so stehen die
-    // Zeilen eines Projekts beieinander.
-    const sortierbar = (r: GridRow) =>
-      `${r.project.name}|${r.workPackage?.code ?? ''}|${r.activity?.name ?? ''}`
-    return [...map.values()].sort((a, b) => sortierbar(a).localeCompare(sortierbar(b), 'de'))
-  }, [entries, extraRows, projects, activityTypes, paketVon])
+    for (const e of entries ?? []) add(e.project_id)
+    for (const projectId of extraRows) add(projectId)
+    return [...map.values()]
+      .sort((a, b) => a.project.name.localeCompare(b.project.name, 'de'))
+  }, [entries, extraRows, projects])
 
   // Die Eintraege des offenen Dialogs werden bei jedem Rendern neu bestimmt.
   // Als Momentaufnahme im Dialog wuerde die Liste nach dem Hinzufuegen veralten.
   const dialogEntries = useMemo(() => {
     if (!dialog) return []
     return (entries ?? []).filter(
-      (e) => e.project_id === dialog.project.id &&
-             e.activity_type_id === (dialog.activity?.id ?? null) &&
-             e.work_package_id === (dialog.workPackage?.id ?? null) &&
-             e.work_date === dialog.workDate)
+      (e) => e.project_id === dialog.project.id && e.work_date === dialog.workDate)
   }, [dialog, entries])
-
-  const zellEntries = useMemo(() => {
-    if (!zelle) return []
-    return (entries ?? []).filter(
-      (e) => e.project_id === zelle.project.id &&
-             e.activity_type_id === (zelle.activity?.id ?? null) &&
-             e.work_package_id === (zelle.workPackage?.id ?? null) &&
-             e.work_date === zelle.workDate)
-  }, [zelle, entries])
 
   const totals = useMemo(() => {
     const list = entries ?? []
@@ -167,10 +123,9 @@ export function TimeEntryPage() {
   }
 
   function copyPreviousWeek() {
-    const keys = new Set(extraRows)
-    for (const e of previousWeek.data ?? [])
-      keys.add(rowKey(e.project_id, e.activity_type_id, e.work_package_id))
-    setExtraRows([...keys])
+    const ids = new Set(extraRows)
+    for (const e of previousWeek.data ?? []) ids.add(e.project_id)
+    setExtraRows([...ids])
   }
 
   const needsSetup = (customers?.length ?? 0) === 0 || activeProjects.length === 0
@@ -279,13 +234,8 @@ export function TimeEntryPage() {
               onStop={({ projectId, activityTypeId, minutes, workDate }) => {
                 const project = activeProjects.find((p) => p.id === projectId)
                 if (!project) return
-                setDialog({
-                  project,
-                  activity: activityTypes?.find((a) => a.id === activityTypeId) ?? null,
-                  workPackage: null,
-                  workDate,
-                  presetMinutes: minutes,
-                })
+                setDialog({ project, workDate, presetMinutes: minutes,
+                            presetActivity: activityTypeId })
               }}
             />
             {/* Beide fuegen dem Wochenraster leere Zeilen hinzu - unter 640 px
@@ -307,40 +257,20 @@ export function TimeEntryPage() {
                 Zeile hinzufügen
               </p>
               <div className="flex flex-wrap gap-2">
-                <Select className="w-56" aria-label="Projekt" value={neueZeile.projekt}
-                        onChange={(e) =>
-                          setNeueZeile({ projekt: e.target.value, art: neueZeile.art, paket: '' })}>
+                <Select className="w-56" aria-label="Projekt" value={neuesProjekt}
+                        onChange={(e) => setNeuesProjekt(e.target.value)}>
                   <option value="" disabled>Projekt …</option>
                   {activeProjects.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </Select>
-                {/* Nur die Pakete des gewaehlten Projekts stehen zur Wahl. */}
-                {paketeDesProjekts.length > 0 && (
-                  <Select className="w-44" aria-label="Arbeitspaket" value={neueZeile.paket}
-                          onChange={(e) => setNeueZeile({ ...neueZeile, paket: e.target.value })}>
-                    <option value="">ohne Arbeitspaket</option>
-                    {paketeDesProjekts.map((w) => (
-                      <option key={w.id} value={w.id}>{w.code} · {w.name}</option>
-                    ))}
-                  </Select>
-                )}
-                <Select className="w-44" aria-label="Tätigkeitsart" value={neueZeileArt}
-                        onChange={(e) => setNeueZeile({ ...neueZeile, art: e.target.value })}>
-                  <option value="">ohne Tätigkeitsart</option>
-                  {(activityTypes ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </Select>
                 <Button
                   variant="primary"
-                  disabled={!neueZeile.projekt}
+                  disabled={!neuesProjekt}
                   onClick={() => {
-                    const { projekt, paket } = neueZeile
-                    if (!projekt) return
-                    setExtraRows((rows) =>
-                      [...new Set([...rows, rowKey(projekt, neueZeileArt || null, paket || null)])])
-                    setNeueZeile({ projekt: '', art: null, paket: '' })
+                    if (!neuesProjekt) return
+                    setExtraRows((ids) => [...new Set([...ids, neuesProjekt])])
+                    setNeuesProjekt('')
                     setAdding(false)
                   }}
                 >
@@ -373,11 +303,9 @@ export function TimeEntryPage() {
                     entries={entries ?? []}
                     periods={periods ?? []}
                     budgets={budgetVon}
-                    selected={zelle
-                      ? cellKey(rowKey(zelle.project.id, zelle.activity?.id ?? null,
-                                       zelle.workPackage?.id ?? null), zelle.workDate)
-                      : null}
+                    selected={zelle}
                     onSelect={setZelle}
+                    onClose={() => setZelle(null)}
                     onQuickUpdate={(entry, minutes) =>
                       void run(() =>
                         save.mutateAsync({
@@ -404,13 +332,7 @@ export function TimeEntryPage() {
                     onEdit={(entry: TimeEntryFull) => {
                       const project = projects?.find((p) => p.id === entry.project_id)
                       if (!project) return
-                      setDialog({
-                        project,
-                        activity: activityTypes?.find((a) => a.id === entry.activity_type_id) ?? null,
-                        workPackage: entry.work_package_id
-                          ? (paketVon.get(entry.work_package_id) ?? null) : null,
-                        workDate: entry.work_date,
-                      })
+                      setDialog({ project, workDate: entry.work_date })
                     }}
                   />
                 </div>
@@ -420,21 +342,17 @@ export function TimeEntryPage() {
 
           {/* Nur breit: schmal gibt es kein Raster, dort fuehrt die Tagesliste
               in denselben Dialog. */}
-          <div className="hidden sm:block">
-            {zelle ? (
-              <CellPanel target={zelle} entries={zellEntries}
-                         onClose={() => setZelle(null)} onRetarget={setZelle} />
-            ) : rows.length > 0 && (
-              <p className="mt-3 px-1 text-sm text-ink-500">
-                In eine Zelle klicken, um die Einträge dieses Tages zu sehen und zu bearbeiten.
-              </p>
-            )}
-          </div>
+          {rows.length > 0 && (
+            <p className="mt-3 hidden px-1 text-sm text-ink-500 sm:block">
+              In eine Zelle klicken — die Zeile klappt auf und zeigt die Einträge
+              dieses Tages, nach Arbeitspaket gruppiert.
+            </p>
+          )}
         </>
       )}
 
       <EntryDialog target={dialog} entries={dialogEntries}
-                   onClose={() => setDialog(null)} onRetarget={setDialog} />
+                   onClose={() => setDialog(null)} />
 
       <QuickEntryDialog
         open={quickEntry.open}
