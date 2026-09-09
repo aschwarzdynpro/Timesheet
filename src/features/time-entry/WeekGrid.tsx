@@ -243,6 +243,15 @@ export function WeekGrid({
                         readOnly={locked}
                         aria-readonly={locked || undefined}
                         aria-expanded={gewaehlt}
+                        // Der Klick schaltet um: das zweite Mal auf dieselbe
+                        // Zelle klappt wieder zu. Bewusst onMouseDown - es
+                        // feuert vor dem Fokus und sieht damit noch den Zustand
+                        // vor dem Klick. Nach onFocus haette React schon neu
+                        // gerendert, und die Zelle waere im selben Klick
+                        // aufgegangen und wieder zugefallen.
+                        onMouseDown={() => (gewaehlt ? onClose() : onSelect(zielVon(row, iso)))}
+                        // Fuer die Tastatur: wer mit Tab hereinkommt, loest
+                        // keinen Mausklick aus.
                         onFocus={() => { if (!gewaehlt) onSelect(zielVon(row, iso)) }}
                         onChange={(e) => {
                           if (locked) return
