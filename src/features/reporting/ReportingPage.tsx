@@ -74,7 +74,8 @@ export function ReportingPage() {
     if (resolution === 'month') {
       for (let m = 0; m < 12; m++) {
         buckets.set(`${year}-${String(m + 1).padStart(2, '0')}-01`,
-                    { label: MONTHS[m]!, full: `${MONTHS_LONG[m]} ${year}`, billable: 0, internal: 0 })
+                    { label: MONTHS[m]!, full: `${MONTHS_LONG[m]} ${year}`,
+                      billable: 0, internal: 0, fees: 0 })
       }
     }
     for (const row of rows) {
@@ -82,10 +83,11 @@ export function ReportingPage() {
       const point = buckets.get(key) ?? {
         label: 'week_start' in row ? `${row.iso_week}` : MONTHS[new Date(key).getMonth()]!,
         full: 'week_start' in row ? `KW ${row.iso_week} / ${row.iso_year}` : key,
-        billable: 0, internal: 0,
+        billable: 0, internal: 0, fees: 0,
       }
       point.billable += Number(row.minutes_billable ?? 0) / 60
       point.internal += Number(row.minutes_internal ?? 0) / 60
+      point.fees += Number(row.fees ?? 0)
       buckets.set(key, point)
     }
     return [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v)
@@ -205,10 +207,13 @@ export function ReportingPage() {
 
           <Card className="mt-3 p-5">
             <h2 className="mb-1 text-sm font-semibold text-ink-700">
-              Stunden je {resolution === 'month' ? 'Monat' : 'Kalenderwoche'}
+              Stunden und Honorar je {resolution === 'month' ? 'Monat' : 'Kalenderwoche'}
             </h2>
             <p className="mb-3 text-xs text-ink-400">
-              Erfasste Zeit, aufgeteilt in abrechenbar und intern.
+              Erfasste Zeit, aufgeteilt in abrechenbar und intern — darunter das daraus
+              bewertete Honorar. Zwei Felder statt zweier Achsen in einem: Stunden und Euro
+              haben keinen gemeinsamen Maßstab, und wo beide auseinandergehen, steckt der
+              Stundensatz dahinter, nicht die Skalierung.
             </p>
             <TrendChart points={trendPoints} unit="h" />
           </Card>

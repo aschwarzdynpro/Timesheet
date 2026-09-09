@@ -335,3 +335,32 @@ damals, sondern schätzt, was heute übrig bleibt.
 
   Für den nächsten Fall bleibt: **Migration vor dem Frontend ausrollen** — `npm run
   db:push` gehört vor den Push nach `main`, nicht danach.
+
+## Nachtrag: Honorar je Zeitraum im Verlauf
+
+Der Verlauf zeigt jetzt zwei Felder übereinander: oben die erfasste Zeit wie bisher,
+darunter das daraus bewertete Honorar. Dieselbe Zeitachse, dieselben Spaltenpositionen,
+ein gemeinsames Ziel für die Maus — der Hinweis nennt beide Zahlen zusammen.
+
+**Bewusst keine zweite Y-Achse.** Sie war die naheliegende Idee und ist der häufigste
+Fehler bei genau dieser Aufgabe: Stunden und Euro haben keinen gemeinsamen Maßstab, und
+zwei Skalen in einem Feld lassen sich immer so legen, dass die Kurven sich schneiden oder
+auseinanderlaufen. Die Aussage käme dann aus der Skalierung, nicht aus den Daten.
+Untereinander stehen beide Felder mit eigenem Maßstab; wo Stunden und Honorar
+auseinandergehen, steckt der Stundensatz dahinter — und das Diagramm behauptet nichts.
+
+Das Blau ist in beiden Feldern dasselbe, weil es dieselbe Sache zeigt: die abrechenbare
+Arbeit, einmal in Stunden und einmal bewertet. Interne Zeit hat kein Gegenstück in Euro
+und steht deshalb nur oben; das Honorarfeld hat nur eine Reihe und braucht keine Legende.
+
+Nebenbei bekamen beide Achsen ein glattes Raster (1 · 1,5 · 2 · 2,5 · 3 · 4 · 5 · 6 · 8
+mal Zehnerpotenz). Vorher lieferte `ceil(max / 4)` Schritte wie 78 — bei Stunden gerade
+noch lesbar, bei Beträgen stünden dort Zahlen wie 19.837. Die Leiter ist bis 8 fein
+genug, dass die Säulen im Honorarfeld mit seinen nur zwei Schritten nicht auf halber
+Höhe enden.
+
+### Beim Bauen gefunden
+
+- **Ein leerer Zeitraum schrieb „0, 0, 1, 1, 1" an die Achse.** Das Raster rechnete
+  `max / 4` und kam bei fehlenden Daten auf Viertelschritte, die als ganze Zahlen
+  formatiert dreimal dieselbe Ziffer ergaben. Jetzt ist der Schritt mindestens 1.
