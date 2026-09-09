@@ -11,6 +11,7 @@ import type {
 } from '@/types/database'
 import { EntryEditor, entryEditorKey, type EntryDialogTarget } from './EntryDialog'
 import { PackageBudget } from './PackageBudget'
+import { gesperrteTage } from './lock'
 
 /**
  * Eine Rasterzeile ist ein Projekt.
@@ -70,20 +71,7 @@ export function WeekGrid({
     return map
   }, [entries])
 
-  // Gesperrte Tage je Kunde: eine Periode, die nicht mehr offen ist
-  const lockedDays = useMemo(() => {
-    const map = new Map<string, Set<string>>()
-    for (const p of periods) {
-      if (p.status === 'open') continue
-      const set = map.get(p.customer_id) ?? new Set<string>()
-      for (const day of days) {
-        const iso = toIsoDate(day)
-        if (iso >= p.period_start && iso <= p.period_end) set.add(iso)
-      }
-      map.set(p.customer_id, set)
-    }
-    return map
-  }, [periods, days])
+  const lockedDays = useMemo(() => gesperrteTage(periods, days), [periods, days])
 
   const cellsOf = (row: GridRow, iso: string) => cells.get(cellKey(row.project.id, iso)) ?? []
   const sumOf = (list: TimeEntryFull[]) => list.reduce((n, e) => n + e.duration_minutes, 0)

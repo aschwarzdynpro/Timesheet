@@ -469,3 +469,35 @@ zu wem sie gehören.
   sich ein neuer Eintrag, in dem Paket und Art dabeistehen. Ein gestoppter Timer bringt
   seine eigene Tätigkeitsart mit und bekommt deshalb immer einen neuen Eintrag.
 - „Zeile hinzufügen" über dem Raster wählt nur noch das Projekt.
+
+## Nachtrag: Tagesansicht, Schnellerfassung, entrümpelter Editor
+
+Drei Änderungen aus einer Frage — „wie stelle ich die Zeiterfassung optimal dar?" —, und
+die Antwort kam aus den eigenen Daten: **534 Einträge an 131 Tagen sind 4,1 am Tag,
+verteilt auf 3,4 Projekte.** Das sind 1,2 Einträge je Projekt und Tag, 531 von 534 mit
+derselben Tätigkeitsart, 9 % ohne Arbeitspaket.
+
+**Der Editor** führte je Arbeitspaket einen eigenen Block mit Kopf, Tabellenkopf und
+Schaltfläche — gut 200 px für eine Zeile mit 2,00 h. Bei 1,2 Einträgen je Projekttag ist
+das Paket keine Überschrift, sondern eine Spalte. Jetzt: eine Tabelle, das Paket als
+erste Spalte direkt umstellbar, die Tätigkeitsart nur sichtbar, wenn es mehr als eine
+aktive gibt.
+
+**Die Tagesansicht** ist der neue Startpunkt: eine Wochenleiste mit sieben Tagesummen,
+darunter eine Erfassungszeile, darunter der Tag nach Projekten. Das Wochenraster ist
+einen Klick entfernt (`Segmented` „Tag | Woche") und dient dem, wofür ein Raster gut ist:
+Prüfen und Melden. Auf dem Telefon ist die Tagesansicht dieselbe — nur schmaler.
+
+**Die Erfassungszeile** macht aus vier Schritten einen: Projekt und Paket bleiben nach
+dem Speichern stehen, Dauer und Beschreibung werden leer, der Fokus springt zurück auf
+die Dauer. Vier Einträge sind viermal tippen, Tab, tippen, Enter.
+
+### Beim Bauen gefunden
+
+- **Die Sperrlogik stand zweimal da.** Das Raster rechnete sich die gemeldeten Tage
+  selbst aus; die Tagesansicht hätte dieselbe Schleife ein zweites Mal gebraucht. Zwei
+  Ansichten, die verschieden antworten, hätten ein Eingabefeld angeboten, wo die andere
+  ein Schloss zeigt. Jetzt steht sie einmal in `lock.ts` — die Sperre selbst bleibt ein
+  Trigger in der Datenbank, das hier ist nur, was die Oberfläche vorwegnimmt.
+- **`ref` fehlte am `Input`.** Für den Fokussprung nach dem Speichern. Unter React 19
+  reicht dafür ein `ref` in den Props; der Baustein hat es jetzt im Typ.

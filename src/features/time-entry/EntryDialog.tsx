@@ -94,8 +94,17 @@ const SPALTE = 'text-xs font-semibold tracking-wide text-ink-500 uppercase'
  * ueber mehreren.
  */
 export function EntryEditor({
-  target, entries,
-}: { target: EntryDialogTarget; entries: TimeEntryFull[] }) {
+  target, entries, speicherhinweis = true,
+}: {
+  target: EntryDialogTarget
+  entries: TimeEntryFull[]
+  /**
+   * Der Satz "gespeichert wird beim Verlassen des Feldes" gehoert einmal auf
+   * die Seite, nicht einmal je Projekt: in der Tagesansicht stehen mehrere
+   * Editoren untereinander.
+   */
+  speicherhinweis?: boolean
+}) {
   const { project, workDate } = target
   const save = useSaveTimeEntry()
   const remove = useDeleteTimeEntry()
@@ -478,9 +487,11 @@ export function EntryEditor({
         <Button size="sm" onClick={ergaenzeZeile}>
           <Plus className="size-4" /> Zeile hinzufügen
         </Button>
-        <span className="text-xs text-ink-500">
-          Gespeichert wird beim Verlassen des Feldes.
-        </span>
+        {speicherhinweis && (
+          <span className="text-xs text-ink-500">
+            Gespeichert wird beim Verlassen des Feldes.
+          </span>
+        )}
       </div>
 
       {artenDesTages.map((artId) => (

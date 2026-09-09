@@ -65,9 +65,14 @@ liegt an einer Stelle.
   die Auslastungsquote ausgeblendet — eine erfundene Zahl wäre schlimmer als keine."
 - **Dialoge erst beim Öffnen einhängen** (`{offen && <Dialog …/>}`), sonst stehen
   Eingaben und Fehlermeldungen des vorigen Aufrufs wieder da.
-- **Ein Editor, zwei Rahmen.** Ein Zeiteintrag wird am Laptop in der
-  aufgeklappten Rasterzeile bearbeitet, auf dem Telefon im Dialog — beide zeigen
-  denselben `EntryEditor`. Wer dort etwas ergänzt, ergänzt es für beide.
+- **Ein Editor, drei Rahmen.** Ein Zeiteintrag wird in der Tagesansicht
+  bearbeitet, in der aufgeklappten Rasterzeile der Wochenansicht und auf dem
+  Telefon im Dialog — alle drei zeigen denselben `EntryEditor`. Wer dort etwas
+  ergänzt, ergänzt es für alle drei.
+- **Erfasst wird tageweise, geprüft wochenweise.** Die Tagesansicht ist der
+  Start: Wochenleiste, eine Erfassungszeile, darunter der Tag nach Projekten.
+  Das Raster liegt einen Klick daneben und dient dem Prüfen und Melden. Die
+  Zahlen dahinter: 4,1 Einträge am Tag auf 3,4 Projekte.
 - **Zeiteinträge werden in der Zeile bearbeitet, nicht in einem Formular
   darunter.** Dauer und Beschreibung stehen als Felder in der Zeile und
   speichern beim Verlassen — wie die Zellen des Wochenrasters auch. Was für eine

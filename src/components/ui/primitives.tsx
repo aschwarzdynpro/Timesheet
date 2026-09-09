@@ -1,4 +1,4 @@
-import { type ComponentType, type ReactNode, type ButtonHTMLAttributes,
+import { type ComponentType, type ReactNode, type Ref, type ButtonHTMLAttributes,
          type InputHTMLAttributes,
          type SelectHTMLAttributes, type TextareaHTMLAttributes, useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
@@ -79,7 +79,10 @@ export function Segmented<T extends string>({
   )
 }
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+/** `ref` steht mit React 19 in den Props - fuer den Fokus nach dem Speichern. */
+export function Input({
+  className, ...props
+}: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
   return (
     <input
       className={cn(

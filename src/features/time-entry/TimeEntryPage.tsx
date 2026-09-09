@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { CalendarDays, ChevronLeft, ChevronRight, CopyPlus, Plus } from 'lucide-react'
 import {
-  Button, Card, EmptyState, ErrorNote, Select, WarnNote,
+  Button, Card, EmptyState, ErrorNote, Segmented, Select, WarnNote,
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
-import { formatDate, formatEuro, formatPercent, sumOrNull } from '@/lib/format'
-import { addDays, isoWeek, minutesToHours, mondayOf, toIsoDate } from '@/lib/week'
+import { formatDate, formatEuro, formatPercent, sumOrNull, today } from '@/lib/format'
+import { addDays, fromIsoDate, isoWeek, minutesToHours, mondayOf, toIsoDate } from '@/lib/week'
 import type { TimeEntryFull, WorkPackageBudget } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
 import { useAllWorkPackageBudgets, useProjects } from '@/features/projects/api'
@@ -16,9 +16,16 @@ import { useIncomeTaxPercent } from '@/features/account/api'
 import { EntryDialog, type EntryDialogTarget } from './EntryDialog'
 import { WeekGrid, rowKey, type GridRow } from './WeekGrid'
 import { DayList } from './DayList'
+import { DayView } from './DayView'
 import { Timer } from './Timer'
 import { QuickEntryDialog } from './QuickEntryDialog'
 import { useSaveTimeEntry, useWeekEntries, useWeekPeriods } from './api'
+
+/** 0 = Montag. Aus einem ISO-Datum, ohne den Umweg ueber die Zeitzone. */
+function wochentagIndex(iso: string): number {
+  const tag = fromIsoDate(iso).getDay()
+  return tag === 0 ? 6 : tag - 1
+}
 
 export function TimeEntryPage() {
   const [monday, setMonday] = useState(() => mondayOf(new Date()))
@@ -32,6 +39,12 @@ export function TimeEntryPage() {
   const [quickEntry, setQuickEntry] = useState<{ open: boolean; workDate?: string }>({
     open: false,
   })
+  /**
+   * Erfasst wird tageweise, geprueft wochenweise. Der Tag ist deshalb die
+   * Startansicht - das Raster liegt einen Klick daneben.
+   */
+  const [ansicht, setAnsicht] = useState<'tag' | 'woche'>('tag')
+  const [tag, setTag] = useState(() => today())
 
   const { data: projects } = useProjects()
   const { data: budgets } = useAllWorkPackageBudgets()
@@ -48,7 +61,13 @@ export function TimeEntryPage() {
   /** Ein Wochenwechsel nimmt die Auswahl mit - sonst zeigte die Tafel einen
       Tag, der gar nicht mehr im Raster steht. */
   function zeigeWoche(next: (m: Date) => Date) {
-    setMonday((m) => next(m))
+    setMonday((m) => {
+      const naechster = next(m)
+      // Der gewaehlte Wochentag wandert mit: wer am Mittwoch blaettert, will
+      // den Mittwoch der anderen Woche sehen und nicht wieder den Montag.
+      setTag((iso) => toIsoDate(addDays(naechster, wochentagIndex(iso))))
+      return naechster
+    })
     setZelle(null)
   }
 
@@ -157,11 +176,20 @@ export function TimeEntryPage() {
       />
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-lg font-semibold text-ink-800">KW {week} / {year}</p>
-          <p className="tabular text-sm text-ink-500">
-            {formatDate(toIsoDate(monday))} – {formatDate(toIsoDate(sunday))}
-          </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <div>
+            <p className="text-lg font-semibold text-ink-800">KW {week} / {year}</p>
+            <p className="tabular text-sm text-ink-500">
+              {formatDate(toIsoDate(monday))} – {formatDate(toIsoDate(sunday))}
+            </p>
+          </div>
+          <Segmented
+            size="sm"
+            label="Ansicht"
+            value={ansicht}
+            onChange={setAnsicht}
+            options={[{ value: 'tag', label: 'Tag' }, { value: 'woche', label: 'Woche' }]}
+          />
         </div>
         <dl className="flex flex-wrap gap-x-6 gap-y-2 text-right">
           <div>
@@ -238,116 +266,132 @@ export function TimeEntryPage() {
                             presetActivity: activityTypeId })
               }}
             />
-            {/* Beide fuegen dem Wochenraster leere Zeilen hinzu - unter 640 px
-                gibt es das Raster nicht, dort waere die Wirkung unsichtbar. */}
-            <Button className="hidden sm:inline-flex" onClick={() => setAdding((v) => !v)}>
-              <Plus className="size-4" /> Zeile
-            </Button>
-            {(previousWeek.data?.length ?? 0) > 0 && (
-              <Button className="hidden sm:inline-flex" onClick={copyPreviousWeek}
-                      title="Projektzeilen der Vorwoche übernehmen, ohne Stunden">
-                <CopyPlus className="size-4" /> Vorwoche
-              </Button>
+            {ansicht === 'woche' && (
+              <>
+                {/* Beide fuegen dem Wochenraster leere Zeilen hinzu - unter 640 px
+                    gibt es das Raster nicht, dort waere die Wirkung unsichtbar. */}
+                <Button className="hidden sm:inline-flex" onClick={() => setAdding((v) => !v)}>
+                  <Plus className="size-4" /> Zeile
+                </Button>
+                {(previousWeek.data?.length ?? 0) > 0 && (
+                  <Button className="hidden sm:inline-flex" onClick={copyPreviousWeek}
+                          title="Die Projekte der Vorwoche als leere Zeilen übernehmen">
+                    <CopyPlus className="size-4" /> Vorwoche
+                  </Button>
+                )}
+              </>
             )}
           </div>
 
-          {adding && (
-            <Card className="mt-3 p-3">
-              <p className="mb-2 text-xs font-semibold tracking-wide text-ink-500 uppercase">
-                Zeile hinzufügen
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Select className="w-56" aria-label="Projekt" value={neuesProjekt}
-                        onChange={(e) => setNeuesProjekt(e.target.value)}>
-                  <option value="" disabled>Projekt …</option>
-                  {activeProjects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </Select>
-                <Button
-                  variant="primary"
-                  disabled={!neuesProjekt}
-                  onClick={() => {
-                    if (!neuesProjekt) return
-                    setExtraRows((ids) => [...new Set([...ids, neuesProjekt])])
-                    setNeuesProjekt('')
-                    setAdding(false)
-                  }}
-                >
-                  Hinzufügen
-                </Button>
-              </div>
-            </Card>
-          )}
+          {ansicht === 'tag' ? (
+            <DayView
+              monday={monday}
+              workDate={tag}
+              entries={entries ?? []}
+              periods={periods ?? []}
+              projects={activeProjects}
+              onSelectDay={setTag}
+            />
+          ) : (
+            <>
+              {adding && (
+                <Card className="mt-3 hidden p-4 sm:block">
+                  <p className="mb-2 text-xs font-semibold tracking-wide text-ink-500 uppercase">
+                    Zeile hinzufügen
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Select className="w-56" aria-label="Projekt" value={neuesProjekt}
+                            onChange={(e) => setNeuesProjekt(e.target.value)}>
+                      <option value="" disabled>Projekt …</option>
+                      {activeProjects.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </Select>
+                    <Button
+                      variant="primary"
+                      disabled={!neuesProjekt}
+                      onClick={() => {
+                        if (!neuesProjekt) return
+                        setExtraRows((ids) => [...new Set([...ids, neuesProjekt])])
+                        setNeuesProjekt('')
+                        setAdding(false)
+                      }}
+                    >
+                      Hinzufügen
+                    </Button>
+                  </div>
+                </Card>
+              )}
 
-          <Card className="mt-3">
-            {isPending ? (
-              <p className="px-5 py-8 text-sm text-ink-400">Wird geladen …</p>
-            ) : rows.length === 0 ? (
-              <EmptyState
-                title="Diese Woche ist noch leer"
-                hint="Erfasse eine Zeit oder starte den Timer — am Laptop kannst du auch die Projekte der Vorwoche übernehmen."
-                action={
-                  <Button variant="primary" onClick={() => setQuickEntry({ open: true })}>
-                    <Plus className="size-4" /> Zeit erfassen
-                  </Button>
-                }
-              />
-            ) : (
-              <>
-                {/* Raster braucht Breite und bleibt dem Laptop vorbehalten */}
-                <div className="hidden sm:block">
-                  <WeekGrid
-                    monday={monday}
-                    rows={rows}
-                    entries={entries ?? []}
-                    periods={periods ?? []}
-                    budgets={budgetVon}
-                    selected={zelle}
-                    onSelect={setZelle}
-                    onClose={() => setZelle(null)}
-                    onQuickUpdate={(entry, minutes) =>
-                      void run(() =>
-                        save.mutateAsync({
-                          id: entry.id,
-                          values: {
-                            project_id: entry.project_id,
-                            activity_type_id: entry.activity_type_id,
-                            work_package_id: entry.work_package_id,
-                            work_date: entry.work_date,
-                            duration_minutes: minutes,
-                            description: entry.description,
-                            is_billable: entry.is_billable,
-                          },
-                        }))
+              <Card className="mt-3">
+                {isPending ? (
+                  <p className="px-5 py-8 text-sm text-ink-400">Wird geladen …</p>
+                ) : rows.length === 0 ? (
+                  <EmptyState
+                    title="Diese Woche ist noch leer"
+                    hint="Erfasse eine Zeit oder starte den Timer — am Laptop kannst du auch die Projekte der Vorwoche übernehmen."
+                    action={
+                      <Button variant="primary" onClick={() => setAnsicht('tag')}>
+                        <Plus className="size-4" /> Zur Tagesansicht
+                      </Button>
                     }
                   />
-                </div>
-                <div className="px-4 sm:hidden">
-                  <DayList
-                    monday={monday}
-                    entries={entries ?? []}
-                    budgets={budgetVon}
-                    onAdd={(workDate) => setQuickEntry({ open: true, workDate })}
-                    onEdit={(entry: TimeEntryFull) => {
-                      const project = projects?.find((p) => p.id === entry.project_id)
-                      if (!project) return
-                      setDialog({ project, workDate: entry.work_date })
-                    }}
-                  />
-                </div>
-              </>
-            )}
-          </Card>
+                ) : (
+                  <>
+                    {/* Raster braucht Breite und bleibt dem Laptop vorbehalten */}
+                    <div className="hidden sm:block">
+                      <WeekGrid
+                        monday={monday}
+                        rows={rows}
+                        entries={entries ?? []}
+                        periods={periods ?? []}
+                        budgets={budgetVon}
+                        selected={zelle}
+                        onSelect={setZelle}
+                        onClose={() => setZelle(null)}
+                        onQuickUpdate={(entry, minutes) =>
+                          void run(() =>
+                            save.mutateAsync({
+                              id: entry.id,
+                              values: {
+                                project_id: entry.project_id,
+                                activity_type_id: entry.activity_type_id,
+                                work_package_id: entry.work_package_id,
+                                work_date: entry.work_date,
+                                duration_minutes: minutes,
+                                description: entry.description,
+                                is_billable: entry.is_billable,
+                              },
+                            }))
+                        }
+                      />
+                    </div>
+                    <div className="px-4 sm:hidden">
+                      <DayList
+                        monday={monday}
+                        entries={entries ?? []}
+                        budgets={budgetVon}
+                        onAdd={(workDate) => { setTag(workDate); setAnsicht('tag') }}
+                        onEdit={(entry: TimeEntryFull) => {
+                          const project = projects?.find((p) => p.id === entry.project_id)
+                          if (!project) return
+                          setDialog({ project, workDate: entry.work_date })
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+              </Card>
 
-          {/* Nur breit: schmal gibt es kein Raster, dort fuehrt die Tagesliste
-              in denselben Dialog. */}
-          {rows.length > 0 && (
-            <p className="mt-3 hidden px-1 text-sm text-ink-500 sm:block">
-              In eine Zelle klicken — die Zeile klappt auf und zeigt die Einträge
-              dieses Tages, nach Arbeitspaket gruppiert.
-            </p>
+              {rows.length > 0 && (
+                <p className="mt-3 hidden px-1 text-sm text-ink-500 sm:block">
+                  In eine Zelle klicken — die Zeile klappt auf und zeigt die Einträge
+                  dieses Tages, nach Arbeitspaket sortiert.
+                </p>
+              )}
+            </>
           )}
+
         </>
       )}
 
