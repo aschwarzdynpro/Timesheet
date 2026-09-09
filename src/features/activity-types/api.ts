@@ -4,6 +4,18 @@ import type { ActivityType, ActivityTypeInsert } from '@/types/database'
 
 const KEY = ['activity-types'] as const
 
+/**
+ * Die vorbelegte Taetigkeitsart fuer neue Zeiteintraege, oder '' wenn keine
+ * gepflegt ist.
+ *
+ * Die Pruefung auf `is_active` ist ein Sicherheitsnetz: die Datenbank nimmt
+ * einer inaktiven Art die Marke bereits ab. Stuende hier trotzdem eine, zeigte
+ * die Auswahlliste ein leeres Feld - sie enthaelt nur aktive Arten.
+ */
+export function standardArt(arten: ActivityType[] | undefined): string {
+  return arten?.find((a) => a.is_default && a.is_active)?.id ?? ''
+}
+
 export function useActivityTypes() {
   return useQuery({
     queryKey: KEY,

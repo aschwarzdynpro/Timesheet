@@ -27,6 +27,10 @@ export function describeError(error: unknown): string {
   if (message.includes('work_schedules_no_overlap')) {
     return 'Für diesen Zeitraum ist bereits ein Arbeitszeitmodell hinterlegt.'
   }
+  if (message.includes('activity_types_one_default')) {
+    return 'Es gibt bereits eine Standard-Tätigkeitsart. Lade die Seite neu — '
+      + 'inzwischen wurde an anderer Stelle eine gesetzt.'
+  }
   if (message.includes('app_settings_income_tax_percent_valid')) {
     return 'Der Einkommensteuersatz muss eine Zahl zwischen 0 und 100 sein.'
   }

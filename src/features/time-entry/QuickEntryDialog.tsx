@@ -6,6 +6,7 @@ import { describeError } from '@/lib/supabase'
 import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration, toIsoDate } from '@/lib/week'
 import type { ActivityType, Project } from '@/types/database'
+import { standardArt } from '@/features/activity-types/api'
 import { nachKuerzel, useWorkPackages } from '@/features/projects/api'
 import { useRateFor, useRecentDescriptions, useSaveTimeEntry } from './api'
 
@@ -36,7 +37,11 @@ function QuickEntryForm({
 }) {
   const save = useSaveTimeEntry()
   const [projectId, setProjectId] = useState(projects.length === 1 ? projects[0]!.id : '')
-  const [activityId, setActivityId] = useState('')
+  // null heisst "noch nicht gewaehlt" - dann gilt die Standardart. Eine
+  // Vorbelegung per useState haette leer bleiben koennen: die Arten kommen
+  // moeglicherweise erst nach dem ersten Rendern an.
+  const [artWahl, setArtWahl] = useState<string | null>(null)
+  const activityId = artWahl ?? standardArt(activityTypes)
   const [packageId, setPackageId] = useState('')
   // Nur die Pakete des gewaehlten Projekts - ein fremdes lehnt die Datenbank ab.
   const { data: workPackages } = useWorkPackages(projectId || null)
@@ -117,7 +122,7 @@ function QuickEntryForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Tätigkeitsart" hint="optional">
-            <Select value={activityId} onChange={(e) => setActivityId(e.target.value)}>
+            <Select value={activityId} onChange={(e) => setArtWahl(e.target.value)}>
               <option value="">ohne Art</option>
               {activityTypes.filter((a) => a.is_active)
                 .map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}

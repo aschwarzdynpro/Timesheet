@@ -37,6 +37,9 @@ export interface ActivityType {
   code: string
   name: string
   is_billable_default: boolean
+  /** Vorbelegung fuer neue Zeiteintraege. Hoechstens eine Art traegt sie - die
+      Datenbank setzt die vorige beim Speichern zurueck. */
+  is_default: boolean
   finops_category: string | null
   sort_order: number
   is_active: boolean
@@ -93,7 +96,7 @@ type Insertable<T, Optional extends keyof T> = Omit<T, 'id' | 'created_at' | Opt
   Partial<Pick<T, Optional>>
 
 export type CustomerInsert = Insertable<Customer, 'owner_id' | 'currency' | 'is_active'>
-export type ActivityTypeInsert = Insertable<ActivityType, 'owner_id' | 'is_active'>
+export type ActivityTypeInsert = Insertable<ActivityType, 'owner_id' | 'is_active' | 'is_default'>
 export type ProjectInsert = Insertable<Project, never>
 export type ProjectRateInsert = Insertable<ProjectRate, 'currency'>
 

@@ -412,3 +412,24 @@ dasselbe Gelb wie knapp — es ist die letzte Warnung vor der Grenze, nicht ihre
   verwarf nur `time-entries` und `reporting-periods`. Das Restbudget hätte den Stand von
   vor der Buchung gezeigt — ausgerechnet in dem Moment, in dem jemand hinsieht. Kein
   Test hätte das gefunden: die Zahl war richtig berechnet, nur zu alt.
+
+## Nachtrag: Standard-Tätigkeitsart
+
+Fast jeder Zeiteintrag trägt dieselbe Art. Eine Art kann deshalb in den Stammdaten die
+Marke **Standard** tragen und steht dann überall vorbelegt, wo ein Zeiteintrag entsteht:
+im Erfassungsdialog, im Timer und in der Zeile, die man dem Wochenraster hinzufügt.
+
+Höchstens eine Art trägt sie, und diese Regel steht in der Datenbank: Ein Trigger nimmt
+sie der bisherigen ab, sobald eine andere sie bekommt — ein Teilindex
+(`activity_types_one_default`) sichert sie gegen den Fall, den kein Trigger sieht, zwei
+gleichzeitige Transaktionen. Zwei Aufrufe aus der Oberfläche wären hier falsch gewesen:
+zwischen „alte abwählen“ und „neue setzen“ gäbe es einen Moment ohne Standard, und
+bricht der zweite Aufruf ab, bleibt es dabei.
+
+Eine inaktive Art verliert die Marke automatisch. Sie steht in keiner Auswahlliste — ein
+Standard, den man nirgends sieht und nirgends abwählen kann, wäre eine Falle.
+
+In der Oberfläche steht die Wahl auf `null`, solange niemand etwas ausgewählt hat; erst
+daraus wird der Standard gelesen. Ein fester Anfangswert per `useState` wäre leer
+geblieben, wenn die Tätigkeitsarten erst nach dem ersten Rendern eintreffen — der Timer
+steht dauerhaft auf der Seite und rendert genau einmal zu früh.

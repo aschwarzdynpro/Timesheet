@@ -4,6 +4,7 @@ import { Button, Select } from '@/components/ui/primitives'
 import { cn } from '@/lib/utils'
 import { minutesToClock, toIsoDate } from '@/lib/week'
 import type { ActivityType, Project } from '@/types/database'
+import { standardArt } from '@/features/activity-types/api'
 
 const STORAGE_KEY = 'timesheet.timer'
 
@@ -44,7 +45,10 @@ export function Timer({
 }) {
   const [timer, setTimer] = useState<RunningTimer | null>(() => load())
   const [projectId, setProjectId] = useState('')
-  const [activityId, setActivityId] = useState('')
+  // null heisst "noch nicht gewaehlt": bis dahin gilt die Standardart, auch
+  // wenn die Arten erst nach dem ersten Rendern eintreffen.
+  const [artWahl, setArtWahl] = useState<string | null>(null)
+  const activityId = artWahl ?? standardArt(activityTypes)
   // Verstrichene Minuten liegen im State, nicht in einer Berechnung waehrend des
   // Renderns: die Uhrzeit ist veraenderlich, das Rendern muss rein bleiben.
   const [elapsed, setElapsed] = useState(() =>
@@ -120,7 +124,7 @@ export function Timer({
         <option value="">Projekt wählen …</option>
         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </Select>
-      <Select value={activityId} onChange={(e) => setActivityId(e.target.value)}
+      <Select value={activityId} onChange={(e) => setArtWahl(e.target.value)}
               className="min-w-0 flex-1 sm:w-36 sm:flex-none" aria-label="Tätigkeitsart für den Timer">
         <option value="">ohne Art</option>
         {activityTypes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}

@@ -17,6 +17,7 @@ const schema = z.object({
   name: z.string().trim().min(1, 'Name fehlt'),
   sort_order: z.coerce.number().int().min(0),
   is_billable_default: z.boolean(),
+  is_default: z.boolean(),
   is_active: z.boolean(),
 })
 
@@ -36,6 +37,7 @@ function ActivityDialog({
     const parsed = schema.safeParse({
       ...raw,
       is_billable_default: raw.is_billable_default === 'on',
+      is_default: raw.is_default === 'on',
       is_active: raw.is_active === 'on',
     })
 
@@ -81,6 +83,17 @@ function ActivityDialog({
                  className="size-4 rounded border-ink-300" />
           standardmäßig abrechenbar
         </label>
+        <div>
+          <label className="flex items-center gap-2 text-sm text-ink-700">
+            <input type="checkbox" name="is_default" defaultChecked={item?.is_default ?? false}
+                   className="size-4 rounded border-ink-300" />
+            Standard für neue Zeiteinträge
+          </label>
+          <p className="mt-1 ml-6 text-xs text-ink-400">
+            Genau eine Art trägt diese Marke — die bisherige gibt sie beim Speichern ab.
+            Eine inaktive Art kann sie nicht tragen.
+          </p>
+        </div>
         <label className="flex items-center gap-2 text-sm text-ink-700">
           <input type="checkbox" name="is_active" defaultChecked={item?.is_active ?? true}
                  className="size-4 rounded border-ink-300" />
@@ -179,9 +192,12 @@ export function ActivityTypesPage() {
                     {!a.is_active && <span className="ml-2"><Badge tone="muted">inaktiv</Badge></span>}
                   </td>
                   <td className="px-5 py-2.5">
-                    {a.is_billable_default
-                      ? <Badge tone="good">abrechenbar</Badge>
-                      : <Badge tone="muted">nicht abrechenbar</Badge>}
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {a.is_billable_default
+                        ? <Badge tone="good">abrechenbar</Badge>
+                        : <Badge tone="muted">nicht abrechenbar</Badge>}
+                      {a.is_default && <Badge>Standard</Badge>}
+                    </span>
                   </td>
                   <td className="px-5 py-2.5 text-right whitespace-nowrap">{aktionen(a)}</td>
                 </tr>
@@ -198,9 +214,12 @@ export function ActivityTypesPage() {
                 inaktiv={!a.is_active}
                 aktionen={aktionen(a)}
                 zeilen={[
-                  a.is_billable_default
-                    ? <Badge tone="good">abrechenbar</Badge>
-                    : <Badge tone="muted">nicht abrechenbar</Badge>,
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {a.is_billable_default
+                      ? <Badge tone="good">abrechenbar</Badge>
+                      : <Badge tone="muted">nicht abrechenbar</Badge>}
+                    {a.is_default && <Badge>Standard</Badge>}
+                  </span>,
                 ]}
               />
             ))}

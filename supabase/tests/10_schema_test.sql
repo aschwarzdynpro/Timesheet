@@ -393,6 +393,62 @@ begin
   delete from time_entries where id = v_entry;
   delete from work_packages where id = v_paket;
 
+  raise notice 'Standard-Taetigkeitsart';
+  -- Ausgangslage: keine Art ist Standard.
+  perform test_assert(
+    (select count(*) from activity_types where owner_id = v_owner and is_default) = 0,
+    'ohne Pflege gibt es keinen Standard');
+
+  update activity_types set is_default = true where id = v_consult;
+  perform test_assert(
+    (select is_default from activity_types where id = v_consult),
+    'Beratung ist Standard');
+
+  -- Der neue Standard loest den alten ab, ohne dass jemand ihn abwaehlt.
+  update activity_types set is_default = true where id = v_travel;
+  perform test_assert(
+    (select is_default from activity_types where id = v_travel),
+    'Reisezeit uebernimmt den Standard');
+  perform test_assert(
+    not (select is_default from activity_types where id = v_consult),
+    'und Beratung gibt ihn ab');
+  perform test_assert(
+    (select count(*) from activity_types where owner_id = v_owner and is_default) = 1,
+    'es bleibt bei genau einem Standard');
+
+  -- Eine inaktive Art kann kein Standard sein: sie steht in keiner Auswahl.
+  update activity_types set is_active = false where id = v_travel;
+  perform test_assert(
+    not (select is_default from activity_types where id = v_travel),
+    'wird der Standard inaktiv, verliert er die Marke');
+  perform test_assert(
+    (select count(*) from activity_types where owner_id = v_owner and is_default) = 0,
+    'und es gibt wieder keinen Standard');
+  update activity_types set is_active = true where id = v_travel;
+  perform test_assert(
+    not (select is_default from activity_types where id = v_travel),
+    'das Wiederaktivieren holt die Marke nicht zurueck');
+
+  -- Auch eine neue Art kann direkt als Standard entstehen und loest ab.
+  update activity_types set is_default = true where id = v_consult;
+  insert into activity_types (owner_id, code, name, is_default)
+  values (v_owner, 'WORKSHOP', 'Workshop', true);
+  perform test_assert(
+    (select count(*) from activity_types where owner_id = v_owner and is_default) = 1,
+    'auch beim Anlegen bleibt es bei einem Standard');
+  perform test_assert(
+    (select code from activity_types where owner_id = v_owner and is_default) = 'WORKSHOP',
+    'und zwar bei der neu angelegten Art');
+
+  -- Der Index ist die Zusicherung fuer den Fall, den kein Trigger sieht.
+  perform test_assert(exists (
+    select 1 from pg_indexes
+    where schemaname = 'public' and indexname = 'activity_types_one_default'
+  ), 'ein Teilindex sichert den einen Standard auch gegen gleichzeitige Zugriffe');
+
+  delete from activity_types where owner_id = v_owner and code = 'WORKSHOP';
+  update activity_types set is_default = false where owner_id = v_owner;
+
   raise notice 'Spalten, auf die sich die Oberflaeche verlaesst';
   -- Die Oberflaeche filtert und sortiert ueber PostgREST nach diesen Spalten.
   -- Fehlt eine, weist PostgREST die gesamte Abfrage mit 42703 ab - und die
@@ -465,6 +521,15 @@ begin
                      and column_name='year') then
       v_fehlend := v_fehlend || 'v_report_year.year';
     end if;
+
+    -- Die Stammdaten der Taetigkeitsarten lesen und schreiben diese Spalten.
+    foreach v_spalte in array array['is_default','is_billable_default','sort_order','is_active'] loop
+      if not exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='activity_types'
+                       and column_name=v_spalte) then
+        v_fehlend := v_fehlend || ('activity_types.' || v_spalte);
+      end if;
+    end loop;
 
     -- Die Arbeitszeitseite sortiert direkt ueber die Tabellen.
     if not exists (select 1 from information_schema.columns

@@ -13,7 +13,7 @@ import { useCustomers } from '@/features/customers/api'
 import {
   nachKuerzel, useAllWorkPackageBudgets, useAllWorkPackages, useProjects,
 } from '@/features/projects/api'
-import { useActivityTypes } from '@/features/activity-types/api'
+import { standardArt, useActivityTypes } from '@/features/activity-types/api'
 import { useIncomeTaxPercent } from '@/features/account/api'
 import { EntryDialog, type EntryDialogTarget } from './EntryDialog'
 import { CellPanel } from './CellPanel'
@@ -61,7 +61,13 @@ export function TimeEntryPage() {
 
   // Auswahl fuer "Zeile hinzufuegen". Als Zustand statt per querySelector: das
   // Arbeitspaket haengt am gewaehlten Projekt und muss darauf reagieren.
-  const [neueZeile, setNeueZeile] = useState({ projekt: '', art: '', paket: '' })
+  // art: null heisst "noch nicht gewaehlt" - dann gilt die Standardart. Die
+  // Arten koennen erst nach dem ersten Rendern eintreffen; ein fester
+  // Anfangswert waere dann leer geblieben.
+  const [neueZeile, setNeueZeile] =
+    useState<{ projekt: string; art: string | null; paket: string }>(
+      { projekt: '', art: null, paket: '' })
+  const neueZeileArt = neueZeile.art ?? standardArt(activityTypes)
 
   const paketeDesProjekts = useMemo(
     () => (workPackages ?? [])
@@ -302,7 +308,8 @@ export function TimeEntryPage() {
               </p>
               <div className="flex flex-wrap gap-2">
                 <Select className="w-56" aria-label="Projekt" value={neueZeile.projekt}
-                        onChange={(e) => setNeueZeile({ projekt: e.target.value, art: neueZeile.art, paket: '' })}>
+                        onChange={(e) =>
+                          setNeueZeile({ projekt: e.target.value, art: neueZeile.art, paket: '' })}>
                   <option value="" disabled>Projekt …</option>
                   {activeProjects.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -318,7 +325,7 @@ export function TimeEntryPage() {
                     ))}
                   </Select>
                 )}
-                <Select className="w-44" aria-label="Tätigkeitsart" value={neueZeile.art}
+                <Select className="w-44" aria-label="Tätigkeitsart" value={neueZeileArt}
                         onChange={(e) => setNeueZeile({ ...neueZeile, art: e.target.value })}>
                   <option value="">ohne Tätigkeitsart</option>
                   {(activityTypes ?? []).map((a) => (
@@ -329,11 +336,11 @@ export function TimeEntryPage() {
                   variant="primary"
                   disabled={!neueZeile.projekt}
                   onClick={() => {
-                    const { projekt, art, paket } = neueZeile
+                    const { projekt, paket } = neueZeile
                     if (!projekt) return
                     setExtraRows((rows) =>
-                      [...new Set([...rows, rowKey(projekt, art || null, paket || null)])])
-                    setNeueZeile({ projekt: '', art: '', paket: '' })
+                      [...new Set([...rows, rowKey(projekt, neueZeileArt || null, paket || null)])])
+                    setNeueZeile({ projekt: '', art: null, paket: '' })
                     setAdding(false)
                   }}
                 >
