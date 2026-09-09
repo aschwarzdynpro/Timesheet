@@ -388,11 +388,25 @@ Betragsbudget — zwei Ansichten derselben Zahl dürfen nicht verschieden rechne
 Die Ampel `BudgetBadge` beantwortet „wie viel ist verbraucht“ und bleibt den Stammdaten
 vorbehalten. Beim Buchen zählt die andere Richtung — „wie viel kann ich noch buchen“ —,
 deshalb steht in `BudgetRest` der Rest vorn. Der Zustand steht als Wort da und nicht nur
-in der Farbe: `0,00` ist eine Punktlandung („aufgebraucht“), ein negativer Rest eine
-Ansage („überschritten“).
+in der Farbe.
+
+Beide lesen dieselbe Funktion `budgetStufe()` mit vier Stufen: *im Rahmen*, *knapp* (ab
+vier Fünfteln, gelb), *aufgebraucht* (gelb) und *überschritten* (rot). Aufgebraucht trägt
+dasselbe Gelb wie knapp — es ist die letzte Warnung vor der Grenze, nicht ihre
+Überschreitung.
 
 ### Beim Bauen gefunden
 
+- **Ein punktgenau aufgebrauchtes Budget stand als Verstoß da.** Beide Bausteine warfen
+  „voll“ und „zu voll“ in einen Topf (`share >= 1` → rot, „überschritten“). Ein Paket mit
+  2,00 von 2,00 h ist aber eine Punktlandung: sauber geplant, sauber geliefert. Rot und
+  „überschritten“ machten daraus eine Anschuldigung — und zwar in der Ampel der
+  Stammdaten *und* im Restbudget der Erfassung, weil die Regel an beiden Stellen einzeln
+  stand. Jetzt steht sie einmal in `budgetStufe()`, und aufgebraucht ist gelb.
+
+  Die Toleranz dieser Stufe ist die Genauigkeit der Anzeige: Was auf `0,00` gerundet
+  wird, ist aufgebraucht. Sonst stünde bei einem Rest von −0,001 h „Rest −0,00 h ·
+  überschritten“ — eine Ansage über nichts, entstanden aus einem Binärbruch.
 - **Der Budgetstand wäre nach dem Buchen stehen geblieben.** Die Sicht
   `v_work_package_budget` hängt an den Zeiteinträgen, aber das Speichern eines Eintrags
   verwarf nur `time-entries` und `reporting-periods`. Das Restbudget hätte den Stand von
