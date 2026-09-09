@@ -2,6 +2,7 @@ import { toIsoDate } from '@/lib/week'
 
 const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
 const decimal = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const percent = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 })
 const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 export function formatEuro(value: number | null | undefined): string {
@@ -18,6 +19,12 @@ export function formatRate(value: number | null | undefined): string {
 export function formatHours(minutes: number | null | undefined): string {
   if (minutes === null || minutes === undefined) return '–'
   return `${decimal.format(minutes / 60)} h`
+}
+
+/** Prozentsatz in deutscher Schreibweise, ohne ueberfluessige Nullen. */
+export function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '–'
+  return `${percent.format(value)} %`
 }
 
 export function formatDate(iso: string | null | undefined): string {

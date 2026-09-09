@@ -27,6 +27,9 @@ export function describeError(error: unknown): string {
   if (message.includes('work_schedules_no_overlap')) {
     return 'Für diesen Zeitraum ist bereits ein Arbeitszeitmodell hinterlegt.'
   }
+  if (message.includes('app_settings_income_tax_percent_valid')) {
+    return 'Der Einkommensteuersatz muss eine Zahl zwischen 0 und 100 sein.'
+  }
   if (message.includes('customers_owner_id_code_key') || message.includes('activity_types_owner_id_code_key')) {
     return 'Dieses Kürzel ist bereits vergeben.'
   }

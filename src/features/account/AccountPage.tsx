@@ -1,13 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { KeyRound, LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { KeyRound, LogOut, Monitor, Moon, Percent, Sun } from 'lucide-react'
 import {
   Button, Card, ErrorNote, Field, Input, WarnNote,
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { cn } from '@/lib/utils'
 import { describeError, supabase } from '@/lib/supabase'
+import { formatPercent } from '@/lib/format'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { useSaveTheme, useSetPassword, useStoredTheme } from './api'
+import {
+  STEUER_STANDARD, useIncomeTaxPercent, useSaveIncomeTaxPercent, useSaveTheme, useSetPassword,
+  useStoredTheme,
+} from './api'
 import { THEME_LABEL, useTheme, type ThemeChoice } from './theme'
 
 const SYMBOL: Record<ThemeChoice, typeof Sun> = {
@@ -76,6 +80,80 @@ function Darstellung() {
       </div>
 
       {error && <div className="px-5 pb-4"><ErrorNote message={error} /></div>}
+    </Card>
+  )
+}
+
+function Einkommensteuer() {
+  const gespeichert = useIncomeTaxPercent()
+  const speichern = useSaveIncomeTaxPercent()
+  // null heisst "noch nichts getippt" - dann zeigt das Feld den gepflegten
+  // Wert und zieht nach, sobald er geladen ist.
+  const [eingabe, setEingabe] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [fertig, setFertig] = useState(false)
+
+  const wert = eingabe ?? (gespeichert.data === undefined
+    ? '' : String(gespeichert.data).replace('.', ','))
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault()
+    setError(null)
+    setFertig(false)
+
+    const zahl = Number(wert.trim().replace(',', '.'))
+    if (wert.trim() === '' || !Number.isFinite(zahl) || zahl < 0 || zahl > 100) {
+      return setError('Ein Satz zwischen 0 und 100 — etwa 42 oder 42,5.')
+    }
+
+    try {
+      await speichern.mutateAsync(zahl)
+      setEingabe(null)
+      setFertig(true)
+    } catch (err) {
+      setError(describeError(err))
+    }
+  }
+
+  return (
+    <Card className="mt-3 overflow-hidden">
+      <div className="border-b border-ink-100 px-5 py-3">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ink-700">
+          <Percent className="size-4 text-ink-400" />
+          Einkommensteuer
+        </h2>
+        <p className="text-xs text-ink-400">
+          Um diesen Satz gekürzt steht das Honorar als Nettoumsatz neben den Zeiten und in
+          den Auswertungen. Ohne eigene Angabe gelten {formatPercent(STEUER_STANDARD)} —
+          der deutsche Spitzensteuersatz.
+        </p>
+      </div>
+
+      <form onSubmit={(e) => void onSubmit(e)} className="px-5 py-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Satz" className="w-32">
+            <div className="flex items-center gap-1.5">
+              <Input inputMode="decimal" className="text-right" value={wert}
+                     aria-label="Einkommensteuersatz in Prozent"
+                     onChange={(e) => { setEingabe(e.target.value); setFertig(false) }} />
+              <span className="text-sm text-ink-500">%</span>
+            </div>
+          </Field>
+          <Button type="submit" variant="primary" disabled={speichern.isPending}>
+            {speichern.isPending ? 'Wird gespeichert …' : 'Speichern'}
+          </Button>
+        </div>
+
+        {gespeichert.error && (
+          <div className="mt-3"><ErrorNote message={describeError(gespeichert.error)} /></div>
+        )}
+        {error && <div className="mt-3"><ErrorNote message={error} /></div>}
+        {fertig && (
+          <p className="mt-3 text-sm text-ink-500">
+            Gespeichert. Der Nettoumsatz rechnet ab sofort mit {formatPercent(gespeichert.data)}.
+          </p>
+        )}
+      </form>
     </Card>
   )
 }
@@ -169,7 +247,7 @@ export function AccountPage() {
     <>
       <PageHeader
         title="Konto"
-        subtitle="Darstellung und Anmeldung. Die Zeitdaten selbst liegen unter den anderen Punkten."
+        subtitle="Darstellung, Steuersatz und Anmeldung. Die Zeitdaten selbst liegen unter den anderen Punkten."
       />
 
       <Card className="mt-4 px-5 py-4">
@@ -178,6 +256,7 @@ export function AccountPage() {
       </Card>
 
       <Darstellung />
+      <Einkommensteuer />
       <Passwort hatPasswort={hatPasswort} />
 
       <Card className="mt-3 px-5 py-4">

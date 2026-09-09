@@ -3,10 +3,11 @@ import { Card, EmptyState, ErrorNote, Select } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { BudgetBadge } from '@/components/ui/BudgetBadge'
 import { describeError } from '@/lib/supabase'
-import { formatEuro } from '@/lib/format'
+import { formatEuro, formatPercent } from '@/lib/format'
 import { minutesToHours } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
 import { useProjects } from '@/features/projects/api'
+import { useIncomeTaxPercent } from '@/features/account/api'
 import { RankChart, TrendChart, type RankPoint, type TrendPoint } from './charts'
 import { useTargetMinutes, useTrend, useYears, type Resolution } from './api'
 
@@ -42,6 +43,8 @@ export function ReportingPage() {
 
   const trend = useTrend(year, resolution)
   const target = useTargetMinutes(`${year}-01-01`, `${year}-12-31`)
+  // Nur fuer den Hinweis unter der Zahl - abgezogen hat die Sicht den Satz schon.
+  const steuersatz = useIncomeTaxPercent()
 
   const rows = useMemo(
     () => (trend.data ?? []).filter((r) => !customerId || r.customer_id === customerId),
@@ -52,8 +55,11 @@ export function ReportingPage() {
     const tracked = rows.reduce((n, r) => n + Number(r.minutes_tracked ?? 0), 0)
     const billable = rows.reduce((n, r) => n + Number(r.minutes_billable ?? 0), 0)
     const fees = rows.reduce((n, r) => n + Number(r.fees ?? 0), 0)
+    // Der Nettoumsatz steht fertig in der Sicht: den Steuersatz zieht die
+    // Datenbank ab, damit hier dieselbe Zahl steht wie in der Wochenuebersicht.
+    const feesNet = rows.reduce((n, r) => n + Number(r.fees_net ?? 0), 0)
     return {
-      tracked, billable, fees,
+      tracked, billable, fees, feesNet,
       // Der Satz, den du tatsaechlich erloest: Honorar geteilt durch die
       // Stunden, die du wirklich gearbeitet hast - nicht durch die berechneten.
       realised: tracked > 0 ? fees / (tracked / 60) : null,
@@ -163,13 +169,20 @@ export function ReportingPage() {
         </Card>
       ) : (
         <>
-          <Card className="mt-4 grid divide-y divide-ink-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+          <Card className="mt-4 grid divide-y divide-ink-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
             <Stat label="Erfasst" value={`${minutesToHours(totals.tracked)} h`} />
             <Stat label="Abrechenbar" value={`${minutesToHours(totals.billable)} h`}
                   hint={totals.tracked > 0
                     ? `${Math.round((totals.billable / totals.tracked) * 100)} % der erfassten Zeit`
                     : undefined} />
             <Stat label="Honorar" value={formatEuro(totals.fees)} />
+            <Stat
+              label="Nettoumsatz"
+              value={formatEuro(totals.feesNet)}
+              hint={steuersatz.data !== undefined
+                ? `Honorar abzüglich ${formatPercent(steuersatz.data)} Einkommensteuer`
+                : undefined}
+            />
             <Stat
               label="Ø realisierter Satz"
               value={totals.realised !== null ? `${formatEuro(totals.realised)} / h` : '–'}

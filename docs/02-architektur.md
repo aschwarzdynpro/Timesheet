@@ -327,6 +327,8 @@ Feiertagen und Abwesenheiten – Grundlage der Auslastungsquote.
 | `fn_ensure_period(customer, cycle, date)` | Periode finden oder anlegen, Wochenbeginn vom Kunden |
 | `trg_customer_week_start_*` (BEFORE/AFTER UPD) | Wochenbeginn ab der ersten Meldung sperren, offene Wochen neu schneiden |
 | `fn_target_minutes(from, to)` | Sollarbeitszeit abzüglich Feiertagen/Abwesenheiten |
+| `fn_income_tax_percent()` | Einkommensteuersatz aus dem Profil (`app_settings`), ohne Pflege 42 |
+| `fn_net_revenue(amount)` | Nettoumsatz: Honorar abzüglich dieses Satzes |
 | `v_work_package_budget` | Arbeitspaket mit Budget und Verbrauch über die gesamte Laufzeit |
 | `trg_assign_period` (BEFORE INS/UPD) | `period_id` und `billable_minutes` setzen – auf Zeiten **und** Spesen |
 | `trg_lock_closed_period` (BEFORE INS/UPD/DEL) | Änderung ablehnen, wenn Periode ≠ `open` |
@@ -351,6 +353,7 @@ select
         * coalesce(t.rate_snapshot,
                    fn_rate_for(t.project_id, t.activity_type_id, t.work_date)), 2)
                                                                           as amount,
+  fn_net_revenue(amount)                                                  as net_amount,
   extract(isoyear from t.work_date)::int as iso_year,
   extract(week    from t.work_date)::int as iso_week,
   date_trunc('week',  t.work_date)::date as week_start,
@@ -365,6 +368,13 @@ left join activity_types a on a.id = t.activity_type_id;
 Analog `v_expenses_full`. Darauf: `v_report_week`, `v_report_month`, `v_report_year` –
 gruppiert nach Kunde und Projekt, mit Stunden, abrechenbaren Stunden, Honorar und Spesen.
 Das Frontend fragt diese Views direkt ab und rechnet selbst nichts nach.
+
+`net_amount` (und in den Berichtssichten `fees_net`) ist das Honorar abzüglich des
+Einkommensteuersatzes aus dem Profil. Die Aggregate summieren die bereits gerundeten
+Zeilenwerte, statt die Summe neu zu bewerten – sonst wichen Wochenübersicht und
+Auswertung um Cents voneinander ab. Anders als der Stundensatz ist der Steuersatz
+**nicht historisiert**: er bewertet nicht die Leistung von damals, sondern schätzt, was
+heute übrig bleibt, und wirkt deshalb auf alle Zeiträume.
 
 ## 4. Export nach Excel
 

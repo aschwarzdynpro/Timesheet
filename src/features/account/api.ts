@@ -3,6 +3,10 @@ import { supabase } from '@/lib/supabase'
 import { anwenden, istWahl, type ThemeChoice } from './theme'
 
 const THEME_KEY = 'theme'
+const TAX_KEY = 'income_tax_percent'
+
+/** Ohne Pflege gilt derselbe Standard wie in fn_income_tax_percent(). */
+export const STEUER_STANDARD = 42
 
 /**
  * Die Darstellungswahl aus der Datenbank. Sie gilt fuer alle Geraete; der
@@ -35,6 +39,48 @@ export function useSaveTheme() {
     onSuccess: (wahl) => {
       qc.setQueryData(['app-settings', THEME_KEY], wahl)
       anwenden(wahl)
+    },
+  })
+}
+
+/* --------------------------------------------------------- Einkommensteuer */
+
+/**
+ * Der Einkommensteuersatz aus dem Profil. Die Zahl selbst braucht die
+ * Oberflaeche nur fuer das Formular und den Hinweis daneben - gerechnet wird
+ * der Nettoumsatz in der Datenbank, damit Wochenuebersicht, Auswertung und
+ * spaeterer Export nicht auseinanderlaufen.
+ */
+export function useIncomeTaxPercent() {
+  return useQuery({
+    queryKey: ['app-settings', TAX_KEY],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase
+        .from('app_settings').select('value').eq('key', TAX_KEY).maybeSingle()
+      if (error) throw error
+      const wert = (data as { value?: unknown } | null)?.value
+      return typeof wert === 'number' ? wert : STEUER_STANDARD
+    },
+  })
+}
+
+export function useSaveIncomeTaxPercent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (prozent: number) => {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ key: TAX_KEY, value: prozent }, { onConflict: 'owner_id,key' })
+      if (error) throw error
+      return prozent
+    },
+    onSuccess: (prozent) => {
+      qc.setQueryData(['app-settings', TAX_KEY], prozent)
+      // Der Nettoumsatz steckt in den Sichten: alles, was ihn zeigt, muss neu
+      // gelesen werden. Sonst stuende die alte Zahl bis zum naechsten Laden da.
+      void qc.invalidateQueries({ queryKey: ['time-entries'] })
+      void qc.invalidateQueries({ queryKey: ['report'] })
     },
   })
 }

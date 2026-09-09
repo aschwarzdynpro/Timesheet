@@ -148,6 +148,41 @@ begin
   perform test_assert(r.rate_is_frozen = false, 'solange offen, ist der Satz nicht eingefroren');
   perform test_assert(r.customer_name = 'ACME Industrie AG', 'Kunde wird mitgefuehrt');
 
+  raise notice 'Nettoumsatz';
+  perform test_assert(fn_income_tax_percent() = 42,
+                      'ohne Pflege im Profil gelten 42 Prozent');
+  perform test_assert(r.net_amount = 121.80,
+                      '210,00 abzueglich 42 Prozent ergeben 121,80');
+
+  -- Ein anderer Satz im Profil schlaegt sofort bis in die Sichten durch.
+  insert into app_settings (owner_id, key, value)
+  values (v_owner, 'income_tax_percent', to_jsonb(30::numeric));
+  perform test_assert(fn_income_tax_percent() = 30, 'der gepflegte Satz gewinnt');
+  select * into r from v_time_entries_full where id = v_entry;
+  perform test_assert(r.net_amount = 147.00, '210,00 abzueglich 30 Prozent ergeben 147,00');
+  perform test_assert(r.amount = 210.00,     'das Honorar selbst bleibt unberuehrt');
+
+  -- Die Auswertungssicht rechnet nicht neu, sondern summiert dieselben Zeilen.
+  select * into r from v_report_week
+  where project_id = v_p_crm and week_start = date '2026-03-30';
+  perform test_assert(r.fees     = 210.00, 'die Wochensicht zeigt dasselbe Honorar');
+  perform test_assert(r.fees_net = 147.00, 'und denselben Nettoumsatz');
+
+  -- Was keine Zahl ist, kommt gar nicht erst hinein: sonst faellt der Cast
+  -- erst beim Lesen der Zeiten um, weit weg vom Formular.
+  perform test_expect_error(
+    format('update app_settings set value = to_jsonb(''42''::text)
+            where owner_id = %L and key = ''income_tax_percent''', v_owner),
+    'ein Steuersatz als Text wird abgelehnt');
+  perform test_expect_error(
+    format('update app_settings set value = to_jsonb(101::numeric)
+            where owner_id = %L and key = ''income_tax_percent''', v_owner),
+    'ein Steuersatz ueber 100 Prozent wird abgelehnt');
+  perform test_assert(fn_income_tax_percent() = 30, 'und der gepflegte Satz bleibt stehen');
+
+  delete from app_settings where owner_id = v_owner and key = 'income_tax_percent';
+  perform test_assert(fn_income_tax_percent() = 42, 'ohne Eintrag gilt wieder der Standard');
+
   raise notice 'ISO-Wochen am Jahreswechsel';
   insert into time_entries (owner_id, project_id, activity_type_id, work_date, duration_minutes, description)
   values (v_owner, v_p_crm, v_consult, date '2027-01-01', 60, 'Jahreswechsel-Test');
@@ -374,7 +409,7 @@ begin
         'period_id','billable_minutes','duration_minutes','amount','rate','status',
         'is_billable','description','iso_year','iso_week','week_start','month_start','year',
         'customer_code','project_code','activity_name',
-        'work_package_id','work_package_code','work_package_name'
+        'work_package_id','work_package_code','work_package_name','net_amount'
       ] loop
         if not exists (
           select 1 from information_schema.columns
@@ -396,6 +431,40 @@ begin
         v_fehlend := v_fehlend || ('v_expenses_full.' || v_spalte);
       end if;
     end loop;
+
+    -- Die Auswertungen filtern und sortieren ueber die Berichtssichten und
+    -- lesen Honorar und Nettoumsatz daraus.
+    foreach v_sicht in array array['v_report_week','v_report_month','v_report_year'] loop
+      foreach v_spalte in array array[
+        'customer_id','customer_name','project_id','project_name',
+        'minutes_tracked','minutes_billable','minutes_internal','fees','fees_net'
+      ] loop
+        if not exists (select 1 from information_schema.columns
+                       where table_schema='public' and table_name=v_sicht
+                         and column_name=v_spalte) then
+          v_fehlend := v_fehlend || (v_sicht || '.' || v_spalte);
+        end if;
+      end loop;
+    end loop;
+    foreach v_spalte in array array['iso_year','iso_week','week_start'] loop
+      if not exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='v_report_week'
+                       and column_name=v_spalte) then
+        v_fehlend := v_fehlend || ('v_report_week.' || v_spalte);
+      end if;
+    end loop;
+    foreach v_spalte in array array['year','month_start'] loop
+      if not exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='v_report_month'
+                       and column_name=v_spalte) then
+        v_fehlend := v_fehlend || ('v_report_month.' || v_spalte);
+      end if;
+    end loop;
+    if not exists (select 1 from information_schema.columns
+                   where table_schema='public' and table_name='v_report_year'
+                     and column_name='year') then
+      v_fehlend := v_fehlend || 'v_report_year.year';
+    end if;
 
     -- Die Arbeitszeitseite sortiert direkt ueber die Tabellen.
     if not exists (select 1 from information_schema.columns

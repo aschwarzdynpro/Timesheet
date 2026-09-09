@@ -154,6 +154,8 @@ export interface TimeEntryFull extends Omit<TimeEntry, 'created_at' | 'updated_a
   activity_name: string | null
   rate: number | null
   amount: number
+  /** Honorar abzueglich des Einkommensteuersatzes aus dem Profil. */
+  net_amount: number
   rate_is_frozen: boolean
   iso_year: number
   iso_week: number
