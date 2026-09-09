@@ -10,7 +10,7 @@ import type {
   Project, ReportingPeriod, TimeEntryFull, WorkPackageBudget,
 } from '@/types/database'
 import { EntryEditor, entryEditorKey, type EntryDialogTarget } from './EntryDialog'
-import { PackageBudget } from './PackageBudget'
+import { BudgetChip } from './PackageBudget'
 import { gesperrteTage } from './lock'
 
 /**
@@ -119,25 +119,28 @@ export function WeekGrid({
   }
 
   /**
-   * Woran diese Woche gearbeitet wurde: die Kuerzel, die sonst je eine eigene
-   * Rasterzeile hatten - und gleich daneben, was vom Budget des Pakets noch
-   * offen ist. Vorher standen die Kuerzel einmal in dieser Liste und ein
-   * zweites Mal vor ihrem Restbudget.
+   * Woran diese Woche gearbeitet wurde, in zwei Teilen.
+   *
+   * Pakete mit Budget stehen als Plaettchen untereinander: Kuerzel und Zahlen
+   * bilden sonst eine Kette, in der man nicht sieht, wo ein Paket aufhoert und
+   * das naechste anfaengt. Alles Uebrige bleibt eine schmale Zeile aus Kuerzeln
+   * - dort gibt es nichts zu trennen.
    */
   const beschriftung = (row: GridRow) => {
-    const stuecke = paketeDerWoche(row).map(([id, code]) => (
-      <span key={id} className="flex items-baseline gap-1">
-        <span>{code}</span>
-        <PackageBudget budget={budgets.get(id)} />
-      </span>
-    ))
+    const mitBudget: { id: string; code: string; budget: WorkPackageBudget }[] = []
+    const ohneBudget: string[] = []
+
+    for (const [id, code] of paketeDerWoche(row)) {
+      const budget = budgets.get(id)
+      if (budget && (budget.budget_hours || budget.budget_amount)) mitBudget.push({ id, code, budget })
+      else ohneBudget.push(code)
+    }
     if (entries.some((e) => e.project_id === row.project.id && !e.work_package_id)) {
-      stuecke.push(<span key="ohne">ohne Paket</span>)
+      ohneBudget.push('ohne Paket')
     }
-    if (!row.project.is_billable) {
-      stuecke.push(<span key="intern">nicht abrechenbar</span>)
-    }
-    return stuecke
+    if (!row.project.is_billable) ohneBudget.push('nicht abrechenbar')
+
+    return { mitBudget, ohneBudget }
   }
 
   const dayTotals = days.map((day) => {
@@ -181,36 +184,43 @@ export function WeekGrid({
           {rows.map((row) => {
             const rowTotal = days.reduce((sum, day) => sum + sumOf(cellsOf(row, toIsoDate(day))), 0)
             const offen = selected?.project.id === row.project.id ? selected : null
-            const stuecke = beschriftung(row)
+            const { mitBudget, ohneBudget } = beschriftung(row)
 
             return [
               <tr key={row.key} className={cn(!offen && 'hover:bg-ink-50/40')}>
                 <td className={cn('border-b border-ink-100 px-3 py-1.5',
                                   offen && 'bg-accent-50/40')}>
-                  <span className="flex items-start gap-1">
+                  {/* Feste Breite: ein Plaettchen mit zwei Budgets zog die
+                      Spalte sonst breiter und nahm den Tagesspalten den Platz.
+                      Jetzt bricht das Plaettchen um, nicht die Tabelle. */}
+                  <span className="flex w-56 items-start gap-1">
                     {/* Die Marke zeigt, dass hier etwas aufgeht - und wo es
                         gerade offen steht. */}
                     {offen
                       ? <ChevronDown className="mt-0.5 size-3.5 shrink-0 text-accent-600" />
                       : <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-ink-300" />}
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-ink-800">
                         {row.project.name}
                       </span>
-                      {/* Eine leere Zeile bekommt hier nichts: "ohne
+                      {/* Die Budgets zuerst - danach sucht man beim Buchen.
+                          Eine leere Zeile bekommt hier gar nichts: "ohne
                           Arbeitspaket" waere eine Aussage ueber Buchungen, die
                           es nicht gibt. */}
-                      {stuecke.length > 0 && (
-                        <span className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-xs text-ink-400">
-                          {/* Der Trenner steckt im selben Umbruchstueck wie sein
-                              Kuerzel. Als eigenes Element blieb er beim Umbruch
-                              allein am Zeilenende stehen. */}
-                          {stuecke.map((stueck, i) => (
-                            <span key={i} className="flex items-baseline gap-1.5">
-                              {i > 0 && <span aria-hidden className="text-ink-300">·</span>}
-                              {stueck}
-                            </span>
+                      {mitBudget.length > 0 && (
+                        <span className="mt-1 flex flex-col items-start gap-1">
+                          {mitBudget.map((p) => (
+                            <BudgetChip key={p.id} code={p.code} budget={p.budget} />
                           ))}
+                        </span>
+                      )}
+                      {ohneBudget.length > 0 && (
+                        // Eine Zeile, notfalls gekuerzt - hier stehen nur
+                        // Kuerzel ohne Zahlen. Der volle Text haengt als title
+                        // daran, damit nichts verloren geht.
+                        <span title={ohneBudget.join(' · ')}
+                              className="mt-0.5 block truncate text-xs text-ink-400">
+                          {ohneBudget.join(' · ')}
                         </span>
                       )}
                     </span>

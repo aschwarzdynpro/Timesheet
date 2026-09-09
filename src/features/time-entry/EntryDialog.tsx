@@ -10,7 +10,7 @@ import { minutesToHours, parseDuration } from '@/lib/week'
 import type { ActivityType, Project, TimeEntryFull } from '@/types/database'
 import { standardArt, useActivityTypes } from '@/features/activity-types/api'
 import { nachKuerzel, useAllWorkPackageBudgets, useWorkPackages } from '@/features/projects/api'
-import { PackageBudget } from './PackageBudget'
+import { BudgetChip } from './PackageBudget'
 import {
   useDeleteTimeEntry, useRateFor, useRecentDescriptions, useSaveTimeEntry,
 } from './api'
@@ -336,12 +336,11 @@ export function EntryEditor({
       {/* Was vom Budget der gebuchten Pakete offen ist - hier, wo gebucht wird,
           und nicht erst in den Stammdaten. */}
       {budgetZeilen.length > 0 && (
-        <div className="flex flex-wrap gap-x-5 gap-y-1">
+        <div className="flex flex-wrap gap-1.5">
+          {/* Dieselben Plaettchen wie in der Wochenliste - hier nebeneinander,
+              weil daneben Platz ist. */}
           {budgetZeilen.map((z) => (
-            <span key={z.id} className="flex flex-wrap items-baseline gap-x-1.5">
-              <span className="text-xs font-medium text-ink-500">{z.code}</span>
-              <PackageBudget budget={z.budget} />
-            </span>
+            <BudgetChip key={z.id} code={z.code} budget={z.budget} />
           ))}
         </div>
       )}
