@@ -10,7 +10,7 @@ import type {
   Project, ReportingPeriod, TimeEntryFull, WorkPackageBudget,
 } from '@/types/database'
 import { EntryEditor, entryEditorKey, type EntryDialogTarget } from './EntryDialog'
-import { BudgetChip } from './PackageBudget'
+import { PaketChip } from './PackageBudget'
 import { gesperrteTage } from './lock'
 
 /**
@@ -22,6 +22,9 @@ import { gesperrteTage } from './lock'
  * Zeile, wo Platz dafuer ist.
  */
 export type GridRow = { key: string; project: Project }
+
+/** Ein Arbeitspaket, wie es in der Zeilenbeschriftung erscheint. */
+type Paket = { id: string; code: string; budget?: WorkPackageBudget }
 
 export const rowKey = (projectId: string): string => projectId
 
@@ -119,28 +122,28 @@ export function WeekGrid({
   }
 
   /**
-   * Woran diese Woche gearbeitet wurde, in zwei Teilen.
+   * Woran diese Woche gearbeitet wurde: ein Plaettchen je Arbeitspaket, die mit
+   * Budget zuerst - danach sucht man beim Buchen.
    *
-   * Pakete mit Budget stehen als Plaettchen untereinander: Kuerzel und Zahlen
-   * bilden sonst eine Kette, in der man nicht sieht, wo ein Paket aufhoert und
-   * das naechste anfaengt. Alles Uebrige bleibt eine schmale Zeile aus Kuerzeln
-   * - dort gibt es nichts zu trennen.
+   * Sie stehen in einem umbrechenden Streifen, nicht fest untereinander: ein
+   * Plaettchen mit Zahlen fuellt die Spalte ohnehin allein, zwei kurze Kuerzel
+   * passen nebeneinander. Die Anordnung ergibt sich damit aus der Breite und
+   * muss nicht entschieden werden.
    */
-  const beschriftung = (row: GridRow) => {
-    const mitBudget: { id: string; code: string; budget: WorkPackageBudget }[] = []
-    const ohneBudget: string[] = []
+  const beschriftung = (row: GridRow): Paket[] => {
+    const mitBudget: Paket[] = []
+    const ohneBudget: Paket[] = []
 
     for (const [id, code] of paketeDerWoche(row)) {
       const budget = budgets.get(id)
       if (budget && (budget.budget_hours || budget.budget_amount)) mitBudget.push({ id, code, budget })
-      else ohneBudget.push(code)
+      else ohneBudget.push({ id, code })
     }
     if (entries.some((e) => e.project_id === row.project.id && !e.work_package_id)) {
-      ohneBudget.push('ohne Paket')
+      ohneBudget.push({ id: 'ohne', code: 'ohne Paket' })
     }
-    if (!row.project.is_billable) ohneBudget.push('nicht abrechenbar')
 
-    return { mitBudget, ohneBudget }
+    return [...mitBudget, ...ohneBudget]
   }
 
   const dayTotals = days.map((day) => {
@@ -184,7 +187,7 @@ export function WeekGrid({
           {rows.map((row) => {
             const rowTotal = days.reduce((sum, day) => sum + sumOf(cellsOf(row, toIsoDate(day))), 0)
             const offen = selected?.project.id === row.project.id ? selected : null
-            const { mitBudget, ohneBudget } = beschriftung(row)
+            const pakete = beschriftung(row)
 
             return [
               <tr key={row.key} className={cn(!offen && 'hover:bg-ink-50/40')}>
@@ -203,24 +206,19 @@ export function WeekGrid({
                       <span className="block truncate font-medium text-ink-800">
                         {row.project.name}
                       </span>
-                      {/* Die Budgets zuerst - danach sucht man beim Buchen.
-                          Eine leere Zeile bekommt hier gar nichts: "ohne
+                      {/* Eine leere Zeile bekommt hier gar nichts: "ohne
                           Arbeitspaket" waere eine Aussage ueber Buchungen, die
                           es nicht gibt. */}
-                      {mitBudget.length > 0 && (
-                        <span className="mt-1 flex flex-col items-start gap-1">
-                          {mitBudget.map((p) => (
-                            <BudgetChip key={p.id} code={p.code} budget={p.budget} />
+                      {pakete.length > 0 && (
+                        <span className="mt-1 flex flex-wrap items-start gap-1">
+                          {pakete.map((p) => (
+                            <PaketChip key={p.id} code={p.code} budget={p.budget} />
                           ))}
                         </span>
                       )}
-                      {ohneBudget.length > 0 && (
-                        // Eine Zeile, notfalls gekuerzt - hier stehen nur
-                        // Kuerzel ohne Zahlen. Der volle Text haengt als title
-                        // daran, damit nichts verloren geht.
-                        <span title={ohneBudget.join(' · ')}
-                              className="mt-0.5 block truncate text-xs text-ink-400">
-                          {ohneBudget.join(' · ')}
+                      {!row.project.is_billable && (
+                        <span className="mt-0.5 block text-xs text-ink-400">
+                          nicht abrechenbar
                         </span>
                       )}
                     </span>

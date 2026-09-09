@@ -39,21 +39,21 @@ export function PackageBudget({
 }
 
 /**
- * Kuerzel und Restbudget als abgesetztes Plaettchen.
+ * Ein Arbeitspaket als abgesetztes Plaettchen, mit seinem Restbudget, wenn es
+ * eines hat.
  *
  * In einer Liste aus Kuerzeln und Zahlen laesst sich sonst schwer sehen, wo ein
  * Paket aufhoert und das naechste anfaengt - "13206 DEV 0 h / 2 h 13834 14 h /
  * 16 h" ist eine Kette aus sieben Teilen, von denen vier Zahlen sind. Der
  * Rahmen trennt, was zusammengehoert.
  *
- * Nur fuer Pakete mit Budget: ohne Zahl daneben waere das Plaettchen ein
- * Rahmen um ein Wort.
+ * Auch ohne Budget: sonst stuenden in derselben Zeile zwei Formen nebeneinander,
+ * gerahmte Pakete und ungerahmte, ohne dass der Unterschied etwas bedeutete -
+ * die Zahl im Plaettchen sagt schon, wer ein Budget hat.
  */
-export function BudgetChip({
+export function PaketChip({
   code, budget,
-}: { code: string; budget: WorkPackageBudget | undefined }) {
-  if (!budget || (!budget.budget_hours && !budget.budget_amount)) return null
-
+}: { code: string; budget?: WorkPackageBudget }) {
   return (
     <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-0.5 rounded border border-ink-200 bg-ink-50/70 px-1.5 py-0.5">
       <span className="text-xs font-medium text-ink-600">{code}</span>

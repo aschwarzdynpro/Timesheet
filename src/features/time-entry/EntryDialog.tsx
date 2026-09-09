@@ -10,7 +10,7 @@ import { minutesToHours, parseDuration } from '@/lib/week'
 import type { ActivityType, Project, TimeEntryFull } from '@/types/database'
 import { standardArt, useActivityTypes } from '@/features/activity-types/api'
 import { nachKuerzel, useAllWorkPackageBudgets, useWorkPackages } from '@/features/projects/api'
-import { BudgetChip } from './PackageBudget'
+import { PaketChip } from './PackageBudget'
 import {
   useDeleteTimeEntry, useRateFor, useRecentDescriptions, useSaveTimeEntry,
 } from './api'
@@ -340,7 +340,7 @@ export function EntryEditor({
           {/* Dieselben Plaettchen wie in der Wochenliste - hier nebeneinander,
               weil daneben Platz ist. */}
           {budgetZeilen.map((z) => (
-            <BudgetChip key={z.id} code={z.code} budget={z.budget} />
+            <PaketChip key={z.id} code={z.code} budget={z.budget} />
           ))}
         </div>
       )}

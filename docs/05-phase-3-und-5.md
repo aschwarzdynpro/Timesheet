@@ -448,12 +448,17 @@ darunter stehen die Einträge dieses Tages, nach Arbeitspaket und Tätigkeitsart
 jede Gruppe mit ihrem Kopf, ihrem Restbudget und ihren Zeilen. Vorher stand dafür eine
 Tafel unter dem Raster — weit weg von der Zahl, aus der sie stammte.
 
-Die Zeilenbeschriftung nennt die Kürzel, auf die diese Woche gebucht wurde. Pakete **mit
-Budget** stehen als Plättchen untereinander (`13206 DEV  0 h / 2 h`), alles Übrige bleibt
-eine schmale Zeile aus Kürzeln. Zwei Zwischenstufen führten dahin: erst standen die Reste
-als eigene Zeilen darunter — und damit jedes Kürzel zweimal in derselben Spalte; dann
-alles in einer Kette, in der zwischen Kürzeln und Zahlen kaum zu sehen war, wo ein Paket
-aufhört.
+Die Zeilenbeschriftung nennt die Kürzel, auf die diese Woche gebucht wurde — **jedes als
+Plättchen**, mit seinem Restbudget darin, wenn es eines hat. Sie stehen in einem
+umbrechenden Streifen: ein Plättchen mit Zahlen füllt die Spalte ohnehin allein, zwei
+kurze Kürzel passen nebeneinander. Die Anordnung ergibt sich damit aus der Breite und
+muss nicht entschieden werden.
+
+Drei Zwischenstufen führten dahin: erst standen die Reste als eigene Zeilen unter der
+Kürzelliste — und damit jedes Kürzel zweimal in derselben Spalte; dann alles in einer
+Kette, in der zwischen Kürzeln und Zahlen kaum zu sehen war, wo ein Paket aufhört; dann
+Plättchen nur für die mit Budget, was zwei Formen in dieselbe Zeile stellte, ohne dass
+der Unterschied etwas bedeutete.
 
 **Was aus dem Umbau folgte, ohne dass es jemand verlangt hätte:**
 
