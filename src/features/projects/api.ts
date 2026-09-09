@@ -192,6 +192,20 @@ export function useAllWorkPackages() {
   })
 }
 
+/**
+ * Alphabetisch nach Kuerzel.
+ *
+ * In den Stammdaten ordnet `sort_order` die Pakete so, wie das Projekt
+ * gegliedert ist - dort ist die Reihenfolge eine Aussage. Beim Erfassen sucht
+ * man dagegen ein bestimmtes Kuerzel in einer Auswahlliste, und dafuer zaehlt
+ * nur, dass es dort steht, wo man es erwartet.
+ *
+ * `numeric` sortiert AP2 vor AP10 - rein alphabetisch stuende die 10 davor,
+ * weil '1' vor '2' kommt.
+ */
+export const nachKuerzel = (a: { code: string }, b: { code: string }) =>
+  a.code.localeCompare(b.code, 'de', { numeric: true })
+
 /** Budget und Verbrauch je Arbeitspaket - ueber die gesamte Laufzeit. */
 export function useWorkPackageBudget(projectId: string | null) {
   return useQuery({
@@ -204,6 +218,25 @@ export function useWorkPackageBudget(projectId: string | null) {
         .eq('project_id', projectId as string)
         .order('sort_order')
         .order('code')
+      if (error) throw error
+      return (data ?? []) as WorkPackageBudget[]
+    },
+  })
+}
+
+/**
+ * Derselbe Budgetstand fuer alle Projekte auf einmal.
+ *
+ * Die Wochenansicht zeigt Zeilen aus mehreren Projekten nebeneinander; eine
+ * Abfrage je Projekt waere ein Schwarm kleiner Anfragen fuer eine Sicht, die
+ * ohnehin nur ein paar Zeilen hat.
+ */
+export function useAllWorkPackageBudgets() {
+  return useQuery({
+    queryKey: ['work-package-budget', 'alle'],
+    queryFn: async (): Promise<WorkPackageBudget[]> => {
+      const { data, error } = await supabase
+        .from('v_work_package_budget').select('*').order('code')
       if (error) throw error
       return (data ?? []) as WorkPackageBudget[]
     },

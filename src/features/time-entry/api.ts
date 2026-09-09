@@ -52,6 +52,10 @@ export function useWeekPeriods(monday: Date) {
 function invalidate(qc: ReturnType<typeof useQueryClient>) {
   void qc.invalidateQueries({ queryKey: ['time-entries'] })
   void qc.invalidateQueries({ queryKey: ['reporting-periods'] })
+  // Jede gebuchte Stunde verbraucht Budget. Ohne das stuende in der Woche das
+  // Restbudget von vor der Buchung - ausgerechnet in dem Moment, in dem
+  // jemand hinsieht.
+  void qc.invalidateQueries({ queryKey: ['work-package-budget'] })
 }
 
 export function useSaveTimeEntry() {

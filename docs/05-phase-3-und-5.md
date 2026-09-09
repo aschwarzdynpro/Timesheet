@@ -370,3 +370,31 @@ Höhe enden.
 - **Ein leerer Zeitraum schrieb „0, 0, 1, 1, 1" an die Achse.** Das Raster rechnete
   `max / 4` und kam bei fehlenden Daten auf Viertelschritte, die als ganze Zahlen
   formatiert dreimal dieselbe Ziffer ergaben. Jetzt ist der Schritt mindestens 1.
+
+## Nachtrag: Restbudget beim Erfassen
+
+Arbeitspakete stehen in der Erfassung jetzt **alphabetisch nach Kürzel** — in der
+Zeilenauswahl des Rasters, im Erfassungsdialog und im Kopf des Tageseintrags. In den
+Stammdaten bleibt `sort_order` maßgeblich: dort ist die Reihenfolge eine Aussage über die
+Gliederung des Projekts, beim Buchen sucht man dagegen ein Kürzel und erwartet es dort,
+wo das Alphabet es hinlegt. Sortiert wird mit `numeric`, sonst stünde AP10 vor AP2.
+
+Wo ein Paket ein Budget hat, steht das **Restbudget neben dem Gesamtbudget** — in der
+Wochenliste (Raster am Laptop, Tagesliste am Telefon) und im Kopf des Tageseintrags.
+„Rest 62,00 von 120,00 h“; bei zwei Budgets zwei Angaben. Verbraucht wird gegen dieselben
+Größen wie in den Stammdaten: erfasste Zeit gegen das Stundenbudget, Honorar gegen das
+Betragsbudget — zwei Ansichten derselben Zahl dürfen nicht verschieden rechnen.
+
+Die Ampel `BudgetBadge` beantwortet „wie viel ist verbraucht“ und bleibt den Stammdaten
+vorbehalten. Beim Buchen zählt die andere Richtung — „wie viel kann ich noch buchen“ —,
+deshalb steht in `BudgetRest` der Rest vorn. Der Zustand steht als Wort da und nicht nur
+in der Farbe: `0,00` ist eine Punktlandung („aufgebraucht“), ein negativer Rest eine
+Ansage („überschritten“).
+
+### Beim Bauen gefunden
+
+- **Der Budgetstand wäre nach dem Buchen stehen geblieben.** Die Sicht
+  `v_work_package_budget` hängt an den Zeiteinträgen, aber das Speichern eines Eintrags
+  verwarf nur `time-entries` und `reporting-periods`. Das Restbudget hätte den Stand von
+  vor der Buchung gezeigt — ausgerechnet in dem Moment, in dem jemand hinsieht. Kein
+  Test hätte das gefunden: die Zahl war richtig berechnet, nur zu alt.

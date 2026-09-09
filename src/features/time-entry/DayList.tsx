@@ -2,17 +2,20 @@ import { Plus } from 'lucide-react'
 import { Button, EmptyState } from '@/components/ui/primitives'
 import { cn } from '@/lib/utils'
 import { WEEKDAY_SHORT, isToday, minutesToHours, toIsoDate, weekDays } from '@/lib/week'
-import type { TimeEntryFull } from '@/types/database'
+import type { TimeEntryFull, WorkPackageBudget } from '@/types/database'
+import { PackageBudget } from './PackageBudget'
 
 /**
  * Tagesliste fuer Mobil und Tablet. Das Wochenraster braucht Breite und bleibt
  * dem Laptop vorbehalten; unterwegs zaehlt Ansehen und Korrigieren.
  */
 export function DayList({
-  monday, entries, onAdd, onEdit,
+  monday, entries, budgets, onAdd, onEdit,
 }: {
   monday: Date
   entries: TimeEntryFull[]
+  /** Budgetstand je Arbeitspaket, fuer die Eintraege mit Budget. */
+  budgets: Map<string, WorkPackageBudget>
   /** Erfassen fuer einen bestimmten Tag. */
   onAdd: (workDate: string) => void
   onEdit: (entry: TimeEntryFull) => void
@@ -88,6 +91,9 @@ export function DayList({
                           {e.work_package_code && ` · ${e.work_package_code}`}
                           {e.activity_name && ` · ${e.activity_name}`}
                         </span>
+                        {e.work_package_id && (
+                          <PackageBudget budget={budgets.get(e.work_package_id)} className="mt-0.5" />
+                        )}
                       </span>
                       {e.status !== 'draft' && (
                         <span className="shrink-0 text-xs text-ink-400">gemeldet</span>

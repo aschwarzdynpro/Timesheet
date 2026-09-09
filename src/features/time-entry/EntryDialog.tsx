@@ -9,7 +9,8 @@ import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration } from '@/lib/week'
 import type { ActivityType, Project, TimeEntryFull, WorkPackage } from '@/types/database'
 import { useActivityTypes } from '@/features/activity-types/api'
-import { useWorkPackages } from '@/features/projects/api'
+import { nachKuerzel, useAllWorkPackageBudgets, useWorkPackages } from '@/features/projects/api'
+import { PackageBudget } from './PackageBudget'
 import {
   useDeleteTimeEntry, useRateFor, useRecentDescriptions, useSaveTimeEntry,
 } from './api'
@@ -103,6 +104,8 @@ export function EntryEditor({
   const { data: suggestions } = useRecentDescriptions(project.id)
   const { data: activityTypes } = useActivityTypes()
   const { data: workPackages } = useWorkPackages(project.id)
+  // Derselbe Abfrageschluessel wie im Wochenraster: eine Abfrage, zwei Orte.
+  const { data: budgets } = useAllWorkPackageBudgets()
 
   const [entwuerfe, setEntwuerfe] = useState<Record<string, Entwurf>>({})
   const [neue, setNeue] = useState<NeueZeile[]>(() =>
@@ -121,6 +124,7 @@ export function EntryEditor({
     .filter((a) => a.is_active || a.id === target.activity?.id)
   const waehlbarePakete = (workPackages ?? [])
     .filter((w) => w.is_active || w.id === target.workPackage?.id)
+    .sort(nachKuerzel)
 
   const { data: satz, isPending: satzLaeuft } =
     useRateFor(project.id, target.activity?.id ?? null, workDate)
@@ -295,6 +299,13 @@ export function EntryEditor({
           </Button>
         )}
       </div>
+
+      {/* Was vom Budget des Pakets noch offen ist - hier, wo gebucht wird, und
+          nicht erst in den Stammdaten. */}
+      {target.workPackage && (
+        <PackageBudget budget={(budgets ?? []).find(
+          (b) => b.work_package_id === target.workPackage?.id)} />
+      )}
 
       {kopf.offen && (
         <div className="rounded-md border border-ink-200 bg-ink-50/60 p-3">

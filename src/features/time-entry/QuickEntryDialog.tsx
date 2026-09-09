@@ -6,7 +6,7 @@ import { describeError } from '@/lib/supabase'
 import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration, toIsoDate } from '@/lib/week'
 import type { ActivityType, Project } from '@/types/database'
-import { useWorkPackages } from '@/features/projects/api'
+import { nachKuerzel, useWorkPackages } from '@/features/projects/api'
 import { useRateFor, useRecentDescriptions, useSaveTimeEntry } from './api'
 
 /**
@@ -40,7 +40,7 @@ function QuickEntryForm({
   const [packageId, setPackageId] = useState('')
   // Nur die Pakete des gewaehlten Projekts - ein fremdes lehnt die Datenbank ab.
   const { data: workPackages } = useWorkPackages(projectId || null)
-  const waehlbarePakete = (workPackages ?? []).filter((w) => w.is_active)
+  const waehlbarePakete = (workPackages ?? []).filter((w) => w.is_active).sort(nachKuerzel)
   const [date, setDate] = useState(workDate ?? toIsoDate(new Date()))
   const { data: satz, isPending: satzLaeuft } =
     useRateFor(projectId || null, activityId || null, date)

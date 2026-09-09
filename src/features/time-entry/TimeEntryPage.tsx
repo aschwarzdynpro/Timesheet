@@ -8,9 +8,11 @@ import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
 import { formatDate, formatEuro, formatPercent, sumOrNull } from '@/lib/format'
 import { addDays, isoWeek, minutesToHours, mondayOf, toIsoDate } from '@/lib/week'
-import type { TimeEntryFull, WorkPackage } from '@/types/database'
+import type { TimeEntryFull, WorkPackage, WorkPackageBudget } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
-import { useAllWorkPackages, useProjects } from '@/features/projects/api'
+import {
+  nachKuerzel, useAllWorkPackageBudgets, useAllWorkPackages, useProjects,
+} from '@/features/projects/api'
 import { useActivityTypes } from '@/features/activity-types/api'
 import { useIncomeTaxPercent } from '@/features/account/api'
 import { EntryDialog, type EntryDialogTarget } from './EntryDialog'
@@ -36,6 +38,7 @@ export function TimeEntryPage() {
 
   const { data: projects } = useProjects()
   const { data: workPackages } = useAllWorkPackages()
+  const { data: budgets } = useAllWorkPackageBudgets()
   const { data: activityTypes } = useActivityTypes()
   const { data: customers } = useCustomers()
   const { data: entries, isPending, error: loadError } = useWeekEntries(monday)
@@ -61,7 +64,9 @@ export function TimeEntryPage() {
   const [neueZeile, setNeueZeile] = useState({ projekt: '', art: '', paket: '' })
 
   const paketeDesProjekts = useMemo(
-    () => (workPackages ?? []).filter((w) => w.project_id === neueZeile.projekt && w.is_active),
+    () => (workPackages ?? [])
+      .filter((w) => w.project_id === neueZeile.projekt && w.is_active)
+      .sort(nachKuerzel),
     [workPackages, neueZeile.projekt],
   )
 
@@ -70,6 +75,13 @@ export function TimeEntryPage() {
     for (const w of workPackages ?? []) map.set(w.id, w)
     return map
   }, [workPackages])
+
+  /** Budgetstand je Arbeitspaket - Raster und Tagesliste zeigen daraus den Rest. */
+  const budgetVon = useMemo(() => {
+    const map = new Map<string, WorkPackageBudget>()
+    for (const b of budgets ?? []) map.set(b.work_package_id, b)
+    return map
+  }, [budgets])
 
   const activeProjects = useMemo(
     () => (projects ?? []).filter((p) => p.status === 'active'),
@@ -353,6 +365,7 @@ export function TimeEntryPage() {
                     rows={rows}
                     entries={entries ?? []}
                     periods={periods ?? []}
+                    budgets={budgetVon}
                     selected={zelle
                       ? cellKey(rowKey(zelle.project.id, zelle.activity?.id ?? null,
                                        zelle.workPackage?.id ?? null), zelle.workDate)
@@ -379,6 +392,7 @@ export function TimeEntryPage() {
                   <DayList
                     monday={monday}
                     entries={entries ?? []}
+                    budgets={budgetVon}
                     onAdd={(workDate) => setQuickEntry({ open: true, workDate })}
                     onEdit={(entry: TimeEntryFull) => {
                       const project = projects?.find((p) => p.id === entry.project_id)

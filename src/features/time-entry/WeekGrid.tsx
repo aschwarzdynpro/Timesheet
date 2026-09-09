@@ -5,9 +5,10 @@ import {
   WEEKDAY_SHORT, isToday, isWeekend, minutesToHours, parseDuration, toIsoDate, weekDays,
 } from '@/lib/week'
 import type {
-  ActivityType, Project, ReportingPeriod, TimeEntryFull, WorkPackage,
+  ActivityType, Project, ReportingPeriod, TimeEntryFull, WorkPackage, WorkPackageBudget,
 } from '@/types/database'
 import type { EntryDialogTarget } from './EntryDialog'
+import { PackageBudget } from './PackageBudget'
 
 export type GridRow = {
   key: string
@@ -45,12 +46,14 @@ export function cellKey(rowKey: string, iso: string) {
  * einen Dialog oeffnen, der genau die Woche verdeckte, um die es ging.
  */
 export function WeekGrid({
-  monday, rows, entries, periods, selected, onSelect, onQuickUpdate,
+  monday, rows, entries, periods, budgets, selected, onSelect, onQuickUpdate,
 }: {
   monday: Date
   rows: GridRow[]
   entries: TimeEntryFull[]
   periods: ReportingPeriod[]
+  /** Budgetstand je Arbeitspaket, fuer die Zeilen mit Budget. */
+  budgets: Map<string, WorkPackageBudget>
   /** Schluessel der gewaehlten Zelle, siehe `cellKey`. */
   selected: string | null
   onSelect: (target: EntryDialogTarget) => void
@@ -181,6 +184,11 @@ export function WeekGrid({
                     {row.activity?.name ?? 'ohne Tätigkeitsart'}
                     {!row.project.is_billable && ' · nicht abrechenbar'}
                   </span>
+                  {/* Nur wo ein Budget hinterlegt ist - sonst bliebe die Zeile
+                      um eine leere Zeile hoeher. */}
+                  {row.workPackage && (
+                    <PackageBudget budget={budgets.get(row.workPackage.id)} className="mt-0.5" />
+                  )}
                 </td>
 
                 {days.map((day) => {
