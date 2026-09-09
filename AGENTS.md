@@ -125,6 +125,10 @@ braucht, verdraengt unten etwas anderes — sonst gehoert sie zu den Stammdaten.
 **Fuenf Felder sind das Maximum**, bei mehr faengt das Quergeschiebe wieder an,
 das diese Leiste abgeloest hat.
 
+Die Seitenleiste steht **fest** (`sticky`, `h-screen`). Ohne das waechst sie mit dem
+Dokument, und ihr unterer Block — das Konto — landet auf einer langen Seite wie den
+Zeiten erst nach mehreren Bildschirmhoehen: erreichbar nur, wer bis ans Ende scrollt.
+
 Die Liste steht **einmal** in `src/components/navigation.ts` — Leiste,
 Stammdatenkacheln und Rueckwege lesen dieselbe. Eine Seite, die nicht in der
 Leiste steht, ist sonst eine Sackgasse: sie bekommt `parent` im `PageHeader`

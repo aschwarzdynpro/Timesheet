@@ -12,7 +12,7 @@ import type { TimeEntryFull, WorkPackageBudget } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
 import { useAllWorkPackageBudgets, useProjects } from '@/features/projects/api'
 import { useActivityTypes } from '@/features/activity-types/api'
-import { useIncomeTaxPercent } from '@/features/account/api'
+import { useIncomeTaxPercent, useShowTimer } from '@/features/account/api'
 import { EntryDialog, type EntryDialogTarget } from './EntryDialog'
 import { WeekGrid, rowKey, type GridRow } from './WeekGrid'
 import { DayList } from './DayList'
@@ -56,6 +56,9 @@ export function TimeEntryPage() {
   // Nur fuer den Hinweis unter der Zahl - abgezogen hat die Sicht den Satz
   // schon.
   const steuersatz = useIncomeTaxPercent()
+  // Der Zeitnehmer ist eine Wahl im Konto - wer nach Feierabend eintraegt,
+  // braucht keine laufende Uhr ueber dem Raster.
+  const zeitnehmer = useShowTimer()
   const save = useSaveTimeEntry()
 
   /** Ein Wochenwechsel nimmt die Auswahl mit - sonst zeigte die Tafel einen
@@ -255,17 +258,22 @@ export function TimeEntryPage() {
         </Card>
       ) : (
         <>
+          {/* Die Leiste faellt ganz weg, wenn sie leer waere: ohne Zeitnehmer
+              hat die Tagesansicht hier nichts zu zeigen. */}
+          {(zeitnehmer.data === true || ansicht === 'woche') && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Timer
-              projects={activeProjects}
-              activityTypes={activityTypes ?? []}
-              onStop={({ projectId, activityTypeId, minutes, workDate }) => {
-                const project = activeProjects.find((p) => p.id === projectId)
-                if (!project) return
-                setDialog({ project, workDate, presetMinutes: minutes,
-                            presetActivity: activityTypeId })
-              }}
-            />
+            {zeitnehmer.data === true && (
+              <Timer
+                projects={activeProjects}
+                activityTypes={activityTypes ?? []}
+                onStop={({ projectId, activityTypeId, minutes, workDate }) => {
+                  const project = activeProjects.find((p) => p.id === projectId)
+                  if (!project) return
+                  setDialog({ project, workDate, presetMinutes: minutes,
+                              presetActivity: activityTypeId })
+                }}
+              />
+            )}
             {ansicht === 'woche' && (
               <>
                 {/* Beide fuegen dem Wochenraster leere Zeilen hinzu - unter 640 px
@@ -282,6 +290,7 @@ export function TimeEntryPage() {
               </>
             )}
           </div>
+          )}
 
           {ansicht === 'tag' ? (
             <DayView

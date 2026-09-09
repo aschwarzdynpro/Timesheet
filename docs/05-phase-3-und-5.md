@@ -504,3 +504,21 @@ die Dauer. Vier Einträge sind viermal tippen, Tab, tippen, Enter.
   Trigger in der Datenbank, das hier ist nur, was die Oberfläche vorwegnimmt.
 - **`ref` fehlte am `Input`.** Für den Fokussprung nach dem Speichern. Unter React 19
   reicht dafür ein `ref` in den Props; der Baustein hat es jetzt im Typ.
+
+## Nachtrag: Zeitnehmer als Wahl, Seitenleiste steht fest
+
+Der Zeitnehmer ist jetzt eine Wahl im Konto und standardmäßig **aus**. Wer nach
+Feierabend einträgt, was er gemacht hat, braucht keine laufende Uhr — für den war sie
+eine Auswahl mehr über dem Raster. Der Schalter liegt in `app_settings` unter
+`show_timer`, wie Darstellung und Steuersatz; eine Migration braucht es dafür nicht,
+der Schlüssel-Wert-Speicher nimmt ihn ohne Schema-Änderung auf.
+
+### Beim Bauen gefunden
+
+- **Das Konto war von den Zeiten aus nicht erreichbar.** Die Seitenleiste war nicht
+  fixiert: `min-h-full` ließ sie mit dem Dokument wachsen, und ihr unterer Block — die
+  Adresse und der Kontolink — stand damit am Ende des *Dokuments*, nicht des Bildschirms.
+  Auf einer kurzen Seite fiel das nicht auf, auf der Zeitenseite mit ihrem langen Raster
+  stand der Link bei 2098 px, also gut anderthalb Bildschirmhöhen unterhalb des
+  Sichtbaren. Gemessen vorher und nachher: 2098 px → 752 px, unabhängig von der
+  Scrollposition.

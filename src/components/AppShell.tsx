@@ -22,9 +22,16 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
     <div className="flex min-h-full flex-col sm:flex-row">
       {/* Breit bleibt es bei der Seitenleiste: dort ist Platz, und ein Menue,
           das man aufklappen muss, waere mit der Maus nur ein Klick mehr. */}
+      {/* Bleibt stehen, waehrend der Inhalt scrollt. Ohne das stand der
+          Kontoblock am unteren Rand des *Dokuments*: auf der Zeitenseite mit
+          ihrem langen Raster also erst nach ein paar Bildschirmhoehen - das
+          Konto war von dort praktisch nicht erreichbar. */}
       <nav
         aria-label="Bereiche"
-        className="hidden shrink-0 flex-col border-ink-200 bg-surface sm:flex sm:w-56 sm:border-r"
+        className={cn(
+          'hidden shrink-0 flex-col border-ink-200 bg-surface sm:flex sm:w-56 sm:border-r',
+          'sm:sticky sm:top-0 sm:h-screen sm:overflow-y-auto',
+        )}
       >
         <div className="flex items-center gap-2 px-5 py-4">
           <span className="rounded bg-accent-500 px-1.5 py-0.5 text-xs font-bold text-on-strong">ZE</span>

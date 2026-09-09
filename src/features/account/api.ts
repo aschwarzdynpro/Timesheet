@@ -43,6 +43,44 @@ export function useSaveTheme() {
   })
 }
 
+/* -------------------------------------------------------------- Zeitnehmer */
+
+const TIMER_KEY = 'show_timer'
+
+/**
+ * Ob die Zeiterfassung den Zeitnehmer zeigt.
+ *
+ * Aus, solange nichts gepflegt ist: Wer nach Feierabend eintraegt, was er
+ * gemacht hat, braucht keine laufende Uhr - fuer den ist sie eine Auswahl mehr
+ * ueber dem Raster. Wer sie will, schaltet sie im Konto ein.
+ */
+export function useShowTimer() {
+  return useQuery({
+    queryKey: ['app-settings', TIMER_KEY],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await supabase
+        .from('app_settings').select('value').eq('key', TIMER_KEY).maybeSingle()
+      if (error) throw error
+      return (data as { value?: unknown } | null)?.value === true
+    },
+  })
+}
+
+export function useSaveShowTimer() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (an: boolean) => {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ key: TIMER_KEY, value: an }, { onConflict: 'owner_id,key' })
+      if (error) throw error
+      return an
+    },
+    onSuccess: (an) => qc.setQueryData(['app-settings', TIMER_KEY], an),
+  })
+}
+
 /* --------------------------------------------------------- Einkommensteuer */
 
 /**

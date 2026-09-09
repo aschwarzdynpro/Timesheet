@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { KeyRound, LogOut, Monitor, Moon, Percent, Sun } from 'lucide-react'
+import { KeyRound, LogOut, Monitor, Moon, Percent, Sun, Timer } from 'lucide-react'
 import {
   Button, Card, ErrorNote, Field, Input, Segmented, WarnNote,
 } from '@/components/ui/primitives'
@@ -8,8 +8,8 @@ import { describeError, supabase } from '@/lib/supabase'
 import { formatPercent } from '@/lib/format'
 import { useAuth } from '@/features/auth/AuthProvider'
 import {
-  STEUER_STANDARD, useIncomeTaxPercent, useSaveIncomeTaxPercent, useSaveTheme, useSetPassword,
-  useStoredTheme,
+  STEUER_STANDARD, useIncomeTaxPercent, useSaveIncomeTaxPercent, useSaveShowTimer, useSaveTheme,
+  useSetPassword, useShowTimer, useStoredTheme,
 } from './api'
 import { THEME_LABEL, useTheme, type ThemeChoice } from './theme'
 
@@ -67,6 +67,46 @@ function Darstellung() {
       </div>
 
       {error && <div className="px-5 pb-4"><ErrorNote message={error} /></div>}
+    </Card>
+  )
+}
+
+function Zeitnehmer() {
+  const gespeichert = useShowTimer()
+  const speichern = useSaveShowTimer()
+  const [error, setError] = useState<string | null>(null)
+
+  async function schalte(an: boolean) {
+    setError(null)
+    try {
+      await speichern.mutateAsync(an)
+    } catch (err) {
+      setError(describeError(err))
+    }
+  }
+
+  return (
+    <Card className="mt-3 overflow-hidden">
+      <div className="border-b border-ink-100 px-5 py-3">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ink-700">
+          <Timer className="size-4 text-ink-400" />
+          Zeitnehmer
+        </h2>
+        <p className="text-xs text-ink-400">
+          Eine laufende Uhr über der Zeiterfassung, die beim Stoppen einen Eintrag vorbereitet.
+        </p>
+      </div>
+
+      <div className="px-5 py-4">
+        <label className="flex items-center gap-2 text-sm text-ink-700">
+          <input type="checkbox" checked={gespeichert.data === true}
+                 disabled={gespeichert.isPending || speichern.isPending}
+                 onChange={(e) => void schalte(e.target.checked)}
+                 className="size-4 rounded border-ink-300" />
+          Zeitnehmer in der Zeiterfassung anzeigen
+        </label>
+        {error && <div className="mt-3"><ErrorNote message={error} /></div>}
+      </div>
     </Card>
   )
 }
@@ -234,7 +274,7 @@ export function AccountPage() {
     <>
       <PageHeader
         title="Konto"
-        subtitle="Darstellung, Steuersatz und Anmeldung. Die Zeitdaten selbst liegen unter den anderen Punkten."
+        subtitle="Darstellung, Zeitnehmer, Steuersatz und Anmeldung. Die Zeitdaten selbst liegen unter den anderen Punkten."
       />
 
       <Card className="mt-4 px-5 py-4">
@@ -243,6 +283,7 @@ export function AccountPage() {
       </Card>
 
       <Darstellung />
+      <Zeitnehmer />
       <Einkommensteuer />
       <Passwort hatPasswort={hatPasswort} />
 
