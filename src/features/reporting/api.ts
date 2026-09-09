@@ -17,8 +17,9 @@ export interface ReportRow {
   minutes_billable: number
   minutes_internal: number | null
   fees: number
-  /** Honorar abzueglich Einkommensteuer - dieselbe Rechnung wie in der Eintragssicht. */
-  fees_net: number
+  /** Honorar abzueglich Einkommensteuer - dieselbe Rechnung wie in der Eintragssicht.
+      Optional wie net_amount: fehlt die Migration, fehlt die Spalte. */
+  fees_net?: number
 }
 
 export interface WeekRow extends ReportRow {

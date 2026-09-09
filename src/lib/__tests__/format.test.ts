@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatEuro, formatHours, formatRate, formatValidity, today } from '@/lib/format'
+import {
+  formatDate, formatEuro, formatHours, formatPercent, formatRate, formatValidity, sumOrNull, today,
+} from '@/lib/format'
 
 describe('Anzeigeformate', () => {
   it('zeigt Betraege in Euro', () => {
@@ -41,5 +43,28 @@ describe('Anzeigeformate', () => {
   it('beschreibt offene und geschlossene Gueltigkeitszeitraeume', () => {
     expect(formatValidity('2026-01-01', null)).toBe('ab 01.01.2026')
     expect(formatValidity('2026-01-01', '2026-06-30')).toBe('01.01.2026 – 30.06.2026')
+  })
+
+  it('zeigt Prozentsaetze ohne ueberfluessige Nullen', () => {
+    expect(formatPercent(42)).toBe('42 %')
+    expect(formatPercent(42.5)).toBe('42,5 %')
+    expect(formatPercent(null)).toBe('–')
+  })
+})
+
+describe('Summen aus einer Spalte, die fehlen kann', () => {
+  it('summiert vorhandene Werte', () => {
+    expect(sumOrNull([1054.15, 100.5])).toBe(1154.65)
+    expect(sumOrNull([])).toBe(0)
+  })
+
+  it('liefert null, sobald ein Wert fehlt - statt einer erfundenen 0,00 EUR', () => {
+    // Genau dieser Fall: die Sicht kannte net_amount noch nicht, weil die
+    // Migration fehlte. Die Woche zeigte 1.817,50 EUR Honorar und 0,00 EUR
+    // danach - eine Zahl, die aussah wie ein Ergebnis.
+    expect(sumOrNull([undefined, undefined])).toBeNull()
+    expect(sumOrNull([1054.15, undefined])).toBeNull()
+    expect(sumOrNull([1054.15, null])).toBeNull()
+    expect(formatEuro(sumOrNull([1054.15, undefined]))).toBe('–')
   })
 })

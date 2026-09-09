@@ -48,7 +48,7 @@ export function useSaveTheme() {
 /**
  * Der Einkommensteuersatz aus dem Profil. Die Zahl selbst braucht die
  * Oberflaeche nur fuer das Formular und den Hinweis daneben - gerechnet wird
- * der Nettoumsatz in der Datenbank, damit Wochenuebersicht, Auswertung und
+ * der Betrag nach Steuern in der Datenbank, damit Wochenuebersicht, Auswertung und
  * spaeterer Export nicht auseinanderlaufen.
  */
 export function useIncomeTaxPercent() {
@@ -77,7 +77,7 @@ export function useSaveIncomeTaxPercent() {
     },
     onSuccess: (prozent) => {
       qc.setQueryData(['app-settings', TAX_KEY], prozent)
-      // Der Nettoumsatz steckt in den Sichten: alles, was ihn zeigt, muss neu
+      // Der Betrag nach Steuern steckt in den Sichten: alles, was ihn zeigt, muss neu
       // gelesen werden. Sonst stuende die alte Zahl bis zum naechsten Laden da.
       void qc.invalidateQueries({ queryKey: ['time-entries'] })
       void qc.invalidateQueries({ queryKey: ['report'] })

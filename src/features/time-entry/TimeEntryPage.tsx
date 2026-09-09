@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
-import { formatDate, formatEuro, formatPercent } from '@/lib/format'
+import { formatDate, formatEuro, formatPercent, sumOrNull } from '@/lib/format'
 import { addDays, isoWeek, minutesToHours, mondayOf, toIsoDate } from '@/lib/week'
 import type { TimeEntryFull, WorkPackage } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
@@ -41,8 +41,8 @@ export function TimeEntryPage() {
   const { data: entries, isPending, error: loadError } = useWeekEntries(monday)
   const { data: periods, error: periodError } = useWeekPeriods(monday)
   const previousWeek = useWeekEntries(addDays(monday, -7))
-  // Nur fuer den Hinweis unter der Zahl - gerechnet wird der Nettoumsatz in
-  // der Sicht.
+  // Nur fuer den Hinweis unter der Zahl - abgezogen hat die Sicht den Satz
+  // schon.
   const steuersatz = useIncomeTaxPercent()
   const save = useSaveTimeEntry()
 
@@ -129,9 +129,10 @@ export function TimeEntryPage() {
       tracked: list.reduce((n, e) => n + e.duration_minutes, 0),
       billable: list.reduce((n, e) => n + e.billable_minutes, 0),
       fees: list.reduce((n, e) => n + Number(e.amount ?? 0), 0),
-      // Nettoumsatz kommt fertig aus der Sicht: den Steuersatz kennt nur die
-      // Datenbank, damit Woche, Auswertung und Export dieselbe Zahl zeigen.
-      net: list.reduce((n, e) => n + Number(e.net_amount ?? 0), 0),
+      // Der Betrag nach Steuern kommt fertig aus der Sicht: den Steuersatz kennt
+      // nur die Datenbank, damit Woche, Auswertung und Export dieselbe Zahl
+      // zeigen. Fehlt die Spalte, bleibt die Zahl offen statt bei 0,00 EUR.
+      net: sumOrNull(list.map((e) => e.net_amount)),
       // Abrechenbare Zeit ohne Satz zaehlt mit 0,00 EUR ins Honorar. Ohne
       // Hinweis sieht das aus wie "nichts verdient" statt "Satz fehlt".
       ohneSatz: list.filter((e) => e.is_billable && e.rate === null),
@@ -207,11 +208,11 @@ export function TimeEntryPage() {
             <dd className="tabular text-lg font-semibold text-ink-800">{formatEuro(totals.fees)}</dd>
           </div>
           <div>
-            <dt className="text-xs tracking-wide text-ink-400 uppercase">Nettoumsatz</dt>
+            <dt className="text-xs tracking-wide text-ink-400 uppercase">Nach Steuern</dt>
             <dd className="tabular text-lg font-semibold text-ink-800">{formatEuro(totals.net)}</dd>
-            {/* Erst wenn der Satz geladen ist: sonst stuende dort kurz ein
-                Gedankenstrich, als waere keiner gepflegt. */}
-            {steuersatz.data !== undefined && (
+            {/* Der Hinweis erst, wenn beides steht: der Satz geladen und die
+                Zahl bekannt. Sonst erklaerte er einen Gedankenstrich. */}
+            {steuersatz.data !== undefined && totals.net !== null && (
               <dd className="text-xs text-ink-400">
                 nach {formatPercent(steuersatz.data)} Einkommensteuer
               </dd>

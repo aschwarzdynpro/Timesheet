@@ -299,3 +299,39 @@ bleibt der Ausweg bei einem vergessenen Passwort. Genau das steht auch im Dialog
 
 Die Anmeldeseite zeigt zuerst Passwort und daneben den Weg über den Link. Ein falsches
 Passwort erklärt beides in einem Satz, statt „Invalid login credentials" zu zeigen.
+
+## Nachtrag: „Nach Steuern" neben dem Honorar
+
+Das Honorar sagt, was der Kunde zahlt. Was davon bleibt, stand nirgends. Neben dem
+Honorar steht deshalb jetzt der Betrag **nach Steuern** — im Wochenkopf der Zeiten und
+als Kennzahl in den Auswertungen.
+
+Der Einkommensteuersatz ist eine persönliche Angabe und liegt im **Konto**, nicht am
+Kunden: in `app_settings` unter `income_tax_percent`, wie schon die Wahl der Darstellung.
+Ohne eigene Angabe gelten 42 % — ein Standard statt einer Leerstelle.
+
+Gerechnet wird in der Datenbank (`fn_income_tax_percent()`, `fn_net_revenue()`); die
+Sichten führen das Ergebnis als `net_amount` beziehungsweise `fees_net`. Anders als der
+Stundensatz ist der Steuersatz **nicht historisiert**: er bewertet nicht die Leistung von
+damals, sondern schätzt, was heute übrig bleibt.
+
+### Beim Bauen gefunden
+
+- **Die fehlende Spalte wurde zu 0,00 €.** Nach dem Ausrollen stand im Wochenkopf
+  „Honorar 1.817,50 €" und daneben „0,00 €". Ursache war keine Rechenfehler, sondern ein
+  Zeitversatz: Vercel hatte das Frontend, die Datenbank hatte die Migration noch nicht.
+  PostgREST antwortete fehlerfrei — nur ohne `net_amount` —, und `Number(e.net_amount ?? 0)`
+  machte daraus eine saubere Null. Eine Zahl, die aussieht wie ein Ergebnis, ist schlimmer
+  als ein Gedankenstrich: Sie lädt zum Weiterrechnen ein.
+
+  Das ist derselbe blinde Fleck wie bei den unsichtbaren Zeiten: Ein Vertragsbruch
+  zwischen App und Datenbank sieht im Browser aus wie ein leeres Ergebnis. Der Mock in den
+  Tests merkt ihn nicht, und die Spaltenzusicherung im Schematest prüft die *Migration*,
+  nicht die *ausgerollte* Datenbank.
+
+  Jetzt summiert `sumOrNull()` und liefert `null`, sobald ein Wert fehlt; die Anzeige
+  macht daraus einen Gedankenstrich und lässt den erklärenden Hinweis weg. Mit
+  Regressionstest, der einmal absichtlich rot war.
+
+  Für den nächsten Fall bleibt: **Migration vor dem Frontend ausrollen** — `npm run
+  db:push` gehört vor den Push nach `main`, nicht danach.

@@ -21,6 +21,26 @@ export function formatHours(minutes: number | null | undefined): string {
   return `${decimal.format(minutes / 60)} h`
 }
 
+/**
+ * Summiert Betraege, die auch fehlen koennen - und liefert `null`, sobald einer
+ * fehlt.
+ *
+ * Hintergrund: Eine Sicht liefert eine neue Spalte erst, wenn ihre Migration
+ * eingespielt ist. Bis dahin steht in jeder Zeile `undefined`, und ein
+ * `Number(x ?? 0)` machte daraus eine Summe von 0,00 EUR - eine Zahl, die
+ * aussieht wie ein Ergebnis, aber keines ist. Genau so stand der Nettobetrag
+ * eine Zeit lang auf null, obwohl Honorar daneben stand. `null` wird in der
+ * Anzeige zum Gedankenstrich; eine erfundene Zahl waere schlimmer als keine.
+ */
+export function sumOrNull(values: (number | null | undefined)[]): number | null {
+  let summe = 0
+  for (const wert of values) {
+    if (wert === null || wert === undefined) return null
+    summe += Number(wert)
+  }
+  return summe
+}
+
 /** Prozentsatz in deutscher Schreibweise, ohne ueberfluessige Nullen. */
 export function formatPercent(value: number | null | undefined): string {
   if (value === null || value === undefined) return '–'

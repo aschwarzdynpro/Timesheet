@@ -123,9 +123,9 @@ function Einkommensteuer() {
           Einkommensteuer
         </h2>
         <p className="text-xs text-ink-400">
-          Um diesen Satz gekürzt steht das Honorar als Nettoumsatz neben den Zeiten und in
-          den Auswertungen. Ohne eigene Angabe gelten {formatPercent(STEUER_STANDARD)} —
-          der deutsche Spitzensteuersatz.
+          Um diesen Satz gekürzt steht das Honorar als „Nach Steuern“ neben den Zeiten
+          und in den Auswertungen. Ohne eigene Angabe gelten {formatPercent(STEUER_STANDARD)}
+          — der deutsche Spitzensteuersatz.
         </p>
       </div>
 
@@ -150,7 +150,7 @@ function Einkommensteuer() {
         {error && <div className="mt-3"><ErrorNote message={error} /></div>}
         {fertig && (
           <p className="mt-3 text-sm text-ink-500">
-            Gespeichert. Der Nettoumsatz rechnet ab sofort mit {formatPercent(gespeichert.data)}.
+            Gespeichert. „Nach Steuern“ rechnet ab sofort mit {formatPercent(gespeichert.data)}.
           </p>
         )}
       </form>

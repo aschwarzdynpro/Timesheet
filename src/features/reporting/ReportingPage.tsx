@@ -3,7 +3,7 @@ import { Card, EmptyState, ErrorNote, Select } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { BudgetBadge } from '@/components/ui/BudgetBadge'
 import { describeError } from '@/lib/supabase'
-import { formatEuro, formatPercent } from '@/lib/format'
+import { formatEuro, formatPercent, sumOrNull } from '@/lib/format'
 import { minutesToHours } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
 import { useProjects } from '@/features/projects/api'
@@ -55,9 +55,10 @@ export function ReportingPage() {
     const tracked = rows.reduce((n, r) => n + Number(r.minutes_tracked ?? 0), 0)
     const billable = rows.reduce((n, r) => n + Number(r.minutes_billable ?? 0), 0)
     const fees = rows.reduce((n, r) => n + Number(r.fees ?? 0), 0)
-    // Der Nettoumsatz steht fertig in der Sicht: den Steuersatz zieht die
-    // Datenbank ab, damit hier dieselbe Zahl steht wie in der Wochenuebersicht.
-    const feesNet = rows.reduce((n, r) => n + Number(r.fees_net ?? 0), 0)
+    // Der Betrag nach Steuern steht fertig in der Sicht: den Steuersatz zieht
+    // die Datenbank ab, damit hier dieselbe Zahl steht wie in der
+    // Wochenuebersicht. Fehlt die Spalte, bleibt sie offen statt bei 0,00 EUR.
+    const feesNet = sumOrNull(rows.map((r) => r.fees_net))
     return {
       tracked, billable, fees, feesNet,
       // Der Satz, den du tatsaechlich erloest: Honorar geteilt durch die
@@ -177,9 +178,9 @@ export function ReportingPage() {
                     : undefined} />
             <Stat label="Honorar" value={formatEuro(totals.fees)} />
             <Stat
-              label="Nettoumsatz"
+              label="Nach Steuern"
               value={formatEuro(totals.feesNet)}
-              hint={steuersatz.data !== undefined
+              hint={steuersatz.data !== undefined && totals.feesNet !== null
                 ? `Honorar abzüglich ${formatPercent(steuersatz.data)} Einkommensteuer`
                 : undefined}
             />
