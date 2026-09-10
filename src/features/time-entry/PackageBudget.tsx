@@ -1,4 +1,4 @@
-import { BudgetStand } from '@/components/ui/BudgetBadge'
+import { BudgetStand, budgetStandText } from '@/components/ui/BudgetBadge'
 import { cn } from '@/lib/utils'
 import { formatEuro } from '@/lib/format'
 import { minutesToHours } from '@/lib/week'
@@ -10,6 +10,41 @@ const stunden = (wert: number) => `${minutesToHours(wert * 60).replace(',00', ''
 /** Ob ein Paket ueberhaupt ein Budget traegt. */
 export const hatBudget = (budget: WorkPackageBudget | undefined) =>
   Boolean(budget && (budget.budget_hours || budget.budget_amount))
+
+/**
+ * Ein Arbeitspaket als Zeile einer Auswahlliste: "13206 DEV · 14 h / 16 h".
+ *
+ * Wer beim Buchen ein Paket aufklappt, entscheidet genau hier, worauf die
+ * naechste Stunde laeuft - und sieht bisher nur Kuerzel. Der Stand gehoert
+ * deshalb in die Liste selbst und nicht erst in die Plaettchen daneben, die es
+ * nur fuer die schon gebuchten Pakete gibt.
+ *
+ * In einer `<option>` gibt es weder Rahmen noch Farbe noch Balken, nur Text.
+ * Die Zahlen sagen den Stand trotzdem: gleich ist aufgebraucht, groesser ist
+ * ueberschritten - dieselbe Lesart wie im Plaettchen.
+ *
+ * Ohne Budget bleibt es beim Kuerzel. Die gebuchte Zeit allein, wie sie das
+ * Plaettchen auch ohne Budget zeigt, waere hier eine Zahl in jeder Zeile einer
+ * Liste aus zwanzig: aufgeklappt sucht man ein Kuerzel, und die Zahl ohne
+ * Bezug daneben verdeckt es nur.
+ */
+export function paketLabel(
+  bezeichnung: string, budget: WorkPackageBudget | undefined,
+): string {
+  if (!budget) return bezeichnung
+  const stand: string[] = []
+  if (budget.budget_hours) {
+    stand.push(budgetStandText(
+      budget.tracked_minutes / 60, Number(budget.budget_hours), stunden))
+  }
+  // Wie im Plaettchen: erfasste Zeit gegen das Stundenbudget, Honorar gegen das
+  // Betragsbudget. Ein Paket mit beidem zeigt beides.
+  if (budget.budget_amount) {
+    stand.push(budgetStandText(
+      Number(budget.fees), Number(budget.budget_amount), formatEuro))
+  }
+  return stand.length > 0 ? `${bezeichnung} · ${stand.join(' · ')}` : bezeichnung
+}
 
 /**
  * Was auf ein Arbeitspaket gebucht ist, und wovon - "gebucht / gesamt".

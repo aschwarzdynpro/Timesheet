@@ -7,7 +7,8 @@ import { formatDate } from '@/lib/format'
 import { minutesToHours, parseDuration, toIsoDate } from '@/lib/week'
 import type { ActivityType, Project } from '@/types/database'
 import { standardArt } from '@/features/activity-types/api'
-import { nachKuerzel, useWorkPackages } from '@/features/projects/api'
+import { nachKuerzel, useAllWorkPackageBudgets, useWorkPackages } from '@/features/projects/api'
+import { paketLabel } from './PackageBudget'
 import { useRateFor, useRecentDescriptions, useSaveTimeEntry } from './api'
 
 /**
@@ -45,7 +46,13 @@ function QuickEntryForm({
   const [packageId, setPackageId] = useState('')
   // Nur die Pakete des gewaehlten Projekts - ein fremdes lehnt die Datenbank ab.
   const { data: workPackages } = useWorkPackages(projectId || null)
+  // Derselbe Abfrageschluessel wie im Raster - eine Abfrage, mehrere Orte.
+  const { data: budgets } = useAllWorkPackageBudgets()
   const waehlbarePakete = (workPackages ?? []).filter((w) => w.is_active).sort(nachKuerzel)
+  const budgetVon = useMemo(
+    () => new Map((budgets ?? []).map((b) => [b.work_package_id, b])),
+    [budgets],
+  )
   const [date, setDate] = useState(workDate ?? toIsoDate(new Date()))
   const { data: satz, isPending: satzLaeuft } =
     useRateFor(projectId || null, activityId || null, date)
@@ -114,7 +121,9 @@ function QuickEntryForm({
             <Select value={packageId} onChange={(e) => setPackageId(e.target.value)}>
               <option value="">ohne Arbeitspaket</option>
               {waehlbarePakete.map((w) => (
-                <option key={w.id} value={w.id}>{w.code} · {w.name}</option>
+                <option key={w.id} value={w.id}>
+                  {paketLabel(`${w.code} · ${w.name}`, budgetVon.get(w.id))}
+                </option>
               ))}
             </Select>
           </Field>

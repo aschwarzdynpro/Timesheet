@@ -85,17 +85,33 @@ export function BudgetStand({
   used, budget, format,
 }: { used: number; budget: number; format: (wert: number) => string }) {
   const stufe = budgetStufe(used, budget)
-  // Aufgebraucht heisst aufgebraucht: 1,9999 von 2 wuerde sonst als "2 h / 2 h"
-  // dastehen und trotzdem gruen leuchten.
-  const gebucht = stufe === 'exhausted' ? budget : used
 
   return (
     <span
-      title={`Gebucht ${format(gebucht)} von ${format(budget)} · ${WORT[stufe]}`}
+      title={`Gebucht ${format(gebuchtStand(used, budget))} von ${format(budget)} · ${WORT[stufe]}`}
       className={cn('tabular text-xs whitespace-nowrap',
                     stufe === 'good' ? 'text-ink-500' : SCHRIFT[stufe])}
     >
-      {format(gebucht)} / {format(budget)}
+      {budgetStandText(used, budget, format)}
     </span>
   )
+}
+
+/** Aufgebraucht heisst aufgebraucht: 1,9999 von 2 stuende sonst als "2 h / 2 h"
+    da und leuchtete trotzdem gruen. */
+const gebuchtStand = (used: number, budget: number) =>
+  budgetStufe(used, budget) === 'exhausted' ? budget : used
+
+/**
+ * Dieselben zwei Zahlen als reiner Text, fuer Orte ohne Markup - eine
+ * `<option>` etwa traegt Text und sonst nichts.
+ *
+ * Zwei Ansichten derselben Zahl duerfen nicht verschieden rechnen: die
+ * Auswahlliste zeigt deshalb nicht "used / budget", sondern was auch im
+ * Plaettchen steht.
+ */
+export function budgetStandText(
+  used: number, budget: number, format: (wert: number) => string,
+): string {
+  return `${format(gebuchtStand(used, budget))} / ${format(budget)}`
 }

@@ -10,7 +10,7 @@ import { minutesToHours, parseDuration } from '@/lib/week'
 import type { ActivityType, Project, TimeEntryFull } from '@/types/database'
 import { standardArt, useActivityTypes } from '@/features/activity-types/api'
 import { nachKuerzel, useAllWorkPackageBudgets, useWorkPackages } from '@/features/projects/api'
-import { PaketChip } from './PackageBudget'
+import { paketLabel, PaketChip } from './PackageBudget'
 import {
   useDeleteTimeEntry, useRateFor, useRecentDescriptions, useSaveTimeEntry,
 } from './api'
@@ -127,6 +127,11 @@ export function EntryEditor({
     () => (activityTypes ?? []).filter((a) => a.is_active),
     [activityTypes],
   )
+  /** Budgetstand je Paket - fuer die Auswahlliste und die Plaettchen darueber. */
+  const budgetVon = useMemo(
+    () => new Map((budgets ?? []).map((b) => [b.work_package_id, b])),
+    [budgets],
+  )
   /**
    * Solange es nur eine aktive Taetigkeitsart gibt, ist die Spalte eine Spalte
    * mit immer demselben Wort. Sie erscheint wieder, sobald eine zweite Art
@@ -163,11 +168,11 @@ export function EntryEditor({
         id,
         code: entries.find((e) => e.work_package_id === id)?.work_package_code
           ?? pakete.find((w) => w.id === id)?.code ?? '',
-        budget: (budgets ?? []).find((b) => b.work_package_id === id),
+        budget: budgetVon.get(id),
       }))
       .filter((z) => z.budget && (z.budget.budget_hours || z.budget.budget_amount))
       .sort((a, b) => a.code.localeCompare(b.code, 'de', { numeric: true }))
-  }, [entries, neue, budgets, pakete])
+  }, [entries, neue, budgetVon, pakete])
 
   /** Die Taetigkeitsarten des Tages - je eine Pruefung auf einen Stundensatz. */
   const artenDesTages = useMemo(() => {
@@ -364,12 +369,18 @@ export function EntryEditor({
                           value={e.work_package_id ?? ''}
                           onChange={(ev) => void aendere(e, { work_package_id: ev.target.value || null })}>
                     <option value="">ohne Arbeitspaket</option>
-                    {pakete.map((w) => <option key={w.id} value={w.id}>{w.code}</option>)}
+                    {pakete.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {paketLabel(w.code, budgetVon.get(w.id))}
+                      </option>
+                    ))}
                     {/* Das eigene Paket bleibt waehlbar, auch wenn es inaktiv
                         wurde - sonst spraenge die Zeile beim ersten Speichern
                         auf ein anderes. */}
                     {e.work_package_id && !pakete.some((w) => w.id === e.work_package_id) && (
-                      <option value={e.work_package_id}>{e.work_package_code}</option>
+                      <option value={e.work_package_id}>
+                        {paketLabel(e.work_package_code ?? '', budgetVon.get(e.work_package_id))}
+                      </option>
                     )}
                   </Select>
                 </span>
@@ -424,7 +435,11 @@ export function EntryEditor({
                   <Select aria-label="Arbeitspaket, neue Zeile" value={z.paket}
                           onChange={(ev) => setzeNeu(z.id, { paket: ev.target.value })}>
                     <option value="">ohne Arbeitspaket</option>
-                    {pakete.map((w) => <option key={w.id} value={w.id}>{w.code}</option>)}
+                    {pakete.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {paketLabel(w.code, budgetVon.get(w.id))}
+                      </option>
+                    ))}
                   </Select>
                 </span>
               )}

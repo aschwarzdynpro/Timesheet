@@ -6,7 +6,8 @@ import { formatDate } from '@/lib/format'
 import { parseDuration } from '@/lib/week'
 import type { Project } from '@/types/database'
 import { standardArt, useActivityTypes } from '@/features/activity-types/api'
-import { nachKuerzel, useWorkPackages } from '@/features/projects/api'
+import { nachKuerzel, useAllWorkPackageBudgets, useWorkPackages } from '@/features/projects/api'
+import { paketLabel } from './PackageBudget'
 import { useSaveTimeEntry } from './api'
 
 /**
@@ -39,7 +40,11 @@ export function QuickEntry({
   const dauerFeld = useRef<HTMLInputElement>(null)
 
   const { data: workPackages } = useWorkPackages(projectId || null)
+  // Derselbe Abfrageschluessel wie im Wochenraster: die Budgets liegen beim
+  // Erfassen laengst im Zwischenspeicher, die Liste kostet keine Anfrage.
+  const { data: budgets } = useAllWorkPackageBudgets()
   const pakete = (workPackages ?? []).filter((w) => w.is_active).sort(nachKuerzel)
+  const budgetVon = new Map((budgets ?? []).map((b) => [b.work_package_id, b]))
   const project = projects.find((p) => p.id === projectId) ?? null
   const gesperrt = project ? locked(project) : false
 
@@ -94,12 +99,15 @@ export function QuickEntry({
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </Select>
 
-        {/* Nur zeigen, wenn das Projekt ueberhaupt gegliedert ist. */}
+        {/* Nur zeigen, wenn das Projekt ueberhaupt gegliedert ist. Breiter als
+            das Kuerzel allein: zugeklappt steht dort auch der Budgetstand. */}
         {pakete.length > 0 && (
-          <Select aria-label="Arbeitspaket" className="w-44" value={packageId}
+          <Select aria-label="Arbeitspaket" className="w-56" value={packageId}
                   onChange={(e) => setPackageId(e.target.value)}>
             <option value="">ohne Arbeitspaket</option>
-            {pakete.map((w) => <option key={w.id} value={w.id}>{w.code}</option>)}
+            {pakete.map((w) => (
+              <option key={w.id} value={w.id}>{paketLabel(w.code, budgetVon.get(w.id))}</option>
+            ))}
           </Select>
         )}
 
