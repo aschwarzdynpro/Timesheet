@@ -3,6 +3,7 @@ import { toIsoDate } from '@/lib/week'
 const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
 const decimal = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const percent = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 })
+const factor = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 4 })
 const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 export function formatEuro(value: number | null | undefined): string {
@@ -45,6 +46,24 @@ export function sumOrNull(values: (number | null | undefined)[]): number | null 
 export function formatPercent(value: number | null | undefined): string {
   if (value === null || value === undefined) return '–'
   return `${percent.format(value)} %`
+}
+
+/**
+ * Eine getippte Dezimalzahl, deutsch oder englisch geschrieben: `1,5` und
+ * `1.5` ergeben beide 1,5. Unverstaendliches wird abgelehnt statt geraten -
+ * `Number('')` liefert 0, und eine stille Null ist hier die falsche Antwort.
+ */
+export function parseDecimal(input: string): number | null {
+  const text = input.trim().replace(',', '.')
+  if (!text) return null
+  const wert = Number(text)
+  return Number.isFinite(wert) ? wert : null
+}
+
+/** Satzfaktor in deutscher Schreibweise: 1,5 statt 1.5000. */
+export function formatFactor(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '–'
+  return factor.format(value)
 }
 
 export function formatDate(iso: string | null | undefined): string {

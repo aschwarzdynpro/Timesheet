@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { ZU_STAMMDATEN } from '@/components/navigation'
 import { describeError } from '@/lib/supabase'
 import { loeschFrage, useConfirm } from '@/components/ui/confirm'
+import { formatFactor, parseDecimal } from '@/lib/format'
 import type { ActivityType, ActivityTypeInsert } from '@/types/database'
 import { useActivityTypes, useDeleteActivityType, useSaveActivityType } from './api'
 
@@ -16,6 +17,10 @@ const schema = z.object({
   code: z.string().trim().min(1, 'Kürzel fehlt').max(20, 'Höchstens 20 Zeichen'),
   name: z.string().trim().min(1, 'Name fehlt'),
   sort_order: z.coerce.number().int().min(0),
+  // Was sich nicht als Zahl lesen liess, kommt als -1 an und faellt hier auf.
+  // So steht auch dort ein deutscher Satz, wo sonst die Vorgabemeldung staende.
+  rate_factor: z.number().refine((n) => n > 0 && n <= 10,
+    'Möglich sind Werte über 0 bis 10 — für 50 % Zuschlag steht dort 1,5, nicht 150.'),
   is_billable_default: z.boolean(),
   is_default: z.boolean(),
   is_active: z.boolean(),
@@ -36,6 +41,7 @@ function ActivityDialog({
     const raw = Object.fromEntries(new FormData(event.currentTarget))
     const parsed = schema.safeParse({
       ...raw,
+      rate_factor: parseDecimal(String(raw.rate_factor ?? '')) ?? -1,
       is_billable_default: raw.is_billable_default === 'on',
       is_default: raw.is_default === 'on',
       is_active: raw.is_active === 'on',
@@ -73,10 +79,24 @@ function ActivityDialog({
             <Input name="name" defaultValue={item?.name ?? ''} placeholder="Reisezeit" />
           </Field>
         </div>
-        <Field label="Sortierung" hint="Kleinere Werte stehen in Auswahllisten weiter oben."
-               error={errors.sort_order}>
-          <Input name="sort_order" type="number" min={0} defaultValue={item?.sort_order ?? 100} />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Sortierung" hint="Kleinere Werte stehen in Auswahllisten weiter oben."
+                 error={errors.sort_order}>
+            <Input name="sort_order" type="number" min={0} defaultValue={item?.sort_order ?? 100} />
+          </Field>
+          <Field label="Satzfaktor" hint="1 = Projektsatz · 1,5 = 50 % Zuschlag · 0,5 = halber Satz"
+                 error={errors.rate_factor}>
+            <Input name="rate_factor" inputMode="decimal" placeholder="1"
+                   className="tabular"
+                   defaultValue={formatFactor(item ? Number(item.rate_factor) : 1)} />
+          </Field>
+        </div>
+        <p className="-mt-1 text-xs text-ink-400">
+          Der Faktor wirkt auf den allgemeinen Satz jedes Projekts — ein Wochenendzuschlag
+          ist damit eine Angabe statt einer je Projekt. Steht am Projekt ein eigener Satz
+          für diese Art, gilt der unverändert: eine Abmachung wird nicht nachträglich
+          multipliziert.
+        </p>
         <label className="flex items-center gap-2 text-sm text-ink-700">
           <input type="checkbox" name="is_billable_default"
                  defaultChecked={item?.is_billable_default ?? true}
@@ -108,6 +128,30 @@ function ActivityDialog({
         </div>
       </form>
     </Dialog>
+  )
+}
+
+/**
+ * Was eine Art vorgibt - in der Tabelle und auf der Karte dieselbe Zeile.
+ *
+ * Der Faktor steht nur da, wenn er einer ist: "×1" in jeder Zeile waere eine
+ * Spalte mit immer demselben Wert, wie die Taetigkeitsart in der Erfassung,
+ * solange es nur eine gibt.
+ */
+function Vorgaben({ art }: { art: ActivityType }) {
+  const faktor = Number(art.rate_factor)
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      {art.is_billable_default
+        ? <Badge tone="good">abrechenbar</Badge>
+        : <Badge tone="muted">nicht abrechenbar</Badge>}
+      {art.is_default && <Badge>Standard</Badge>}
+      {faktor !== 1 && (
+        <span title={`Satzfaktor ${formatFactor(faktor)} auf den allgemeinen Projektsatz`}>
+          <Badge>×{formatFactor(faktor)}</Badge>
+        </span>
+      )}
+    </span>
   )
 }
 
@@ -191,14 +235,7 @@ export function ActivityTypesPage() {
                     {a.name}
                     {!a.is_active && <span className="ml-2"><Badge tone="muted">inaktiv</Badge></span>}
                   </td>
-                  <td className="px-5 py-2.5">
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      {a.is_billable_default
-                        ? <Badge tone="good">abrechenbar</Badge>
-                        : <Badge tone="muted">nicht abrechenbar</Badge>}
-                      {a.is_default && <Badge>Standard</Badge>}
-                    </span>
-                  </td>
+                  <td className="px-5 py-2.5"><Vorgaben art={a} /></td>
                   <td className="px-5 py-2.5 text-right whitespace-nowrap">{aktionen(a)}</td>
                 </tr>
               ))}
@@ -213,14 +250,7 @@ export function ActivityTypesPage() {
                 name={a.name}
                 inaktiv={!a.is_active}
                 aktionen={aktionen(a)}
-                zeilen={[
-                  <span className="flex flex-wrap items-center gap-1.5">
-                    {a.is_billable_default
-                      ? <Badge tone="good">abrechenbar</Badge>
-                      : <Badge tone="muted">nicht abrechenbar</Badge>}
-                    {a.is_default && <Badge>Standard</Badge>}
-                  </span>,
-                ]}
+                zeilen={[<Vorgaben art={a} />]}
               />
             ))}
           </MobileList>

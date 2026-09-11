@@ -183,6 +183,50 @@ begin
   delete from app_settings where owner_id = v_owner and key = 'income_tax_percent';
   perform test_assert(fn_income_tax_percent() = 42, 'ohne Eintrag gilt wieder der Standard');
 
+  raise notice 'Satzfaktor der Taetigkeitsart';
+  perform test_assert(
+    (select count(*) from activity_types where owner_id = v_owner and rate_factor <> 1) = 0,
+    'ohne Pflege traegt jede Taetigkeitsart den Faktor 1');
+  perform test_assert(fn_rate_for(v_p_crm, v_consult, date '2026-02-10') = 140.00,
+                      'und der Satz bleibt der blosse Projektsatz');
+
+  update activity_types set rate_factor = 1.5 where id = v_consult;
+  perform test_assert(fn_rate_for(v_p_crm, v_consult, date '2026-02-10') = 210.00,
+                      'Faktor 1,5 macht aus 140 EUR 210 EUR');
+  perform test_assert(fn_rate_for(v_p_crm, null, date '2026-02-10') = 140.00,
+                      'ohne Taetigkeitsart wirkt kein Faktor');
+
+  -- Ein ausgehandelter Satz wird nicht nachtraeglich multipliziert: sonst
+  -- schriebe eine Aenderung an der Taetigkeitsart stillschweigend Vertraege um.
+  update activity_types set rate_factor = 2 where id = v_travel;
+  perform test_assert(fn_rate_for(v_p_crm, v_travel, date '2026-02-10') = 70.00,
+                      'der eigene Satz der Taetigkeitsart schlaegt ihren Faktor');
+
+  -- Die Sicht rechnet nicht selbst, sie fragt dieselbe Funktion.
+  select * into r from v_time_entries_full where id = v_entry;
+  perform test_assert(r.rate   = 210.00, 'die Sicht zeigt den Satz mit Faktor');
+  perform test_assert(r.amount = 315.00, '90 min zu 210 EUR ergeben 315,00');
+
+  -- Auf den Cent gerundet, damit angezeigter und gerechneter Satz derselbe sind.
+  update activity_types set rate_factor = 1.3333 where id = v_consult;
+  perform test_assert(fn_rate_for(v_p_crm, v_consult, date '2026-02-10') = 186.66,
+                      '140 mal 1,3333 ergibt 186,66 auf den Cent');
+
+  perform test_expect_error(
+    format('update activity_types set rate_factor = 0 where id = %L', v_consult),
+    'ein Faktor von null wird abgelehnt');
+  perform test_expect_error(
+    format('update activity_types set rate_factor = 11 where id = %L', v_consult),
+    'ein Faktor ueber 10 wird abgelehnt');
+  perform test_expect_error(
+    format('update activity_types set rate_factor = 150 where id = %L', v_consult),
+    'und der Tippfehler 150 statt 1,5 erst recht');
+
+  -- Zurueck auf den Ausgangsstand: die folgenden Zusicherungen rechnen mit 140.
+  update activity_types set rate_factor = 1 where owner_id = v_owner;
+  perform test_assert(fn_rate_for(v_p_crm, v_consult, date '2026-02-10') = 140.00,
+                      'zurueckgestellt gilt wieder der Projektsatz');
+
   raise notice 'ISO-Wochen am Jahreswechsel';
   insert into time_entries (owner_id, project_id, activity_type_id, work_date, duration_minutes, description)
   values (v_owner, v_p_crm, v_consult, date '2027-01-01', 60, 'Jahreswechsel-Test');
@@ -202,6 +246,14 @@ begin
   perform test_assert(
     (select rate_snapshot from time_entries where id = v_entry) = 140.00,
     'Satz ist im Eintrag eingefroren');
+
+  -- Ein Faktor, der spaeter dazukommt, erreicht die gemeldete Zeit nicht mehr.
+  -- Was der Kunde bekommen hat, bleibt, wie es gemeldet wurde.
+  update activity_types set rate_factor = 3 where id = v_consult;
+  select * into r from v_time_entries_full where id = v_entry;
+  perform test_assert(r.rate = 140.00, 'ein spaeterer Faktor laesst den eingefrorenen Satz in Ruhe');
+  perform test_assert(r.rate_is_frozen, 'und der Eintrag weist ihn als eingefroren aus');
+  update activity_types set rate_factor = 1 where id = v_consult;
 
   raise notice 'Sperre gemeldeter Perioden';
   perform test_expect_error(
@@ -523,7 +575,8 @@ begin
     end if;
 
     -- Die Stammdaten der Taetigkeitsarten lesen und schreiben diese Spalten.
-    foreach v_spalte in array array['is_default','is_billable_default','sort_order','is_active'] loop
+    foreach v_spalte in array array['is_default','is_billable_default','sort_order','is_active',
+                                    'rate_factor'] loop
       if not exists (select 1 from information_schema.columns
                      where table_schema='public' and table_name='activity_types'
                        and column_name=v_spalte) then

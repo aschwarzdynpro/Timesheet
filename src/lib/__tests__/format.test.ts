@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  formatDate, formatEuro, formatHours, formatPercent, formatRate, formatValidity, sumOrNull, today,
+  formatDate, formatEuro, formatFactor, formatHours, formatPercent, formatRate, formatValidity,
+  parseDecimal, sumOrNull, today,
 } from '@/lib/format'
 
 describe('Anzeigeformate', () => {
@@ -66,5 +67,31 @@ describe('Summen aus einer Spalte, die fehlen kann', () => {
     expect(sumOrNull([1054.15, undefined])).toBeNull()
     expect(sumOrNull([1054.15, null])).toBeNull()
     expect(formatEuro(sumOrNull([1054.15, undefined]))).toBe('–')
+  })
+})
+
+describe('Getippte Dezimalzahlen', () => {
+  it('versteht deutsche und englische Schreibweise', () => {
+    expect(parseDecimal('1,5')).toBe(1.5)
+    expect(parseDecimal('1.5')).toBe(1.5)
+    expect(parseDecimal(' 2 ')).toBe(2)
+    expect(parseDecimal('0,3')).toBe(0.3)
+  })
+
+  it('lehnt ab, was keine Zahl ist - statt still eine Null zu liefern', () => {
+    // Number('') ist 0. Bei einem Satzfaktor hiesse das "kostenlos", und genau
+    // diese stille Null soll es nirgends geben.
+    expect(parseDecimal('')).toBeNull()
+    expect(parseDecimal('   ')).toBeNull()
+    expect(parseDecimal('anderthalb')).toBeNull()
+    expect(parseDecimal('1,5x')).toBeNull()
+  })
+
+  it('zeigt einen Satzfaktor ohne angehaengte Nullen', () => {
+    // Aus der Datenbank kommt numeric(6,4), also 1.5000.
+    expect(formatFactor(1.5)).toBe('1,5')
+    expect(formatFactor(1)).toBe('1')
+    expect(formatFactor(0.5)).toBe('0,5')
+    expect(formatFactor(null)).toBe('–')
   })
 })

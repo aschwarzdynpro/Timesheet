@@ -4,7 +4,7 @@ import type { ActivityType } from '@/types/database'
 
 const art = (id: string, felder: Partial<ActivityType> = {}): ActivityType => ({
   id, owner_id: 'o', code: id.toUpperCase(), name: id, is_billable_default: true,
-  is_default: false, finops_category: null, sort_order: 100, is_active: true,
+  is_default: false, rate_factor: 1, finops_category: null, sort_order: 100, is_active: true,
   created_at: '', ...felder,
 })
 

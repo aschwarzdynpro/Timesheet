@@ -34,6 +34,11 @@ export function describeError(error: unknown): string {
   if (message.includes('app_settings_income_tax_percent_valid')) {
     return 'Der Einkommensteuersatz muss eine Zahl zwischen 0 und 100 sein.'
   }
+  if (message.includes('activity_types_rate_factor_valid')
+      || (message.includes('numeric field overflow') && message.includes('rate_factor'))) {
+    return 'Der Satzfaktor muss größer als 0 und höchstens 10 sein. '
+      + 'Für einen Zuschlag von 50 % steht dort 1,5 — nicht 150.'
+  }
   if (message.includes('customers_owner_id_code_key') || message.includes('activity_types_owner_id_code_key')) {
     return 'Dieses Kürzel ist bereits vergeben.'
   }
