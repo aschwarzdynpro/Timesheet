@@ -86,6 +86,16 @@ liegt an einer Stelle.
   leere Zelle in einer gemeldeten Woche hat keinen Eintrag, an dessen Status man
   sie ablesen könnte; ohne das Feld `locked` am Ziel böte das Formular dort
   etwas an, das die Datenbank ablehnt.
+- **Eine Spalte, die in jeder Zeile dasselbe sagt, verschwindet.** Die
+  Tätigkeitsart im Editor erscheint erst ab der zweiten aktiven Art, das
+  Häkchen „abrechenbar" erst, wenn eine Zeile davon abweicht. Wer nur externe
+  Zeit erfasst, bekommt sonst eine Spalte mit immer demselben Haken darin.
+  Die Regel holt sich selbst zurück: Sobald ein Eintrag abweicht, steht sie
+  wieder da — sonst ließe sich der Ausnahmefall nicht zurücknehmen.
+- **Summiert wird je Kunde, nicht nur je Tag.** Wer an einem Tag für zwei
+  Kunden bucht, liest aus „16,00 h" nichts ab. `anteileJeKunde()` in
+  `features/time-entry/kunden.ts` beantwortet das an einer Stelle für
+  Wochenleiste, Tagesansicht und Raster.
 - **Minuten, keine Dezimalstunden.** Gerechnet wird in `int`; `minutesToHours()`
   formatiert erst zur Anzeige. Eingaben versteht `parseDuration()`: `1,5`, `1:30`, `90m`.
 - **Daten als `DATE`**, nie `timestamptz`. Ein Arbeitstag hat keine Zeitzone.
@@ -164,6 +174,17 @@ sichtbaren Text gegen seinen tatsächlichen Grund und schlägt unter 4,5:1 an.
 
 ## Datenbank
 
+- **Der Dateiname ist die Version.** Der Zeitstempel vor dem Unterstrich muss
+  dem Eintrag in `supabase_migrations.schema_migrations` entsprechen. Laufen
+  beide auseinander — etwa weil eine Migration über das Supabase-MCP
+  eingespielt wurde, das eigene Zeitstempel vergibt —, hält `supabase db push`
+  jede Datei für unangewendet und scheitert. Wer es bemerkt, benennt die
+  Dateien um; ihr Inhalt bleibt unberührt.
+- **Satzermittlung, in dieser Reihenfolge:** ein Satz für genau diese
+  Tätigkeitsart gilt unverändert, sonst der allgemeine Projektsatz mal
+  `activity_types.rate_factor`. Ein ausgehandelter Satz wird nie nachträglich
+  multipliziert — sonst schriebe eine Änderung an der Tätigkeitsart
+  stillschweigend Verträge um.
 - Sichten immer mit `security_invoker = true`, sonst hängen sie RLS aus.
 - Jede Tabelle bekommt RLS und eine Policy. Bei Kindtabellen hängt die
   Zugehörigkeit am Kunden (siehe `reporting_periods`, `period_events`).

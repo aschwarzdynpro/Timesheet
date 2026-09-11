@@ -536,3 +536,134 @@ der Schlüssel-Wert-Speicher nimmt ihn ohne Schema-Änderung auf.
   stand der Link bei 2098 px, also gut anderthalb Bildschirmhöhen unterhalb des
   Sichtbaren. Gemessen vorher und nachher: 2098 px → 752 px, unabhängig von der
   Scrollposition.
+
+## Nachtrag: Wochenendzuschlag als Regel statt als Satz je Projekt
+
+Ein abweichender Satz entstand bisher ausschließlich als eigener Eintrag in der
+Satzhistorie: „Reisezeit zu 70 €" ist ein `project_rates`-Satz mit Tätigkeitsart. Für
+einen ausgehandelten Satz ist das genau richtig — er gehört zu *diesem* Kunden.
+
+Für einen Zuschlag, der überall gleich gilt, ist es der falsche Ort. Im echten Datenstand
+lag die Tätigkeitsart „Wochenende" auf drei Einträgen, aber nur **eines von zehn
+Projekten** trug einen Wochenendsatz. Bei den anderen neun fällt `fn_rate_for` still auf
+den Normalsatz zurück — und still ist das Problem: Die Oberfläche warnt nur, wenn *gar
+kein* Satz gefunden wird. Ein gefundener, aber falscher Satz sieht aus wie ein richtiger.
+Der Zuschlag wäre unbemerkt verlorengegangen, Buchung für Buchung.
+
+Die Tätigkeitsart trägt deshalb einen **Faktor** auf den allgemeinen Projektsatz.
+„Wochenende +50 %" ist damit eine Angabe an einer Stelle statt einer je Projekt. Die
+Rangfolge bleibt, wie sie war, und der Faktor ordnet sich darunter ein:
+
+1. Satz für genau diese Tätigkeitsart → gilt unverändert
+2. allgemeiner Projektsatz → mal Faktor der Tätigkeitsart
+
+**Ein ausgehandelter Satz wird nie nachträglich multipliziert.** Wer für ein Projekt
+„Reisezeit 70 €" vereinbart hat, bekommt 70 €, auch wenn die Art daneben einen Faktor
+trägt. Andernfalls schriebe eine Änderung an einer Tätigkeitsart stillschweigend Verträge
+um. Ebenso bleibt ein eingefrorener Satz unberührt: Was gemeldet wurde, bleibt, wie es
+gemeldet wurde.
+
+Die Grenzen des Feldes sind gegen den Tippfehler gebaut, der hier am nächsten liegt: 150
+statt 1,5 — ein Faktor, der aus 125 € 18.750 € machen würde. Und echt größer als null,
+weil ein Faktor von 0 eine abrechenbare Zeit zu 0,00 € ergäbe: genau die stille Null, die
+die Satzwarnung beseitigen sollte. Wer nicht berechnen will, nimmt das Kennzeichen
+„abrechenbar" weg — das sagt dasselbe, aber sichtbar.
+
+**Geprüft:** zwölf Datenbankzusicherungen, darunter die Gegenprobe, dass der eigene Satz
+den Faktor schlägt und dass ein später gesetzter Faktor eine gemeldete Periode nicht mehr
+erreicht. Einmal absichtlich gebrochen: Ignoriert `fn_rate_for` den Faktor, fällt der Test
+mit „Faktor 1,5 macht aus 140 EUR 210 EUR" um.
+
+## Nachtrag: Summen je Kunde, und zwei Kennzahlen weniger
+
+Der Nutzer bucht an einem Tag für mehrere Kunden parallel: 104 der 133 erfassten Tage
+tragen zwei Kunden, 88 Tage liegen über zehn Stunden. Je Kunde bleibt alles im Rahmen —
+7,2 h im Schnitt, höchstens 12 h.
+
+Damit war die Tagessumme die falsche Zahl. „16,00 h" ist ein Alarm oder eine
+Selbstverständlichkeit, je nachdem, ob sie auf einen oder auf zwei Kunden entfällt; die
+Frage, wegen der man hinsieht, beantwortet erst „HSO 8 · SYS 8". Drei Stellen zeigen das
+jetzt:
+
+- **Die Wochenleiste** listet unter der Tagessumme die Anteile je Kunde — erst ab 640 px.
+  Schmal hat ein Feld 44 px, und darin steht „HSO 7,5" nicht mehr nebeneinander.
+- **Unter der Tagesüberschrift** steht dieselbe Aufteilung in voller Breite, also auch auf
+  dem Telefon. Die Blöcke darunter sind nach Kunde gruppiert.
+- **Das Wochenraster** sortiert nach Kunde und trägt je Kunde eine Zwischensummenzeile mit
+  allen sieben Tagen. Gemeldet wird je Kunde, und das Raster ist die Ansicht, in der
+  geprüft und gemeldet wird — Projekte desselben Kunden auseinandergerissen zu sehen half
+  dabei nie.
+
+Die Rechnung steht **einmal** in `features/time-entry/kunden.ts`, aus demselben Grund, aus
+dem die Sperrlogik in `lock.ts` steht: Dieselbe Rechnung an drei Stellen ist dreimal
+dieselbe Gelegenheit, sie verschieden zu machen.
+
+**Weggefallen ist, was keine Aussage mehr hatte.** Es gibt kein internes Projekt und
+keinen nicht abrechenbaren Eintrag — erfasste und abrechenbare Zeit sind dieselbe Zahl.
+Deshalb:
+
+- Das Häkchen „abrechenbar" verschwindet aus jeder Editorzeile, solange keine Zeile davon
+  abweicht. Sobald eine abweicht, steht es wieder da; ohne das ließe sich der Ausnahmefall
+  nicht zurücknehmen. Bei einem nicht abrechenbaren Projekt steht statt der Spalte ein
+  Satz unter der Tabelle — sonst gäbe es im Editor keinen Hinweis mehr darauf.
+- „100 % der erfassten Zeit" unter der Kachel *Abrechenbar* steht nur noch bei einem
+  Anteil unter 100 %.
+- Der Verlauf zeigt Legende und interne Reihe nur, wenn interne Zeit vorkommt. Vorher
+  stand über einem einfarbigen Feld „aufgeteilt in abrechenbar und intern" und daneben
+  eine Legende mit einer Farbe, die nie auftauchte.
+- Dafür nennt „Honorar je Kunde" jetzt den **Anteil**: Ein Kunde, der vier Fünftel des
+  Jahres trägt, ist aus den Balkenlängen zu ahnen, aus „81 %" aber abzulesen.
+
+**Was das kostet:** Einen Eintrag auf einem abrechenbaren Projekt einzeln als intern zu
+buchen, geht in der Oberfläche nicht mehr. Der Weg über das Projekt (`is_billable`) bleibt.
+Sollte der Einzelfall doch auftreten, holt ihn ein Häkchen an einer beliebigen Zeile
+zurück — nur anlegen lässt er sich nicht mehr.
+
+## Nachtrag: Leistungsnachweis aus der Periode
+
+Die Meldung eines Monats hieß bisher: auf die Exportseite wechseln, den Zeitraum von Hand
+nachbauen, den Kunden wählen, das Profil wählen, Datei erzeugen. Vier Schritte, bei denen
+sich drei vertippen lassen — und jeder davon macht die Datei still falsch, ohne dass etwas
+rot wird.
+
+An der Periode steht das alles längst fest. Sie trägt jetzt deshalb einen Knopf
+**Nachweis**, der die Datei direkt erzeugt: Positionen und Spesen der Periode, Spalten aus
+dem Export-Profil dieses Kunden (sonst die Vorgabespalten), dazu ein Kopfbereich mit
+Kunde, Zeitraum und Meldestand. Welches Profil greift, steht im `title` des Knopfes —
+sonst wäre es eine stille Wahl.
+
+Der Kopf bekommt **nur der Nachweis**, nicht der freie Export: Wer die Datei als Vorlage
+weiterverarbeitet, erwartet die Spaltenüberschriften in Zeile 1, und fünf Zeilen davor
+würden jede Weiterverarbeitung verschieben.
+
+Die Zeilen kommen über dieselbe Abfragebeschreibung, aus der auch der aufgeklappte
+Periodenbereich liest (`periodEntriesQuery`). War die Periode schon offen, kostet der
+Nachweis keine Anfrage; zwei getrennte Abfragen wären zwei Zeitpunkte und könnten sich
+widersprechen.
+
+**Geprüft:** Die erzeugte Datei wurde ausgepackt und gelesen — Kopf in den Zeilen 1 bis 4,
+Leerzeile, Tabellenkopf in Zeile 6, Daten und Summe darunter, eingefroren bis Zeile 6. Die
+Datumsseriennummer 46268 entspricht dem 03.09.2026, also kein Zeitzonenversatz.
+
+### Beim Bauen gefunden
+
+- **Der Migrationsstand passte nicht zum Repository.** Die Versionen in
+  `supabase_migrations.schema_migrations` wichen von den Dateinamen ab, und eine Migration
+  (`move_btree_gist_to_extensions_schema`) existierte nur in der Datenbank. Ursache:
+  Eingespielt wurde über das Supabase-MCP, das eigene Zeitstempel vergibt. Inhaltlich
+  stimmten Sichten, Trigger und Funktionen überein — `supabase db push` hätte aber alle
+  vierzehn Dateien für unangewendet gehalten und wäre gescheitert. Kein Test hätte das
+  gefunden: `scripts/test-db.sh` spielt die Dateien in eine frische Datenbank ein und
+  sieht die Versionstabelle der echten nie.
+
+  Behoben durch Umbenennen der Dateien auf die Versionen der Datenbank; der Inhalt blieb
+  unberührt. Die fehlende Migration steht jetzt als Datei da, mit Bedingung: Liegt
+  `btree_gist` schon im richtigen Schema, gibt es nichts zu tun. Ein unbedingtes `ALTER`
+  bräche jeden Lauf gegen eine frische Datenbank mit „is already in schema extensions".
+
+- **Ein regulärer Ausdruck, der Zeilen verschob.** Beim Prüfen der erzeugten Datei ordnete
+  mein Skript dem Tabellenkopf Zeile 5 statt 6 zu: `<row r="5"/>` ist selbstschließend,
+  und der Ausdruck las den Inhalt der *nächsten* Zeile dazu. Das ist derselbe Fehler wie
+  in Phase 4, dort bei `<c …/>`. Ein Fehler im Prüfmittel, nicht in der Anwendung — aber
+  einer, der beinahe zu einer Korrektur an korrektem Code geführt hätte. Nachgeprüft mit
+  einem echten XML-Parser statt mit Mustersuche.
