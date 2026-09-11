@@ -148,6 +148,20 @@ export function EntryEditor({
 
   const locked = target.locked === true || entries.some((e) => e.status !== 'draft')
 
+  /**
+   * Das Haekchen "abrechenbar" nach derselben Regel wie die Taetigkeitsart:
+   * Es erscheint, wenn es eine Entscheidung ist, und verschwindet, wenn es in
+   * jeder Zeile dasselbe sagt.
+   *
+   * Bei einem nicht abrechenbaren Projekt setzt der Trigger die Zeit ohnehin
+   * auf intern - das Haekchen waere dort ein dauerhaft graues Kaestchen, und
+   * der Satz unter der Tabelle sagt es besser. Bei einem abrechenbaren
+   * Projekt, auf dem jede Zeile abrechenbar ist, steht es in jeder Zeile
+   * gesetzt da und kostet eine Spalte. Sobald eine Zeile davon abweicht, ist
+   * es wieder da - sonst liesse sich der Ausnahmefall nicht zuruecknehmen.
+   */
+  const zeigeAbrechenbar = project.is_billable && entries.some((e) => !e.is_billable)
+
   // Nach Arbeitspaket sortiert: was zusammengehoert, steht beieinander - das
   // leistete vorher die Gruppierung. Innerhalb eines Pakets bleibt die
   // Reihenfolge des Anlegens, weil sort stabil ist und die Abfrage bereits
@@ -356,7 +370,7 @@ export function EntryEditor({
           <span className={`${SPALTE} w-20 shrink-0`}>Dauer</span>
           <span className={`${SPALTE} min-w-0 flex-1`}>Beschreibung</span>
           {zeigeArt && <span className={`${SPALTE} w-36 shrink-0`}>Tätigkeitsart</span>}
-          <span className={`${SPALTE} w-24 shrink-0 text-center`}>abrechenbar</span>
+          {zeigeAbrechenbar && <span className={`${SPALTE} w-24 shrink-0 text-center`}>abrechenbar</span>}
           <span className="w-9 shrink-0" />
         </div>
 
@@ -412,15 +426,17 @@ export function EntryEditor({
                   </Select>
                 </span>
               )}
-              <label className="flex shrink-0 items-center gap-1.5 sm:w-24 sm:justify-center">
-                <input type="checkbox" checked={e.is_billable} disabled={!project.is_billable}
-                       aria-label={`abrechenbar, ${e.description}`}
-                       onChange={(ev) => void aendere(e, { is_billable: ev.target.checked })}
-                       className="size-4 rounded border-ink-300" />
-                {/* Schmal faellt die Spaltenueberschrift weg - dann stuende das
-                    Haekchen ohne ein Wort dazu da. */}
-                <span className="text-xs text-ink-500 sm:hidden">abrechenbar</span>
-              </label>
+              {zeigeAbrechenbar && (
+                <label className="flex shrink-0 items-center gap-1.5 sm:w-24 sm:justify-center">
+                  <input type="checkbox" checked={e.is_billable}
+                         aria-label={`abrechenbar, ${e.description}`}
+                         onChange={(ev) => void aendere(e, { is_billable: ev.target.checked })}
+                         className="size-4 rounded border-ink-300" />
+                  {/* Schmal faellt die Spaltenueberschrift weg - dann stuende das
+                      Haekchen ohne ein Wort dazu da. */}
+                  <span className="text-xs text-ink-500 sm:hidden">abrechenbar</span>
+                </label>
+              )}
               <Button size="sm" variant="ghost" aria-label={`Löschen, ${e.description}`}
                       className="w-9 shrink-0 px-0" onClick={() => void loesche(e)}>
                 <Trash2 className="size-4" />
@@ -468,13 +484,15 @@ export function EntryEditor({
                   </Select>
                 </span>
               )}
-              <label className="flex shrink-0 items-center gap-1.5 sm:w-24 sm:justify-center">
-                <input type="checkbox" checked={z.abrechenbar} disabled={!project.is_billable}
-                       aria-label="abrechenbar, neue Zeile"
-                       onChange={(ev) => setzeNeu(z.id, { abrechenbar: ev.target.checked })}
-                       className="size-4 rounded border-ink-300" />
-                <span className="text-xs text-ink-500 sm:hidden">abrechenbar</span>
-              </label>
+              {zeigeAbrechenbar && (
+                <label className="flex shrink-0 items-center gap-1.5 sm:w-24 sm:justify-center">
+                  <input type="checkbox" checked={z.abrechenbar}
+                         aria-label="abrechenbar, neue Zeile"
+                         onChange={(ev) => setzeNeu(z.id, { abrechenbar: ev.target.checked })}
+                         className="size-4 rounded border-ink-300" />
+                  <span className="text-xs text-ink-500 sm:hidden">abrechenbar</span>
+                </label>
+              )}
               <Button size="sm" variant="ghost" aria-label="Neue Zeile verwerfen"
                       className="w-9 shrink-0 px-0"
                       onClick={() => setNeue((n) => n.filter((x) => x.id !== z.id))}>
@@ -507,6 +525,15 @@ export function EntryEditor({
           </span>
         )}
       </div>
+
+      {/* Steht hier, seit das Haekchen in jeder Zeile weg ist: sonst gaebe es
+          im Editor keinen Hinweis mehr darauf, dass diese Zeit intern ist. */}
+      {!project.is_billable && (
+        <p className="text-xs text-ink-500">
+          Dieses Projekt ist nicht abrechenbar — die Zeit zählt als interne Zeit
+          und wird nicht bewertet.
+        </p>
+      )}
 
       {artenDesTages.map((artId) => (
         <SatzHinweis key={artId ?? 'ohne'} project={project} workDate={workDate}

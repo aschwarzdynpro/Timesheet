@@ -21,7 +21,16 @@ import { gesperrteTage } from './lock'
  * die Woche geriet zur Liste. Die Aufteilung steht jetzt in der aufgeklappten
  * Zeile, wo Platz dafuer ist.
  */
-export type GridRow = { key: string; project: Project }
+export type GridRow = {
+  key: string
+  project: Project
+  /**
+   * Der Kunde des Projekts, ausgeschrieben. Er steht an der Zeile und nicht
+   * erst im Raster: eine Zeile ohne Buchungen in dieser Woche hat keinen
+   * Eintrag, aus dem sich der Name lesen liesse.
+   */
+  customerName: string
+}
 
 /** Ein Arbeitspaket, wie es in der Zeilenbeschriftung erscheint. */
 type Paket = { id: string; code: string; budget?: WorkPackageBudget }
@@ -154,6 +163,27 @@ export function WeekGrid({
   })
   const weekTotal = dayTotals.reduce((a, b) => a + b, 0)
 
+  /**
+   * Die Zeilen je Kunde, in der Reihenfolge, in der sie hereinkommen - die
+   * Seite sortiert bereits nach Kunde, dann nach Projekt.
+   *
+   * Gemeldet wird je Kunde, nicht je Tag. Wer an einem Tag fuer zwei Kunden
+   * bucht, liest aus der Tagessumme unten nicht ab, ob die Meldung eines
+   * einzelnen Kunden vollstaendig ist - dafuer steht die Zwischensumme.
+   */
+  const gruppen = useMemo(() => {
+    const map = new Map<string, { name: string; rows: GridRow[] }>()
+    for (const row of rows) {
+      const vorhanden = map.get(row.project.customer_id)
+      if (vorhanden) vorhanden.rows.push(row)
+      else map.set(row.project.customer_id, { name: row.customerName, rows: [row] })
+    }
+    return [...map.entries()].map(([id, gruppe]) => ({ id, ...gruppe }))
+  }, [rows])
+
+  /** Bei einem einzigen Kunden waere die Zwischensumme die Gesamtsumme. */
+  const zeigeKunden = gruppen.length > 1
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[760px] border-collapse text-sm">
@@ -186,7 +216,32 @@ export function WeekGrid({
         </thead>
 
         <tbody>
-          {rows.map((row) => {
+          {gruppen.map((gruppe) => [
+            zeigeKunden && (
+              <tr key={`kunde-${gruppe.id}`} className="bg-ink-50/60">
+                <td className="border-b border-ink-200 px-3 py-1.5 text-xs font-semibold tracking-wide text-ink-600 uppercase">
+                  {gruppe.name}
+                </td>
+                {days.map((day) => {
+                  const iso = toIsoDate(day)
+                  const summe = gruppe.rows.reduce((n, r) => n + sumOf(cellsOf(r, iso)), 0)
+                  return (
+                    <td key={iso}
+                        className={cn('tabular border-b border-ink-200 px-2 py-1.5 text-center text-xs font-medium',
+                                      summe > 0 ? 'text-ink-700' : 'text-ink-400',
+                                      isWeekend(day) && 'bg-ink-100/40',
+                                      isToday(day) && 'bg-accent-50/60')}>
+                      {summe > 0 ? minutesToHours(summe) : '–'}
+                    </td>
+                  )
+                })}
+                <td className="tabular border-b border-ink-200 px-2 py-1.5 text-right text-xs font-semibold text-ink-700">
+                  {minutesToHours(gruppe.rows.reduce(
+                    (n, r) => n + days.reduce((m, d) => m + sumOf(cellsOf(r, toIsoDate(d))), 0), 0))}
+                </td>
+              </tr>
+            ),
+            ...gruppe.rows.map((row) => {
             const rowTotal = days.reduce((sum, day) => sum + sumOf(cellsOf(row, toIsoDate(day))), 0)
             const offen = selected?.project.id === row.project.id ? selected : null
             const pakete = beschriftung(row)
@@ -346,7 +401,8 @@ export function WeekGrid({
                 </tr>
               ),
             ]
-          })}
+            }),
+          ])}
         </tbody>
 
         <tfoot>

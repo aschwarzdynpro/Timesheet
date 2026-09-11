@@ -3,10 +3,13 @@ import { Lock } from 'lucide-react'
 import { Card, EmptyState } from '@/components/ui/primitives'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/format'
-import { WEEKDAY_SHORT, isToday, isWeekend, minutesToHours, toIsoDate, weekDays } from '@/lib/week'
+import {
+  WEEKDAY_SHORT, isToday, isWeekend, minutesToHours, minutesToShortHours, toIsoDate, weekDays,
+} from '@/lib/week'
 import type { Project, ReportingPeriod, TimeEntryFull } from '@/types/database'
 import { EntryEditor } from './EntryDialog'
 import { QuickEntry } from './QuickEntry'
+import { anteileJeKunde, type KundenAnteil } from './kunden'
 import { gesperrteTage } from './lock'
 
 /**
@@ -37,24 +40,52 @@ export function DayView({
     [entries, workDate],
   )
 
-  /** Je Projekt ein Block - in der Reihenfolge, in der die Projekte heissen. */
-  const proProjekt = useMemo(() => {
-    const map = new Map<string, TimeEntryFull[]>()
+  /**
+   * Ob in dieser Woche ueberhaupt mehr als ein Kunde vorkommt.
+   *
+   * Bei einem einzigen Kunden waere seine Summe dieselbe Zahl wie die des
+   * Tages, einmal mit Kuerzel davor - eine Zeile, die nichts hinzufuegt.
+   */
+  const mehrereKunden = useMemo(
+    () => new Set(entries.map((e) => e.customer_id)).size > 1,
+    [entries],
+  )
+
+  /** Je Kunde ein Block, darin je Projekt einer - beide nach Namen. */
+  const proKunde = useMemo(() => {
+    const map = new Map<string, { kunde: KundenAnteil; projekte: Map<string, TimeEntryFull[]> }>()
     for (const e of desTages) {
-      const liste = map.get(e.project_id)
+      let block = map.get(e.customer_id)
+      if (!block) {
+        block = {
+          kunde: { id: e.customer_id, code: e.customer_code, name: e.customer_name, minuten: 0 },
+          projekte: new Map(),
+        }
+        map.set(e.customer_id, block)
+      }
+      block.kunde.minuten += e.duration_minutes
+      const liste = block.projekte.get(e.project_id)
       if (liste) liste.push(e)
-      else map.set(e.project_id, [e])
+      else block.projekte.set(e.project_id, [e])
     }
-    return [...map.entries()]
-      .map(([id, liste]) => ({ project: projects.find((p) => p.id === id), liste }))
-      .filter((z): z is { project: Project; liste: TimeEntryFull[] } => Boolean(z.project))
-      .sort((a, b) => a.project.name.localeCompare(b.project.name, 'de'))
+
+    return [...map.values()]
+      .map(({ kunde, projekte }) => ({
+        kunde,
+        projekte: [...projekte.entries()]
+          .map(([id, liste]) => ({ project: projects.find((p) => p.id === id), liste }))
+          .filter((z): z is { project: Project; liste: TimeEntryFull[] } => Boolean(z.project))
+          .sort((a, b) => a.project.name.localeCompare(b.project.name, 'de')),
+      }))
+      .filter((block) => block.projekte.length > 0)
+      .sort((a, b) => a.kunde.name.localeCompare(b.kunde.name, 'de'))
   }, [desTages, projects])
 
   const istGesperrt = (project: Project) =>
     gesperrt.get(project.customer_id)?.has(workDate) ?? false
 
   const summe = desTages.reduce((n, e) => n + e.duration_minutes, 0)
+  const anteile = useMemo(() => anteileJeKunde(desTages), [desTages])
 
   return (
     <>
@@ -67,6 +98,7 @@ export function DayView({
             const minuten = tages.reduce((n, e) => n + e.duration_minutes, 0)
             const aktiv = iso === workDate
             const zu = [...gesperrt.values()].some((set) => set.has(iso))
+            const tagesAnteile = mehrereKunden ? anteileJeKunde(tages) : []
             return (
               <li key={iso}>
                 <button
@@ -91,6 +123,21 @@ export function DayView({
                                       minuten > 0 ? 'text-ink-800' : 'text-ink-400')}>
                     {minuten > 0 ? minutesToHours(minuten) : '–'}
                   </span>
+                  {/* Erst ab 640 px: schmal hat ein Feld 44 px, und darin steht
+                      "HSO 7,5" nicht mehr nebeneinander. Auf dem Telefon
+                      beantwortet die Zeile unter der Ueberschrift dieselbe
+                      Frage - sie hat die volle Breite. */}
+                  {tagesAnteile.length > 1 && (
+                    <span className="hidden w-full flex-col items-center gap-0.5 pt-0.5 sm:flex">
+                      {tagesAnteile.map((a) => (
+                        <span key={a.id}
+                              title={`${a.name}: ${minutesToHours(a.minuten)} h`}
+                              className="tabular max-w-full truncate text-[10px] leading-tight text-ink-500">
+                          {a.code} {minutesToShortHours(a.minuten)}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                   {zu && <Lock className="size-3 text-ink-400" aria-label="gemeldet" />}
                 </button>
               </li>
@@ -113,13 +160,21 @@ export function DayView({
         </p>
       </div>
 
-      {proProjekt.length > 0 && (
+      {/* Die Aufteilung des Tages auf die Kunden - hier in voller Breite, also
+          auch auf dem Telefon lesbar. */}
+      {anteile.length > 1 && (
+        <p className="tabular mt-0.5 px-1 text-right text-xs text-ink-500">
+          {anteile.map((a) => `${a.code} ${minutesToShortHours(a.minuten)} h`).join(' · ')}
+        </p>
+      )}
+
+      {proKunde.length > 0 && (
         <p className="mt-2 px-1 text-right text-xs text-ink-500">
           Gespeichert wird beim Verlassen des Feldes.
         </p>
       )}
 
-      {proProjekt.length === 0 ? (
+      {proKunde.length === 0 ? (
         <Card className="mt-2">
           <EmptyState
             title="Für diesen Tag ist nichts erfasst"
@@ -127,22 +182,36 @@ export function DayView({
           />
         </Card>
       ) : (
-        proProjekt.map(({ project, liste }) => (
-          <Card key={project.id} className="mt-2 px-4 py-3">
-            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-sm font-medium text-ink-800">{project.name}</h3>
-              <span className="tabular text-sm text-ink-500">
-                {minutesToHours(liste.reduce((n, e) => n + e.duration_minutes, 0))} h
-              </span>
-            </div>
-            {/* Derselbe Editor wie in der aufgeklappten Rasterzeile und im
-                Dialog des Telefons. */}
-            <EntryEditor
-              target={{ project, workDate, locked: istGesperrt(project) }}
-              entries={liste}
-              speicherhinweis={false}
-            />
-          </Card>
+        proKunde.map(({ kunde, projekte }) => (
+          <section key={kunde.id}>
+            {/* Die Kundenzeile nur, wenn es etwas zu trennen gibt: bei einem
+                einzigen Kunden stuende dort seine Tagessumme ein zweites Mal. */}
+            {proKunde.length > 1 && (
+              <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 px-1">
+                <h3 className="text-sm font-semibold text-ink-700">{kunde.name}</h3>
+                <span className="tabular text-sm text-ink-500">
+                  {minutesToHours(kunde.minuten)} h
+                </span>
+              </div>
+            )}
+            {projekte.map(({ project, liste }) => (
+              <Card key={project.id} className="mt-2 px-4 py-3">
+                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                  <h4 className="text-sm font-medium text-ink-800">{project.name}</h4>
+                  <span className="tabular text-sm text-ink-500">
+                    {minutesToHours(liste.reduce((n, e) => n + e.duration_minutes, 0))} h
+                  </span>
+                </div>
+                {/* Derselbe Editor wie in der aufgeklappten Rasterzeile und im
+                    Dialog des Telefons. */}
+                <EntryEditor
+                  target={{ project, workDate, locked: istGesperrt(project) }}
+                  entries={liste}
+                  speicherhinweis={false}
+                />
+              </Card>
+            ))}
+          </section>
         ))
       )}
     </>

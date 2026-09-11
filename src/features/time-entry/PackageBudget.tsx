@@ -1,11 +1,11 @@
 import { BudgetStand, budgetStandText } from '@/components/ui/BudgetBadge'
 import { cn } from '@/lib/utils'
 import { formatEuro } from '@/lib/format'
-import { minutesToHours } from '@/lib/week'
+import { minutesToShortHours } from '@/lib/week'
 import type { WorkPackageBudget } from '@/types/database'
 
 /** Ganze Stunden ohne ",00": Budgets sind meist glatt, und jede Stelle zaehlt. */
-const stunden = (wert: number) => `${minutesToHours(wert * 60).replace(',00', '')} h`
+const stunden = (wert: number) => `${minutesToShortHours(wert * 60)} h`
 
 /** Ob ein Paket ueberhaupt ein Budget traegt. */
 export const hatBudget = (budget: WorkPackageBudget | undefined) =>

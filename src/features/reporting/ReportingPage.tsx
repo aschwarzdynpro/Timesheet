@@ -98,7 +98,13 @@ export function ReportingPage() {
     return [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v)
   }, [rows, resolution, year])
 
-  /** Honorar je Kunde, absteigend. */
+  /**
+   * Honorar je Kunde, absteigend - mit dem Anteil am Gesamthonorar.
+   *
+   * Der Anteil ist die Zahl, die ein Klumpenrisiko sichtbar macht: Ein Kunde,
+   * der vier Fuenftel des Jahres traegt, ist aus den Balkenlaengen zu ahnen,
+   * aus "81 %" aber abzulesen.
+   */
   const byCustomer: RankPoint[] = useMemo(() => {
     const map = new Map<string, { name: string; fees: number }>()
     for (const r of rows) {
@@ -106,10 +112,19 @@ export function ReportingPage() {
       entry.fees += Number(r.fees ?? 0)
       map.set(r.customer_id, entry)
     }
+    const gesamt = [...map.values()].reduce((n, c) => n + c.fees, 0)
     return [...map.values()]
       .filter((c) => c.fees > 0)
       .sort((a, b) => b.fees - a.fees)
-      .map((c) => ({ label: c.name, value: c.fees, formatted: formatEuro(c.fees) }))
+      .map((c) => ({
+        label: c.name,
+        value: c.fees,
+        // Der Anteil steht nur da, wo er etwas unterscheidet: bei einem
+        // einzigen Kunden sind es immer 100 %.
+        formatted: map.size > 1 && gesamt > 0
+          ? `${formatEuro(c.fees)} · ${Math.round((c.fees / gesamt) * 100)} %`
+          : formatEuro(c.fees),
+      }))
   }, [rows])
 
   /** Je Projekt: Stunden, Honorar und Budgetstand. */
@@ -179,8 +194,11 @@ export function ReportingPage() {
         <>
           <Card className="mt-4 grid divide-y divide-ink-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
             <Stat label="Erfasst" value={`${minutesToHours(totals.tracked)} h`} />
+            {/* Der Anteil steht nur da, wenn er von 100 % abweicht: wer keine
+                interne Zeit erfasst, bekaeme sonst in jedem Zeitraum dieselbe
+                Zahl unter derselben Zahl. */}
             <Stat label="Abrechenbar" value={`${minutesToHours(totals.billable)} h`}
-                  hint={totals.tracked > 0
+                  hint={totals.tracked > 0 && totals.billable < totals.tracked
                     ? `${Math.round((totals.billable / totals.tracked) * 100)} % der erfassten Zeit`
                     : undefined} />
             <Stat label="Honorar" value={formatEuro(totals.fees)} />
@@ -218,9 +236,11 @@ export function ReportingPage() {
                   {resolution === 'month' ? 'Monat' : 'Kalenderwoche'}
                 </h2>
                 <p className="text-xs text-ink-400">
-                  {metric === 'hours'
-                    ? 'Erfasste Zeit, aufgeteilt in abrechenbar und intern.'
-                    : 'Die abrechenbare Zeit, mit dem gültigen Satz bewertet.'}
+                  {metric === 'fees'
+                    ? 'Die abrechenbare Zeit, mit dem gültigen Satz bewertet.'
+                    : totals.billable < totals.tracked
+                      ? 'Erfasste Zeit, aufgeteilt in abrechenbar und intern.'
+                      : 'Erfasste Zeit — im gewählten Zeitraum durchweg abrechenbar.'}
                   {' '}Der Hinweis an der Säule nennt beides.
                 </p>
               </div>

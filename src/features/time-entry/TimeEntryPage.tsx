@@ -96,20 +96,31 @@ export function TimeEntryPage() {
 
   /** Zeilen: ein Projekt je Zeile - was diese Woche erfasst wurde, plus manuell
       ergaenzte. Die Aufteilung nach Arbeitspaket steht in der aufgeklappten
-      Zeile, nicht im Raster. */
+      Zeile, nicht im Raster.
+
+      Sortiert erst nach Kunde, dann nach Projekt: gemeldet wird je Kunde, und
+      das Raster ist die Ansicht, in der geprueft und gemeldet wird. Projekte
+      desselben Kunden auseinandergerissen zu sehen, half beim Melden nie. */
   const rows: GridRow[] = useMemo(() => {
     const map = new Map<string, GridRow>()
     const add = (projectId: string) => {
       if (map.has(projectId)) return
       const project = projects?.find((p) => p.id === projectId)
       if (!project) return
-      map.set(projectId, { key: rowKey(projectId), project })
+      // Der Name kommt aus den Stammdaten; eine Zeile ohne Buchungen in dieser
+      // Woche hat keinen Eintrag, aus dem er sich lesen liesse. Solange die
+      // Kunden noch laden, bleibt er leer - die Zeile faellt deswegen nicht weg.
+      const customerName = customers?.find((c) => c.id === project.customer_id)?.name
+        ?? entries?.find((e) => e.project_id === projectId)?.customer_name
+        ?? ''
+      map.set(projectId, { key: rowKey(projectId), project, customerName })
     }
     for (const e of entries ?? []) add(e.project_id)
     for (const projectId of extraRows) add(projectId)
-    return [...map.values()]
-      .sort((a, b) => a.project.name.localeCompare(b.project.name, 'de'))
-  }, [entries, extraRows, projects])
+    return [...map.values()].sort((a, b) =>
+      a.customerName.localeCompare(b.customerName, 'de')
+      || a.project.name.localeCompare(b.project.name, 'de'))
+  }, [entries, extraRows, projects, customers])
 
   // Die Eintraege des offenen Dialogs werden bei jedem Rendern neu bestimmt.
   // Als Momentaufnahme im Dialog wuerde die Liste nach dem Hinzufuegen veralten.

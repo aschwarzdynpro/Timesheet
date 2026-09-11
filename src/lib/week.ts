@@ -102,6 +102,17 @@ export function minutesToHours(minutes: number): string {
   })
 }
 
+/**
+ * Wie minutesToHours, aber ohne glatte Nachkommastellen: "8" statt "8,00".
+ *
+ * Fuer enge Stellen, an denen die Zahl neben etwas anderem steht - ein Kuerzel
+ * in der Wochenleiste, ein Budget im Plaettchen. Dort kostet jede Stelle Platz,
+ * und ",00" traegt keine Aussage.
+ */
+export function minutesToShortHours(minutes: number): string {
+  return minutesToHours(minutes).replace(',00', '')
+}
+
 /** Kompakte Dauer fuer enge Zellen: "1:30" statt "1,50". */
 export function minutesToClock(minutes: number): string {
   const h = Math.floor(minutes / 60)

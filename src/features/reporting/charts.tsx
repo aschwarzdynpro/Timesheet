@@ -100,6 +100,14 @@ export function TrendChart({
   const padTop = 12
 
   const stunden = metric === 'hours'
+  /**
+   * Ob im Zeitraum ueberhaupt interne Zeit vorkommt.
+   *
+   * Wer ausschliesslich fuer Kunden bucht, bekam bisher eine Legende mit zwei
+   * Eintraegen, von denen einer nie im Bild auftaucht - und die Aussage
+   * "aufgeteilt in abrechenbar und intern" ueber einem einfarbigen Feld.
+   */
+  const hatIntern = points.some((p) => p.internal > 0)
   const hoehe = (p: TrendPoint) => (stunden ? p.billable + p.internal : p.fees)
   const schritt = rasterSchritt(Math.max(1, ...points.map(hoehe)) / 4)
   const top = schritt * 4
@@ -120,9 +128,9 @@ export function TrendChart({
     <div className="relative">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-labelledby={titleId}>
         <title id={titleId}>
-          {stunden
-            ? 'Erfasste Zeit je Zeitraum, aufgeteilt in abrechenbar und intern'
-            : 'Honorar je Zeitraum in Euro'}
+          {!stunden ? 'Honorar je Zeitraum in Euro'
+            : hatIntern ? 'Erfasste Zeit je Zeitraum, aufgeteilt in abrechenbar und intern'
+              : 'Abrechenbare Zeit je Zeitraum'}
         </title>
 
         {[0, 1, 2, 3, 4].map((i) => {
@@ -181,7 +189,7 @@ export function TrendChart({
       )}
 
       {/* Eine Reihe braucht keine Legende - die Ueberschrift nennt sie. */}
-      {stunden && (
+      {stunden && hatIntern && (
         <ul className="mt-2 flex flex-wrap gap-4 pl-13 text-xs text-ink-600">
           <li className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-sm" style={{ background: SERIES.billable }} />
