@@ -1,5 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { CheckCircle2, ChevronDown, ChevronRight, History, Lock, LockOpen } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+  CheckCircle2, ChevronDown, ChevronRight, FileDown, History, Lock, LockOpen,
+} from 'lucide-react'
 import {
   Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Select, Textarea,
 } from '@/components/ui/primitives'
@@ -9,9 +12,11 @@ import { useConfirm } from '@/components/ui/confirm'
 import { CYCLE_LABEL, formatDate, formatEuro } from '@/lib/format'
 import { minutesToHours, toIsoDate } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
+import { profilFuerKunden, useExportProfiles } from '@/features/export/api'
+import { DEFAULT_COLUMNS } from '@/features/export/columns'
 import {
-  usePeriodEntries, usePeriodEvents, usePeriods, useReopenPeriod, useSubmitPeriod,
-  type PeriodWithTotals,
+  periodEntriesQuery, periodExpensesQuery, usePeriodEntries, usePeriodEvents, usePeriods,
+  useReopenPeriod, useSubmitPeriod, type PeriodWithTotals,
 } from './api'
 
 const STATUS = {
@@ -163,12 +168,22 @@ function PeriodDetail({ periodId }: { periodId: string }) {
   )
 }
 
+/** Was mit dieser Periode zuletzt geschehen ist - eine Zeile fuer den Nachweis. */
+function standText(period: PeriodWithTotals): string {
+  if (period.status === 'open') return 'offen — noch nicht gemeldet'
+  const am = period.submitted_at ? ` am ${formatDate(period.submitted_at.slice(0, 10))}` : ''
+  return `${STATUS[period.status].label}${am}`
+}
+
 export function PeriodsPage() {
   const { data: periods, isPending, error } = usePeriods()
   const { data: customers } = useCustomers()
+  const { data: profiles } = useExportProfiles()
   const submit = useSubmitPeriod()
   const confirm = useConfirm()
+  const qc = useQueryClient()
   const [reopening, setReopening] = useState<PeriodWithTotals | null>(null)
+  const [erzeugt, setErzeugt] = useState<string | null>(null)
 
   const [customerId, setCustomerId] = useState('')
   const [onlyOpen, setOnlyOpen] = useState(true)
@@ -212,6 +227,56 @@ export function PeriodsPage() {
       await submit.mutateAsync(period.id)
     } catch (err) {
       setActionError(describeError(err))
+    }
+  }
+
+  /**
+   * Der Leistungsnachweis: dieselbe Datei wie auf der Exportseite, aber Kunde,
+   * Zeitraum und Spaltenbild stehen schon fest - sie stehen an der Periode.
+   *
+   * Vorher hiess die Meldung eines Monats: auf die Exportseite wechseln, den
+   * Zeitraum von Hand nachbauen, den Kunden waehlen, das Profil waehlen. Vier
+   * Schritte, bei denen sich drei vertippen lassen, und jeder davon macht die
+   * Datei still falsch.
+   */
+  async function onNachweis(period: PeriodWithTotals) {
+    setActionError(null)
+    setErzeugt(period.id)
+    try {
+      const [entries, expenses] = await Promise.all([
+        qc.fetchQuery(periodEntriesQuery(period.id)),
+        qc.fetchQuery(periodExpensesQuery(period.id)),
+      ])
+      if (entries.length === 0 && expenses.length === 0) {
+        setActionError('Diese Periode enthält keine Positionen — es gibt nichts nachzuweisen.')
+        return
+      }
+
+      const kunde = customers?.find((c) => c.id === period.customer_id)
+      const profil = profilFuerKunden(profiles, period.customer_id)
+      // Die Tabellenbibliothek wiegt rund 330 kB und wird erst hier gebraucht.
+      const { exportToExcel } = await import('@/features/export/writeExcel')
+      await exportToExcel({
+        rows: entries,
+        expenses,
+        columns: profil?.columns?.length ? profil.columns : DEFAULT_COLUMNS,
+        fileName: `Leistungsnachweis_${kunde?.code ?? 'Kunde'}`
+          + `_${period.period_start}_bis_${period.period_end}.xlsx`,
+        title: kunde?.name ?? 'Leistungsnachweis',
+        kopf: {
+          titel: 'Leistungsnachweis',
+          zeilen: [
+            { label: 'Kunde', wert: kunde?.name ?? '—' },
+            { label: 'Zeitraum',
+              wert: `${formatDate(period.period_start)} – ${formatDate(period.period_end)}` },
+            { label: 'Stand', wert: standText(period) },
+          ],
+        },
+      })
+    } catch (err) {
+      setActionError(describeError(err))
+    } finally {
+      setErzeugt(null)
     }
   }
 
@@ -304,7 +369,7 @@ export function PeriodsPage() {
                       </div>
                     </div>
 
-                    <div className="flex w-full items-center justify-between gap-4 pl-7 sm:w-auto sm:justify-end sm:pl-0">
+                    <div className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-7 sm:w-auto sm:justify-end sm:pl-0">
                     <dl className="flex gap-5 text-right">
                       <div>
                         <dt className="text-xs text-ink-400">Stunden</dt>
@@ -319,6 +384,20 @@ export function PeriodsPage() {
                         </dd>
                       </div>
                     </dl>
+
+                    {/* Der Nachweis steht neben der Handlung, nicht auf einer
+                        anderen Seite: Kunde, Zeitraum und Spaltenbild stehen
+                        hier bereits fest. */}
+                    <Button size="sm" className="whitespace-nowrap"
+                            disabled={p.entry_count === 0 || erzeugt === p.id}
+                            title={profilFuerKunden(profiles, p.customer_id)
+                              ? `Spalten aus dem Profil „${profilFuerKunden(profiles, p.customer_id)?.name}“`
+                              : 'Spalten wie im Export voreingestellt — ein Profil mit diesem '
+                                + 'Kunden legt sie fest'}
+                            onClick={() => void onNachweis(p)}>
+                      <FileDown className="size-4" />
+                      {erzeugt === p.id ? 'Wird erzeugt …' : 'Nachweis'}
+                    </Button>
 
                     {p.status === 'open' ? (
                       <Button size="sm" variant="primary"

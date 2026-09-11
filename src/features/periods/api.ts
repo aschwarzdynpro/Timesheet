@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { PeriodEvent, ReportingPeriod, TimeEntryFull } from '@/types/database'
+import type { ExpenseFull, PeriodEvent, ReportingPeriod, TimeEntryFull } from '@/types/database'
 
 export interface PeriodWithTotals extends ReportingPeriod {
   /** Aus den Eintraegen berechnet, solange die Periode noch offen ist. */
@@ -51,21 +51,55 @@ export function usePeriods() {
   })
 }
 
-/** Die Eintraege einer Periode – die Positionen, die gemeldet werden. */
-export function usePeriodEntries(periodId: string | null) {
-  return useQuery({
-    queryKey: ['period-entries', periodId],
-    enabled: Boolean(periodId),
+/**
+ * Die Eintraege einer Periode – die Positionen, die gemeldet werden.
+ *
+ * Als Beschreibung und nicht nur als Hook, weil der Nachweis dieselben Zeilen
+ * auf Knopfdruck braucht: `fetchQuery` mit derselben Beschreibung liest sie aus
+ * dem Zwischenspeicher, wenn die Periode ohnehin aufgeklappt war, und holt sie
+ * sonst nach. Zwei getrennte Abfragen waeren zwei Wahrheiten.
+ */
+export function periodEntriesQuery(periodId: string) {
+  return {
+    queryKey: ['period-entries', periodId] as const,
     queryFn: async (): Promise<TimeEntryFull[]> => {
       const { data, error } = await supabase
         .from('v_time_entries_full')
         .select('*')
-        .eq('period_id', periodId as string)
+        .eq('period_id', periodId)
         .order('work_date')
+        .order('created_at')
       if (error) throw error
       return (data ?? []) as TimeEntryFull[]
     },
+  }
+}
+
+export function usePeriodEntries(periodId: string | null) {
+  return useQuery({
+    ...periodEntriesQuery(periodId ?? ''),
+    enabled: Boolean(periodId),
   })
+}
+
+/**
+ * Die Spesen einer Periode. Sie laufen durch dieselbe Periode und Sperre wie
+ * die Zeiten und gehoeren deshalb in denselben Nachweis - als eigenes Blatt,
+ * weil ein Betrag nicht in eine Spalte gehoert, die Stunden zaehlt.
+ */
+export function periodExpensesQuery(periodId: string) {
+  return {
+    queryKey: ['period-expenses', periodId] as const,
+    queryFn: async (): Promise<ExpenseFull[]> => {
+      const { data, error } = await supabase
+        .from('v_expenses_full')
+        .select('*')
+        .eq('period_id', periodId)
+        .order('expense_date')
+      if (error) throw error
+      return (data ?? []) as ExpenseFull[]
+    },
+  }
 }
 
 /**

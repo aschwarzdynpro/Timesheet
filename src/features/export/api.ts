@@ -24,6 +24,23 @@ export interface ExportProfile {
   created_at: string
 }
 
+/**
+ * Das Profil, mit dem ein Kunde gemeldet wird - oder null, wenn keines
+ * hinterlegt ist.
+ *
+ * Ein Profil traegt optional einen Kunden; damit ist es dessen Spaltenbild.
+ * Der Nachweis aus einer Periode nimmt es, statt bei jeder Meldung dieselbe
+ * Auswahl erneut zu treffen. Gibt es mehrere fuer denselben Kunden, gewinnt
+ * das alphabetisch erste - die Liste ist nach Namen sortiert, und eine
+ * Reihenfolge, die sich nicht ansehen laesst, waere schlechter als eine, die
+ * man sieht.
+ */
+export function profilFuerKunden(
+  profiles: ExportProfile[] | undefined, customerId: string,
+): ExportProfile | null {
+  return (profiles ?? []).find((p) => p.customer_id === customerId) ?? null
+}
+
 export function useExportProfiles() {
   return useQuery({
     queryKey: ['export-profiles'],

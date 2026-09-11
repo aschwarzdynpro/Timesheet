@@ -365,6 +365,13 @@ export function ExportPage() {
             {filters.customerId && <> und der Kunde <Badge>{customers?.find((c) => c.id === filters.customerId)?.name}</Badge></>}.
             Der Zeitraum bleibt frei wählbar.
           </p>
+          {filters.customerId && (
+            <p className="text-sm text-ink-500">
+              Ein Profil mit Kunde liefert außerdem die Spalten für den
+              <strong className="font-medium"> Leistungsnachweis</strong> unter Perioden —
+              dort sind Kunde und Zeitraum schon bekannt.
+            </p>
+          )}
           <div className="flex justify-end gap-2 border-t border-ink-100 pt-4">
             <Button type="button" onClick={() => setSaveOpen(false)}>Abbrechen</Button>
             <Button type="submit" variant="primary" disabled={saveProfile.isPending}>Sichern</Button>

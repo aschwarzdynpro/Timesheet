@@ -86,18 +86,43 @@ function expenseSheet(expenses: ExpenseFull[]) {
   }
 }
 
+/**
+ * Ein Kopf ueber der Tabelle: was das Blatt ist, fuer wen und fuer wann.
+ *
+ * Nur der Nachweis aus einer Periode bekommt ihn. Der freie Export bleibt
+ * ohne: Wer die Datei als Vorlage weiterverarbeitet, erwartet die
+ * Spaltenueberschriften in Zeile 1 - fuenf Zeilen davor wuerden jede
+ * Weiterverarbeitung verschieben.
+ */
+export type ExcelKopf = {
+  titel: string
+  zeilen: { label: string; wert: string }[]
+}
+
 export async function exportToExcel({
-  rows, expenses, columns, fileName, title,
+  rows, expenses, columns, fileName, title, kopf,
 }: {
   rows: TimeEntryFull[]
   expenses: ExpenseFull[]
   columns: ColumnKey[]
   fileName: string
   title: string
+  kopf?: ExcelKopf
 }): Promise<void> {
   const defs = columns.map((key) => COLUMN_BY_KEY.get(key)).filter((c) => c !== undefined)
 
   const header: Row = defs.map((def) => headerCell(def.label, def.align))
+
+  const kopfZeilen: Row[] = kopf
+    ? [
+        [{ value: kopf.titel, fontWeight: 'bold' as const, fontSize: 14 }],
+        ...kopf.zeilen.map((z): Row => [
+          { value: z.label, fontWeight: 'bold' as const },
+          { value: z.wert, type: String },
+        ]),
+        [{}],   // Luft zwischen Kopf und Tabelle
+      ]
+    : []
 
   const body: Row[] = rows.map((entry) =>
     defs.map((def) => {
@@ -137,13 +162,18 @@ export async function exportToExcel({
     }
   })
 
-  const data: SheetData = rows.length > 0 ? [header, ...body, totals] : [header]
+  const data: SheetData = [
+    ...kopfZeilen,
+    ...(rows.length > 0 ? [header, ...body, totals] : [header]),
+  ]
 
   const zeitenBlatt = {
     name: (title.slice(0, 24) || 'Zeiten'),
     data,
     columns: defs.map((def) => ({ width: def.width })),
-    stickyRowsCount: 1,
+    // Mit Kopf bleibt auch er stehen: beim Blaettern durch hundert Positionen
+    // soll sichtbar bleiben, wessen Nachweis das ist.
+    stickyRowsCount: kopfZeilen.length + 1,
   }
 
   const blaetter = expenses.length > 0
