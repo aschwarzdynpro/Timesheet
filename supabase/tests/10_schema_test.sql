@@ -148,6 +148,37 @@ begin
   perform test_assert(r.rate_is_frozen = false, 'solange offen, ist der Satz nicht eingefroren');
   perform test_assert(r.customer_name = 'ACME Industrie AG', 'Kunde wird mitgefuehrt');
 
+  raise notice 'Meldeperiode in der Auswertungssicht';
+  -- Der Export beschriftet die Spalte "Periode" aus diesen Spalten. Sie muessen
+  -- die Grenzen der Periode tragen, nicht den Monat des Leistungstages.
+  select * into r from v_time_entries_full where id = v_entry;
+  perform test_assert(r.period_cycle  = 'monthly',         'ACME-Eintrag traegt den Monatszyklus');
+  perform test_assert(r.period_start  = date '2026-03-01', 'und den Beginn seiner Periode');
+  perform test_assert(r.period_end    = date '2026-03-31', 'und ihr Ende');
+  perform test_assert(r.period_status = 'open',            'die Periode ist noch offen');
+
+  -- Eine Sonntagswoche ueber den Monatswechsel: 30.08. bis 05.09.2026. Beide
+  -- Eintraege liegen in derselben Periode und muessen dieselben Grenzen tragen.
+  -- month_start haette sie auf August und September verteilt - genau so stand
+  -- es im Export.
+  update customers set week_start_day = 'sunday' where id = v_nord;
+  insert into time_entries (owner_id, project_id, activity_type_id, work_date, duration_minutes, description)
+  values (v_owner, v_p_migr, v_consult, date '2026-08-31', 60, 'Montag, noch August'),
+         (v_owner, v_p_migr, v_consult, date '2026-09-02', 60, 'Mittwoch, schon September');
+  perform test_assert((
+    select count(distinct (period_cycle, period_start, period_end))
+    from v_time_entries_full
+    where project_id = v_p_migr and work_date between date '2026-08-31' and date '2026-09-02') = 1,
+    'beide Eintraege der Woche tragen dieselben Periodengrenzen');
+  select * into r from v_time_entries_full where project_id = v_p_migr and work_date = date '2026-09-02';
+  perform test_assert(r.period_cycle = 'weekly',          'Nordwind-Eintrag traegt den Wochenzyklus');
+  perform test_assert(r.period_start = date '2026-08-30', 'die Woche beginnt am Sonntag, 30.08.');
+  perform test_assert(r.period_end   = date '2026-09-05', 'und endet am Samstag, 05.09.');
+  perform test_assert(r.month_start  = date '2026-09-01', 'waehrend month_start den September nennt');
+  delete from time_entries
+  where project_id = v_p_migr and work_date between date '2026-08-31' and date '2026-09-02';
+  update customers set week_start_day = 'monday' where id = v_nord;
+
   raise notice 'ISO-Wochen am Jahreswechsel';
   insert into time_entries (owner_id, project_id, activity_type_id, work_date, duration_minutes, description)
   values (v_owner, v_p_crm, v_consult, date '2027-01-01', 60, 'Jahreswechsel-Test');
@@ -374,7 +405,8 @@ begin
         'period_id','billable_minutes','duration_minutes','amount','rate','status',
         'is_billable','description','iso_year','iso_week','week_start','month_start','year',
         'customer_code','project_code','activity_name',
-        'work_package_id','work_package_code','work_package_name'
+        'work_package_id','work_package_code','work_package_name',
+        'period_cycle','period_start','period_end','period_status'
       ] loop
         if not exists (
           select 1 from information_schema.columns

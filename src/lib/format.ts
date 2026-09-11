@@ -3,6 +3,9 @@ import { toIsoDate } from '@/lib/week'
 const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
 const decimal = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+// Monatsname mit Jahr. Datum und Formatierer beide in UTC, damit der Monatserste
+// nirgends auf den Vortag - und damit in den Vormonat - rutscht.
+const monthFmt = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 
 export function formatEuro(value: number | null | undefined): string {
   if (value === null || value === undefined) return '–'
@@ -25,6 +28,14 @@ export function formatDate(iso: string | null | undefined): string {
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
   return dateFmt.format(new Date(Date.UTC(y, m - 1, d)))
+}
+
+/** Monat eines Datums, ausgeschrieben: „September 2026". */
+export function formatMonth(iso: string | null | undefined): string {
+  if (!iso) return '–'
+  const [y, m] = iso.split('-').map(Number)
+  if (!y || !m) return iso
+  return monthFmt.format(new Date(Date.UTC(y, m - 1, 1)))
 }
 
 /** Gültigkeitszeitraum eines Stundensatzes, offenes Ende inklusive. */

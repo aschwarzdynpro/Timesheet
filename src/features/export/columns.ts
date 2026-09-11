@@ -1,4 +1,4 @@
-import { formatDate } from '@/lib/format'
+import { formatDate, formatMonth } from '@/lib/format'
 import { isoWeek, fromIsoDate } from '@/lib/week'
 import type { TimeEntryFull } from '@/types/database'
 
@@ -37,6 +37,26 @@ const EURO_FORMAT = '#,##0.00 "€"'
 
 const STATUS_LABEL: Record<string, string> = {
   draft: 'offen', submitted: 'gemeldet', invoiced: 'abgerechnet',
+}
+
+/**
+ * Beschriftung der Meldeperiode: bei woechentlicher Meldung die Grenzen der
+ * Woche, bei monatlicher der Monat. Beides kommt aus reporting_periods, wo die
+ * Datenbank die Periode nach Zyklus und Wochenbeginn des Kunden geschnitten
+ * hat. Der Monat des Leistungstages taugt dafuer nicht: eine Woche ueber den
+ * Monatswechsel bekaeme zwei Werte fuer dieselbe Periode.
+ */
+export function periodLabel(e: TimeEntryFull): string {
+  // Laeuft das Frontend gegen eine Sicht ohne die Periodenspalten (Migration
+  // noch nicht ausgerollt), liefert PostgREST sie schlicht nicht mit. Dann
+  // lieber ein Gedankenstrich als ein geratener Wert.
+  if (e.period_cycle === undefined || e.period_start === undefined || e.period_end === undefined) {
+    return '–'
+  }
+  if (!e.period_cycle || !e.period_start || !e.period_end) return ''
+  return e.period_cycle === 'weekly'
+    ? `${formatDate(e.period_start)} – ${formatDate(e.period_end)}`
+    : formatMonth(e.period_start)
 }
 
 export const COLUMNS: ColumnDef[] = [
@@ -91,8 +111,8 @@ export const COLUMNS: ColumnDef[] = [
   { key: 'status', label: 'Status', width: 12, align: 'left',
     cell: (e) => ({ type: 'text', value: STATUS_LABEL[e.status] ?? e.status }) },
 
-  { key: 'period', label: 'Periode', width: 14, align: 'left',
-    cell: (e) => ({ type: 'text', value: e.period_id ? e.month_start.slice(0, 7) : '' }) },
+  { key: 'period', label: 'Periode', width: 24, align: 'left',
+    cell: (e) => ({ type: 'text', value: periodLabel(e) }) },
 ]
 
 export const COLUMN_BY_KEY = new Map(COLUMNS.map((c) => [c.key, c]))

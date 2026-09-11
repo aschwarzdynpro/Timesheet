@@ -8,6 +8,7 @@
  */
 
 export type ReportingCycle = 'weekly' | 'monthly'
+export type ReportingPeriodStatus = 'open' | 'submitted' | 'approved' | 'invoiced'
 /** Erster Tag der Meldewoche; wirkt nur bei woechentlicher Meldung. */
 export type WeekStartDay = 'monday' | 'sunday'
 export type RoundingMode = 'up' | 'nearest' | 'none'
@@ -160,6 +161,16 @@ export interface TimeEntryFull extends Omit<TimeEntry, 'created_at' | 'updated_a
   week_start: string
   month_start: string
   year: number
+  /**
+   * Die Meldeperiode des Eintrags, wie die Datenbank sie geschnitten hat
+   * (Zyklus und Wochenbeginn des Kunden). Leer, solange keine zugeordnet ist.
+   * Der Export beschriftet daraus die Spalte "Periode" - month_start waere
+   * bei einer Woche ueber den Monatswechsel zwei Werte fuer dieselbe Periode.
+   */
+  period_cycle: ReportingCycle | null
+  period_start: string | null
+  period_end: string | null
+  period_status: ReportingPeriodStatus | null
 }
 
 /** Was die Oberflaeche schreiben darf. billable_minutes und period_id gehoeren dem Trigger. */
@@ -179,7 +190,7 @@ export interface ReportingPeriod {
   cycle: ReportingCycle
   period_start: string
   period_end: string
-  status: 'open' | 'submitted' | 'approved' | 'invoiced'
+  status: ReportingPeriodStatus
   submitted_at: string | null
   total_minutes: number | null
   total_fees: number | null
