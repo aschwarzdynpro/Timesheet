@@ -52,6 +52,13 @@ supabase link --project-ref <projekt-ref>
 supabase db push
 ```
 
+Der Zeitstempel im Dateinamen **ist** die Version: Er muss dem Eintrag in
+`supabase_migrations.schema_migrations` entsprechen. Wird eine Migration an der CLI vorbei
+eingespielt — etwa über das Supabase-MCP, das eigene Zeitstempel vergibt —, laufen beide
+auseinander, und `db push` hält danach jede Datei für unangewendet. Das lässt sich am
+bequemsten am Dateinamen geraderücken; der Inhalt einer eingespielten Migration bleibt
+dabei unberührt.
+
 Damit die Anmeldelinks funktionieren, müssen unter **Authentication → URL Configuration**
 die Site URL und die Redirect URLs auf die laufende App zeigen — lokal
 `http://localhost:5173`, produktiv die Vercel-Adresse.
