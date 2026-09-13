@@ -718,3 +718,44 @@ trägt weiter sein Schloss.
   Kalenderwoche als „37,00". In der Datei stimmte beides, weil dort das Zahlenformat der
   Zelle gilt. Jetzt gilt es auch im Text — Beträge mit Eurozeichen, ganze Zahlen ohne
   Nachkommastellen.
+
+## Nachtrag: Das Unterraster wird schmal zur Karte
+
+Mit den Profilspalten ist die Spaltenzahl nicht mehr fest — ein Profil kann zwölf oder
+mehr Spalten führen. Als Tabelle in einem seitwärts schiebbaren Kasten war davon auf dem
+Telefon der größte Teil unerreichbar, und dass da noch etwas kommt, sah man dem Kasten
+nicht an. Unter 640 px steht jede Position deshalb jetzt als **Karte** da, mit jedem Wert
+der gewählten Spaltenfolge.
+
+Dafür gibt es in `components/ui/MobileList.tsx` eine zweite Kartenform, `MobileFieldItem`:
+beschriftete Wertepaare statt Name und Kürzel im Kopf. `MobileListItem` daneben zeigt
+Stammdaten, wo aus „wöchentlich" hervorgeht, was gemeint ist; die Positionen einer Periode
+tragen dagegen Spalten, die sich der Nutzer selbst zusammenstellt — dort braucht jeder
+Wert seine Beschriftung, sonst stünden „125,00 €" und „62,50 €" untereinander und nichts
+sagte, welches davon der Satz ist. Die Beschriftung steht **neben** dem Wert, nicht
+darüber: Eine Karte mit zwölf Spalten wäre sonst doppelt so hoch, und für die zwei Wörter
+links ist auch auf 320 px Platz.
+
+Ein leerer Wert — ein Eintrag ohne Arbeitspaket — wird zum Gedankenstrich. In der Tabelle
+steht die Spaltenüberschrift noch daneben; auf der Karte stünde sonst eine Beschriftung
+ohne alles.
+
+**Geprüft** in einer Wegwerf-Ansicht, die die Seite mit vorgefüllten Abfragen ohne
+Datenbank rendert, auf 320, 390, 768 und 1400 px, hell und dunkel, mit vier, sechs und
+zwölf Spalten: kein seitliches Scrollen der Seite, keine Konsolenmeldungen.
+
+### Beim Bauen gefunden
+
+- **Die Zellen hatten mehr Luft als Inhalt.** Bei `px-5` je Zelle kosten zwölf Spalten
+  allein 480 px Innenabstand; die Tabelle maß 1.346 px. Jetzt `px-3` innen und `pl-5`/`pr-5`
+  außen — bündig mit der Zeile darüber, aber 200 px schmaler.
+
+- **Breite Profile schieben weiterhin, nur nicht mehr die Seite.** Der Inhaltsbereich der
+  App ist auf `max-w-5xl` begrenzt; in diesem Kasten stehen rund 990 px zur Verfügung. Die
+  Vorgabespalten (sechs) passen ab 1024 px hinein, ein Profil mit zwölf Spalten braucht
+  1.346 px und schiebt auch auf einem breiten Schirm. Auf dem Telefon ist das erledigt —
+  dort stehen Karten —, zwischen 640 px und der vollen Breite bleibt es. Kein Test hätte
+  das gefunden: Die Seite läuft nicht quer, die Zusicherungen sind grün, und sichtbar wird
+  es erst, wenn man ein Profil mit vielen Spalten wählt und hinsieht. Wer es stört, hat
+  zwei Wege: die Karten bis zu einer größeren Breite zeigen, oder dem Kasten ansehen
+  lassen, dass rechts noch etwas kommt.

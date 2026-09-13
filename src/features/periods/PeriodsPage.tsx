@@ -6,6 +6,7 @@ import {
 import {
   Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Select, Textarea,
 } from '@/components/ui/primitives'
+import { MobileFieldItem, MobileList } from '@/components/ui/MobileList'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
 import { useConfirm } from '@/components/ui/confirm'
@@ -121,13 +122,16 @@ function ReopenDialog({
 }
 
 /**
- * Eine Zelle des Unterrasters.
+ * Ein Wert des Unterrasters.
  *
- * Den Wert liefert der Spaltenkatalog des Exports; zwei Dinge kommen hier
+ * Den Text liefert der Spaltenkatalog des Exports; drei Dinge kommen hier
  * dazu, die in einer Datei nichts verloren haetten. Ein fehlender Satz steht
  * als Gedankenstrich und nicht als 0,00 EUR - eine erfundene Zahl waere
- * schlimmer als keine. Und ein eingefrorener Satz traegt sein Schloss: daran
- * sieht man, dass diese Zeile gemeldet ist und sich nicht mehr neu bewertet.
+ * schlimmer als keine. Ein eingefrorener Satz traegt sein Schloss: daran sieht
+ * man, dass diese Zeile gemeldet ist und sich nicht mehr neu bewertet. Und ein
+ * leerer Wert - ein Eintrag ohne Arbeitspaket etwa - wird ebenfalls zum
+ * Gedankenstrich: In der Tabelle traegt die Spalte ihre Ueberschrift noch
+ * daneben, auf der Karte stuende sonst eine Beschriftung ohne alles.
  */
 function Zelle({ def, entry }: { def: ColumnDef; entry: TimeEntryFull }) {
   if (def.key === 'rate') {
@@ -138,7 +142,7 @@ function Zelle({ def, entry }: { def: ColumnDef; entry: TimeEntryFull }) {
       </>
     )
   }
-  return <>{cellText(def.cell(entry))}</>
+  return <>{cellText(def.cell(entry)) || '–'}</>
 }
 
 /**
@@ -199,13 +203,15 @@ function PeriodDetail({ periodId, spalten, auswahl }: {
   return (
     <div className="border-t border-ink-100 bg-ink-50/50">
       {auswahl}
-      <div className="overflow-x-auto">
+      {/* Versteckt wird der Kasten, nicht die Tabelle darin: ein leerer Schieber
+          unter 640 px waere ein Ort, an dem nichts steht. */}
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-ink-200 text-left text-xs tracking-wide text-ink-400 uppercase">
               {defs.map((def) => (
                 <th key={def.key}
-                    className={`px-5 py-2 font-semibold whitespace-nowrap ${
+                    className={`px-3 py-2 font-semibold whitespace-nowrap first:pl-5 last:pr-5 ${
                       def.align === 'right' ? 'text-right' : ''}`}>
                   {def.label}
                 </th>
@@ -215,9 +221,12 @@ function PeriodDetail({ periodId, spalten, auswahl }: {
           <tbody>
             {entries.map((e) => (
               <tr key={e.id} className="border-b border-ink-100 last:border-0">
+                {/* Enger als der Rest der Seite, aussen buendig mit ihr: Ein Profil
+                    kann zwoelf Spalten fuehren, und bei je 40 px Luft steht die
+                    Haelfte davon ausserhalb des Kastens. */}
                 {defs.map((def) => (
                   <td key={def.key}
-                      className={`px-5 py-2 ${
+                      className={`px-3 py-2 first:pl-5 last:pr-5 ${
                         def.align === 'right' ? 'tabular text-right text-ink-800' : 'text-ink-600'} ${
                         def.key === 'amount' ? 'font-medium' : ''} ${
                         def.key === 'description' ? 'min-w-[14rem]' : 'whitespace-nowrap'}`}>
@@ -229,6 +238,22 @@ function PeriodDetail({ periodId, spalten, auswahl }: {
           </tbody>
         </table>
       </div>
+
+      {/* Schmal steht jede Zeile als Karte da - mit jedem Wert der gewaehlten
+          Spalten. Ein Schieber zur Seite zeigte die Haelfte ausserhalb, und
+          dass da noch etwas kommt, sieht man ihm nicht an. */}
+      <MobileList>
+        {entries.map((e) => (
+          <MobileFieldItem
+            key={e.id}
+            felder={defs.map((def) => ({
+              label: def.label,
+              wert: <Zelle def={def} entry={e} />,
+              zahl: def.align === 'right',
+            }))}
+          />
+        ))}
+      </MobileList>
     </div>
   )
 }

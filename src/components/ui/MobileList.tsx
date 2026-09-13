@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 import { Badge } from './primitives'
 
 /**
@@ -53,6 +54,42 @@ export function MobileListItem({
           {gefuellt.map((zeile, i) => <div key={i} className="min-w-0">{zeile}</div>)}
         </div>
       )}
+    </li>
+  )
+}
+
+/**
+ * Eine Karte aus beschrifteten Werten - fuer Zeilen ohne Namen, den man oben
+ * hinstellen koennte.
+ *
+ * `MobileListItem` daneben zeigt Stammdaten: Name und Kuerzel im Kopf, darunter
+ * das Weitere ohne Beschriftung, weil auf einer Kundenkarte klar ist, was
+ * "woechentlich" bedeutet. Die Positionen einer Periode tragen dagegen die
+ * Spalten, die sich der Nutzer im Export-Profil selbst zusammenstellt: Dort
+ * braucht jeder Wert seine Beschriftung, sonst stuenden "125,00 EUR" und
+ * "62,50 EUR" untereinander und nichts sagte, welches davon der Satz ist.
+ *
+ * Die Beschriftung steht neben dem Wert und nicht darueber: Eine Karte mit
+ * sechzehn Spalten waere sonst doppelt so hoch, und fuer die zwei Woerter links
+ * ist auch auf 320 px Platz.
+ */
+export function MobileFieldItem({ felder }: {
+  felder: { label: string; wert: ReactNode; /** Zahlen bekommen die Ziffernbreite der Tabelle. */ zahl?: boolean }[]
+}) {
+  return (
+    <li className="px-4 py-3">
+      {/* minmax(0,…) auf beiden Spalten: sonst waechst die Wertspalte auf die
+          laengste Beschreibung und schiebt die Karte aus dem Schirm. */}
+      <dl className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3 gap-y-1">
+        {felder.map((feld, i) => (
+          <Fragment key={i}>
+            <dt className="pt-0.5 text-xs text-ink-500">{feld.label}</dt>
+            <dd className={cn('min-w-0 text-sm break-words text-ink-800', feld.zahl && 'tabular')}>
+              {feld.wert}
+            </dd>
+          </Fragment>
+        ))}
+      </dl>
     </li>
   )
 }
