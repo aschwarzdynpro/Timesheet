@@ -25,20 +25,18 @@ export interface ExportProfile {
 }
 
 /**
- * Das Profil, mit dem ein Kunde gemeldet wird - oder null, wenn keines
- * hinterlegt ist.
+ * Die Profile, die fuer diesen Kunden hinterlegt sind - sein Spaltenbild.
  *
- * Ein Profil traegt optional einen Kunden; damit ist es dessen Spaltenbild.
- * Der Nachweis aus einer Periode nimmt es, statt bei jeder Meldung dieselbe
- * Auswahl erneut zu treffen. Gibt es mehrere fuer denselben Kunden, gewinnt
- * das alphabetisch erste - die Liste ist nach Namen sortiert, und eine
- * Reihenfolge, die sich nicht ansehen laesst, waere schlechter als eine, die
- * man sieht.
+ * Ein Profil traegt optional einen Kunden; damit gehoert es ihm. Perioden
+ * nehmen es, statt bei jeder Meldung dieselbe Auswahl erneut zu treffen. Die
+ * Reihenfolge ist die der Liste, also nach Namen: Gibt es mehrere, steht das
+ * erste vorn, und eine Reihenfolge, die sich ansehen laesst, ist besser als
+ * eine, die sich nicht ansehen laesst.
  */
-export function profilFuerKunden(
+export function profileDesKunden(
   profiles: ExportProfile[] | undefined, customerId: string,
-): ExportProfile | null {
-  return (profiles ?? []).find((p) => p.customer_id === customerId) ?? null
+): ExportProfile[] {
+  return (profiles ?? []).filter((p) => p.customer_id === customerId)
 }
 
 export function useExportProfiles() {

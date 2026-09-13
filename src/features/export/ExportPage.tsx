@@ -15,7 +15,9 @@ import {
   useDeleteExportProfile, useExportProfiles, useExportRows, useSaveExportProfile,
   type ExportFilters,
 } from './api'
-import { COLUMNS, COLUMN_BY_KEY, DEFAULT_COLUMNS, cellText, type ColumnKey } from './columns'
+import {
+  COLUMNS, COLUMN_BY_KEY, DEFAULT_COLUMNS, cellText, columnDefs, type ColumnKey,
+} from './columns'
 
 const PREVIEW_ROWS = 50
 
@@ -55,10 +57,7 @@ export function ExportPage() {
     [projects, filters.customerId],
   )
 
-  const defs = useMemo(
-    () => columns.map((k) => COLUMN_BY_KEY.get(k)).filter((c) => c !== undefined),
-    [columns],
-  )
+  const defs = useMemo(() => columnDefs(columns), [columns])
 
   const totals = useMemo(() => {
     const list = rows.data ?? []

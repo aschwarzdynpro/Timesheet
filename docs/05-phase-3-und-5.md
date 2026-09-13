@@ -667,3 +667,54 @@ Datumsseriennummer 46268 entspricht dem 03.09.2026, also kein Zeitzonenversatz.
   in Phase 4, dort bei `<c …/>`. Ein Fehler im Prüfmittel, nicht in der Anwendung — aber
   einer, der beinahe zu einer Korrektur an korrektem Code geführt hätte. Nachgeprüft mit
   einem echten XML-Parser statt mit Mustersuche.
+
+## Nachtrag: Das Unterraster zeigt die Spalten des Nachweises
+
+Die aufgeklappte Periode zeigte sechs fest verdrahtete Spalten — Datum, Projekt,
+Beschreibung, Stunden, Satz, Betrag —, während die Datei daneben die Spalten des
+Export-Profils trug. Wer für einen Kunden „mit Arbeitspaket" gesichert hatte, sah das
+Arbeitspaket erst in der heruntergeladenen Datei. Das Raster war damit keine Vorschau,
+sondern eine zweite Meinung.
+
+Jetzt liest es denselben Spaltenkatalog wie Vorschau und Datei (`features/export/columns.ts`).
+Gilt für den Kunden ein Profil, stehen dessen Spalten im Raster **und** im Nachweis; gilt
+keines, in beiden die Vorgabespalten. Welche Folge das ist, beantwortet
+`spaltenDerPeriode()` an einer Stelle für beide.
+
+**Gibt es mehrere Profile für einen Kunden, lässt sich wählen** — ein Feld über der
+Tabelle, mit „Standard" als erster Möglichkeit. Es erscheint nur, wo es etwas zu
+entscheiden gibt: Ohne Profil für diesen Kunden bliebe ein Auswahlfeld mit einem einzigen
+Eintrag stehen. Die Wahl gilt für den **Kunden**, nicht für die einzelne Periode: Zwei
+Wochen desselben Kunden werden gleich nachgewiesen, und wer sie an der Woche festmachte,
+müsste sie in jeder neuen Woche erneut treffen.
+
+**Was das kostet:** Ohne Profil steht der Stundensatz nicht mehr im Raster — die
+Vorgabespalten führen ihn nicht. Wer ihn beim Prüfen sehen will, sichert auf der
+Exportseite ein Profil mit „Stundensatz" für diesen Kunden; dann steht er auch im
+Nachweis. Zwei Dinge, die eine Datei nicht braucht, bleiben dem Raster erhalten: Ein
+fehlender Satz steht als Gedankenstrich statt als 0,00 €, und ein eingefrorener Satz
+trägt weiter sein Schloss.
+
+### Beim Bauen gefunden
+
+- **Die Datumsspalte verlor in Berlin einen Tag.** Sie entstand aus `fromIsoDate()`, also
+  aus *lokaler* Mitternacht. Die Tabellenbibliothek rechnet die Datumszahl einer Zelle aus
+  `getTime()`, und lokale Mitternacht ist in Berlin 22:00 des Vortags in UTC: Aus dem
+  09.09. wurde in Datei und Vorschau der 08.09. — bei jedem Nachweis, ohne dass etwas rot
+  wurde. Dieselbe Verschiebung lag in der Vorschau, weil `cellText()` mit
+  `toISOString()` zurückrechnete.
+
+  Warum es niemand bemerkt hat: Beide Prüfungen dieser Datei — Phase 4 und der Nachtrag
+  oben, jeweils mit ausgepackter Seriennummer — liefen in einer Umgebung mit UTC. Dort
+  fallen lokale und UTC-Mitternacht zusammen, und die Kontrolle „kein Zeitzonenversatz"
+  konnte gar nicht anschlagen. Deshalb läuft der Testlauf jetzt in `Europe/Berlin`
+  (`vitest.config.ts`); die neue Zusicherung wurde gegengeprüft und zeigt mit dem alten
+  Stand „08.09.2026 statt 09.09.2026". Die Zellen tragen jetzt Mitternacht in UTC —
+  `fromIsoDate()` bleibt unberührt, die Wochenlogik rechnet zu Recht lokal. Dieselbe
+  Falle stand im Spesenblatt (`new Date(datum + 'T00:00:00')`) und ist dort mitbehoben.
+
+- **Die Vorschau zeigte Zahlen ohne ihr Format.** Jede Zahl bekam zwei Nachkommastellen
+  und kein Zeichen: Der Stundensatz stand als „125,00" neben „8,00" Stunden, die
+  Kalenderwoche als „37,00". In der Datei stimmte beides, weil dort das Zahlenformat der
+  Zelle gilt. Jetzt gilt es auch im Text — Beträge mit Eurozeichen, ganze Zahlen ohne
+  Nachkommastellen.

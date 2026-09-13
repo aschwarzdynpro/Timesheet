@@ -8,5 +8,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // Geprueft wird in der Zeitzone, in der die App laeuft. In UTC faellt keine
+    // der Zeitzonenfallen auf, vor denen AGENTS.md warnt: lokale Mitternacht
+    // und UTC-Mitternacht sind dort dasselbe, und ein Datum, das beim Umrechnen
+    // einen Tag verliert, bliebe gruen.
+    env: { TZ: 'Europe/Berlin' },
   },
 })

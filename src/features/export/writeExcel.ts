@@ -1,7 +1,7 @@
 import writeXlsxFile from 'write-excel-file/browser'
 import type { Row, SheetData } from 'write-excel-file/browser'
 import type { ExpenseFull, TimeEntryFull } from '@/types/database'
-import { COLUMN_BY_KEY, type ColumnKey } from './columns'
+import { columnDefs, type ColumnKey } from './columns'
 
 /**
  * Erzeugt die Tabellendatei im Browser und laedt sie herunter.
@@ -43,7 +43,10 @@ function expenseSheet(expenses: ExpenseFull[]) {
 
   const rahmen = { borderColor: '#e6eaee', borderStyle: 'thin' as const }
   const body: Row[] = expenses.map((e) => [
-    { ...rahmen, type: Date, value: new Date(e.expense_date + 'T00:00:00'), format: 'dd.mm.yyyy' },
+    // Mitternacht in UTC: die Bibliothek rechnet die Datumszahl aus getTime(),
+    // und lokale Mitternacht waere in Berlin 22:00 des Vortags - die Zelle zeigte
+    // den Vortag.
+    { ...rahmen, type: Date, value: new Date(e.expense_date + 'T00:00:00Z'), format: 'dd.mm.yyyy' },
     { ...rahmen, type: String, value: e.customer_name },
     { ...rahmen, type: String, value: e.project_name },
     { ...rahmen, type: String, value: e.category_name },
@@ -109,7 +112,7 @@ export async function exportToExcel({
   title: string
   kopf?: ExcelKopf
 }): Promise<void> {
-  const defs = columns.map((key) => COLUMN_BY_KEY.get(key)).filter((c) => c !== undefined)
+  const defs = columnDefs(columns)
 
   const header: Row = defs.map((def) => headerCell(def.label, def.align))
 

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle2, ChevronDown, ChevronRight, FileDown, History, Lock, LockOpen,
@@ -12,8 +12,10 @@ import { useConfirm } from '@/components/ui/confirm'
 import { CYCLE_LABEL, formatDate, formatEuro } from '@/lib/format'
 import { minutesToHours, toIsoDate } from '@/lib/week'
 import { useCustomers } from '@/features/customers/api'
-import { profilFuerKunden, useExportProfiles } from '@/features/export/api'
-import { DEFAULT_COLUMNS } from '@/features/export/columns'
+import { profileDesKunden, useExportProfiles, type ExportProfile } from '@/features/export/api'
+import { cellText, columnDefs, type ColumnDef, type ColumnKey } from '@/features/export/columns'
+import type { TimeEntryFull } from '@/types/database'
+import { OHNE_PROFIL, profilDerPeriode, spaltenDerPeriode } from './spalten'
 import {
   periodEntriesQuery, periodExpensesQuery, usePeriodEntries, usePeriodEvents, usePeriods,
   useReopenPeriod, useSubmitPeriod, type PeriodWithTotals,
@@ -118,8 +120,76 @@ function ReopenDialog({
   )
 }
 
-function PeriodDetail({ periodId }: { periodId: string }) {
+/**
+ * Eine Zelle des Unterrasters.
+ *
+ * Den Wert liefert der Spaltenkatalog des Exports; zwei Dinge kommen hier
+ * dazu, die in einer Datei nichts verloren haetten. Ein fehlender Satz steht
+ * als Gedankenstrich und nicht als 0,00 EUR - eine erfundene Zahl waere
+ * schlimmer als keine. Und ein eingefrorener Satz traegt sein Schloss: daran
+ * sieht man, dass diese Zeile gemeldet ist und sich nicht mehr neu bewertet.
+ */
+function Zelle({ def, entry }: { def: ColumnDef; entry: TimeEntryFull }) {
+  if (def.key === 'rate') {
+    return (
+      <>
+        {entry.rate === null ? '–' : cellText(def.cell(entry))}
+        {entry.rate_is_frozen && <Lock className="ml-1 inline size-3 text-ink-300" />}
+      </>
+    )
+  }
+  return <>{cellText(def.cell(entry))}</>
+}
+
+/**
+ * Welches Spaltenbild diese Periode traegt.
+ *
+ * Steht nur da, wo es etwas zu waehlen gibt: ohne Profil fuer diesen Kunden
+ * bliebe ein Feld mit einem einzigen Eintrag, das nichts entscheidet.
+ *
+ * Die Wahl gilt fuer den Kunden und nicht fuer die einzelne Periode: Zwei
+ * Wochen desselben Kunden werden gleich nachgewiesen, und wer sie an der Woche
+ * festmachte, muesste sie in jeder neuen Woche erneut treffen.
+ */
+function ProfilWahl({ profile, wert, onWahl }: {
+  profile: ExportProfile[]
+  wert: string
+  onWahl: (id: string) => void
+}) {
+  if (profile.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink-100 px-5 py-2">
+      <label className="flex min-w-0 items-center gap-2 text-xs font-semibold tracking-wide text-ink-500 uppercase">
+        Spalten
+        <Select value={wert} onChange={(e) => onWahl(e.target.value)} className="w-40 sm:w-56">
+          <option value={OHNE_PROFIL}>Standard</option>
+          {profile.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </Select>
+      </label>
+      <span className="text-xs text-ink-400">
+        Dieselben Spalten stehen im Nachweis.
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Die Positionen einer Periode - in den Spalten, die auch der Nachweis traegt.
+ *
+ * Das Raster ist die Vorschau der Datei, die der Kunde bekommt: dieselben
+ * Spalten, dieselbe Reihenfolge, dieselbe Quelle. Vorher standen hier sechs
+ * fest verdrahtete Spalten, und wer ein Profil mit Arbeitspaket gesichert
+ * hatte, sah es erst in der heruntergeladenen Datei.
+ */
+function PeriodDetail({ periodId, spalten, auswahl }: {
+  periodId: string
+  spalten: ColumnKey[]
+  /** Die Profilauswahl. Sie steht ueber der Tabelle, weil sie sie bestimmt. */
+  auswahl: ReactNode
+}) {
   const { data: entries, isPending } = usePeriodEntries(periodId)
+  const defs = useMemo(() => columnDefs(spalten), [spalten])
 
   if (isPending) return <p className="px-5 py-4 text-sm text-ink-400">Wird geladen …</p>
   if (!entries?.length) {
@@ -127,43 +197,38 @@ function PeriodDetail({ periodId }: { periodId: string }) {
   }
 
   return (
-    <div className="overflow-x-auto border-t border-ink-100 bg-ink-50/50">
-      <table className="w-full min-w-[640px] text-sm">
-        <thead>
-          <tr className="border-b border-ink-200 text-left text-xs tracking-wide text-ink-400 uppercase">
-            <th className="px-5 py-2 font-semibold">Datum</th>
-            <th className="px-5 py-2 font-semibold">Projekt</th>
-            <th className="px-5 py-2 font-semibold">Beschreibung</th>
-            <th className="px-5 py-2 text-right font-semibold">Std.</th>
-            <th className="px-5 py-2 text-right font-semibold">Satz</th>
-            <th className="px-5 py-2 text-right font-semibold">Betrag</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e) => (
-            <tr key={e.id} className="border-b border-ink-100 last:border-0">
-              <td className="tabular px-5 py-2 whitespace-nowrap text-ink-600">
-                {formatDate(e.work_date)}
-              </td>
-              <td className="px-5 py-2 text-ink-700">
-                {e.project_name}
-                {e.activity_name && <span className="text-ink-400"> · {e.activity_name}</span>}
-              </td>
-              <td className="px-5 py-2 text-ink-600">{e.description}</td>
-              <td className="tabular px-5 py-2 text-right text-ink-800">
-                {minutesToHours(e.billable_minutes)}
-              </td>
-              <td className="tabular px-5 py-2 text-right text-ink-600">
-                {e.rate !== null ? formatEuro(Number(e.rate)) : '–'}
-                {e.rate_is_frozen && <Lock className="ml-1 inline size-3 text-ink-300" />}
-              </td>
-              <td className="tabular px-5 py-2 text-right font-medium text-ink-800">
-                {formatEuro(Number(e.amount))}
-              </td>
+    <div className="border-t border-ink-100 bg-ink-50/50">
+      {auswahl}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr className="border-b border-ink-200 text-left text-xs tracking-wide text-ink-400 uppercase">
+              {defs.map((def) => (
+                <th key={def.key}
+                    className={`px-5 py-2 font-semibold whitespace-nowrap ${
+                      def.align === 'right' ? 'text-right' : ''}`}>
+                  {def.label}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {entries.map((e) => (
+              <tr key={e.id} className="border-b border-ink-100 last:border-0">
+                {defs.map((def) => (
+                  <td key={def.key}
+                      className={`px-5 py-2 ${
+                        def.align === 'right' ? 'tabular text-right text-ink-800' : 'text-ink-600'} ${
+                        def.key === 'amount' ? 'font-medium' : ''} ${
+                        def.key === 'description' ? 'min-w-[14rem]' : 'whitespace-nowrap'}`}>
+                    <Zelle def={def} entry={e} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -189,6 +254,8 @@ export function PeriodsPage() {
   const [onlyOpen, setOnlyOpen] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  /** Je Kunde das gewaehlte Spaltenbild; fehlt er, gilt sein erstes Profil. */
+  const [profilwahl, setProfilwahl] = useState<Record<string, string>>({})
 
   const today = toIsoDate(new Date())
 
@@ -234,6 +301,9 @@ export function PeriodsPage() {
    * Der Leistungsnachweis: dieselbe Datei wie auf der Exportseite, aber Kunde,
    * Zeitraum und Spaltenbild stehen schon fest - sie stehen an der Periode.
    *
+   * Welches Profil das ist, steht im aufgeklappten Raster - und was dort steht,
+   * steht auch in der Datei.
+   *
    * Vorher hiess die Meldung eines Monats: auf die Exportseite wechseln, den
    * Zeitraum von Hand nachbauen, den Kunden waehlen, das Profil waehlen. Vier
    * Schritte, bei denen sich drei vertippen lassen, und jeder davon macht die
@@ -253,13 +323,13 @@ export function PeriodsPage() {
       }
 
       const kunde = customers?.find((c) => c.id === period.customer_id)
-      const profil = profilFuerKunden(profiles, period.customer_id)
+      const profil = profilDerPeriode(profiles, period.customer_id, profilwahl[period.customer_id])
       // Die Tabellenbibliothek wiegt rund 330 kB und wird erst hier gebraucht.
       const { exportToExcel } = await import('@/features/export/writeExcel')
       await exportToExcel({
         rows: entries,
         expenses,
-        columns: profil?.columns?.length ? profil.columns : DEFAULT_COLUMNS,
+        columns: spaltenDerPeriode(profil),
         fileName: `Leistungsnachweis_${kunde?.code ?? 'Kunde'}`
           + `_${period.period_start}_bis_${period.period_end}.xlsx`,
         title: kunde?.name ?? 'Leistungsnachweis',
@@ -334,6 +404,10 @@ export function PeriodsPage() {
             {visible.map((p) => {
               const isOpen = expanded === p.id
               const status = STATUS[p.status]
+              // Einmal aufgeloest: Titel der Schaltflaeche, Spalten des Rasters
+              // und Spalten der Datei muessen dasselbe Profil meinen.
+              const kundenProfile = profileDesKunden(profiles, p.customer_id)
+              const profil = profilDerPeriode(profiles, p.customer_id, profilwahl[p.customer_id])
               return (
                 <li key={p.id} className="border-b border-ink-100 last:border-0">
                   {/* Auf schmalen Schirmen bekommen Name und Zeitraum die volle
@@ -390,10 +464,12 @@ export function PeriodsPage() {
                         hier bereits fest. */}
                     <Button size="sm" className="whitespace-nowrap"
                             disabled={p.entry_count === 0 || erzeugt === p.id}
-                            title={profilFuerKunden(profiles, p.customer_id)
-                              ? `Spalten aus dem Profil „${profilFuerKunden(profiles, p.customer_id)?.name}“`
-                              : 'Spalten wie im Export voreingestellt — ein Profil mit diesem '
-                                + 'Kunden legt sie fest'}
+                            title={profil
+                              ? `Spalten aus dem Profil „${profil.name}“`
+                              : kundenProfile.length > 0
+                                ? 'Standardspalten — im aufgeklappten Raster steht die Auswahl'
+                                : 'Spalten wie im Export voreingestellt — ein Profil mit diesem '
+                                  + 'Kunden legt sie fest'}
                             onClick={() => void onNachweis(p)}>
                       <FileDown className="size-4" />
                       {erzeugt === p.id ? 'Wird erzeugt …' : 'Nachweis'}
@@ -423,7 +499,18 @@ export function PeriodsPage() {
                   {isOpen && (
                     <>
                       <PeriodHistory periodId={p.id} />
-                      <PeriodDetail periodId={p.id} />
+                      <PeriodDetail
+                        periodId={p.id}
+                        spalten={spaltenDerPeriode(profil)}
+                        auswahl={
+                          <ProfilWahl
+                            profile={kundenProfile}
+                            wert={profil?.id ?? OHNE_PROFIL}
+                            onWahl={(id) =>
+                              setProfilwahl((w) => ({ ...w, [p.customer_id]: id }))}
+                          />
+                        }
+                      />
                     </>
                   )}
                 </li>
