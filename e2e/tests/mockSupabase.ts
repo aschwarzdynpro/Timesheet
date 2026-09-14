@@ -38,8 +38,27 @@ function isoToday() {
   return `${y}-${m}-${day}`
 }
 
+function timeEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const today = isoToday()
+  return {
+    id: 'te-existing', owner_id: user.id, project_id: project.id,
+    activity_type_id: activity.id, work_package_id: null, work_date: today,
+    start_time: null, end_time: null, duration_minutes: 60,
+    billable_minutes: 60, is_billable: true,
+    description: 'Bestehender E2E-Eintrag', rate_snapshot: 120, period_id: null, status: 'draft',
+    project_code: project.code, project_name: project.name, customer_id: customer.id,
+    customer_code: customer.code, customer_name: customer.name, activity_code: activity.code,
+    activity_name: activity.name, work_package_code: null, work_package_name: null,
+    rate: 120, amount: 120, net_amount: 69.6, rate_is_frozen: false,
+    iso_year: new Date().getFullYear(), iso_week: 1, week_start: today,
+    month_start: today.slice(0, 7) + '-01', year: new Date().getFullYear(),
+    period_cycle: null, period_start: null, period_end: null, period_status: null,
+    ...overrides,
+  }
+}
+
 export async function mockSupabase(page: Page) {
-  const entries: Record<string, unknown>[] = []
+  const entries: Record<string, unknown>[] = [timeEntry()]
 
   await page.addInitScript(({ user }) => {
     const now = Math.floor(Date.now() / 1000)
@@ -68,21 +87,17 @@ export async function mockSupabase(page: Page) {
     const table = url.pathname.slice('/rest/v1/'.length)
     if (request.method() === 'POST' && table === 'time_entries') {
       const body = request.postDataJSON() as Record<string, unknown>
-      entries.push({
-        id: `te-${entries.length + 1}`, owner_id: user.id, project_id: project.id,
-        activity_type_id: activity.id, work_package_id: null, work_date: body.work_date ?? isoToday(),
-        start_time: null, end_time: null, duration_minutes: body.duration_minutes ?? 0,
-        billable_minutes: body.duration_minutes ?? 0, is_billable: true,
-        description: body.description ?? '', rate_snapshot: 120, period_id: null, status: 'draft',
-        project_code: project.code, project_name: project.name, customer_id: customer.id,
-        customer_code: customer.code, customer_name: customer.name, activity_code: activity.code,
-        activity_name: activity.name, work_package_code: null, work_package_name: null,
-        rate: 120, amount: 0, net_amount: 0, rate_is_frozen: false,
-        iso_year: new Date().getFullYear(), iso_week: 1, week_start: isoToday(),
-        month_start: isoToday().slice(0, 7) + '-01', year: new Date().getFullYear(),
-        period_cycle: null, period_start: null, period_end: null, period_status: null,
+      const entry = timeEntry({
+        id: `te-${entries.length + 1}`,
+        work_date: body.work_date ?? isoToday(),
+        duration_minutes: body.duration_minutes ?? 0,
+        billable_minutes: body.duration_minutes ?? 0,
+        description: body.description ?? '',
+        amount: 0,
+        net_amount: 0,
       })
-      return json(route, entries.at(-1), 201)
+      entries.push(entry)
+      return json(route, entry, 201)
     }
 
     const single = request.headers()['accept']?.includes('application/vnd.pgrst.object+json')
