@@ -1,12 +1,12 @@
 ## Problem / Ziel
 
-<!-- Welches konkrete Problem oder Nutzerziel loest dieser PR? Verlinke das Issue, z. B. Closes #42. -->
+<!-- Welches konkrete Problem oder Nutzerziel löst dieser PR? Verlinke das Issue, z. B. Closes #42. -->
 
 ## Umsetzung
 
-<!-- Die wesentlichen technischen Aenderungen. -->
+<!-- Die wesentlichen technischen Änderungen. -->
 
-## Bewusst nicht geaendert
+## Bewusst nicht geändert
 
 <!-- Scope-Grenzen und Dinge, die absichtlich in einem Folge-Issue bleiben. -->
 
@@ -16,21 +16,22 @@
 - [ ] `npm run lint`
 - [ ] `npm test`
 - [ ] `npm run build`
-- [ ] `./scripts/test-db.sh` (wenn DB/Schema/RLS/SQL betroffen)
+- [ ] `./scripts/test-db.sh`
 
-### UI-Aenderungen
+### UI-Änderungen
 
 - [ ] Nicht zutreffend
-- [ ] 320 px geprueft
-- [ ] 390 px geprueft
-- [ ] Tablet/Desktop geprueft
-- [ ] Light und Dark Mode geprueft, wenn Farben/visuelle Komponenten betroffen sind
-- [ ] Screenshot(s) oder Preview-Link beigefuegt
+- [ ] 320 px geprüft
+- [ ] 390 px geprüft
+- [ ] 768 px geprüft
+- [ ] 1400 px geprüft
+- [ ] Light und Dark Mode geprüft, wenn Farben/visuelle Komponenten betroffen sind
+- [ ] Screenshot(s) oder Preview-Link beigefügt
 
 ## Risiken / offene Punkte
 
-<!-- Bekannte Risiken, Annahmen oder Dinge, die der Reviewer gezielt pruefen soll. -->
+<!-- Bekannte Risiken, Annahmen oder Dinge, die der Reviewer gezielt prüfen soll. -->
 
 ## Agent-Handoff
 
-<!-- Falls durch einen Coding-Agent erstellt: Modell/Rolle, relevante Dateien und alles, was der naechste Reviewer wissen muss. Keine Secrets. -->
+<!-- Falls durch einen Coding-Agent erstellt: Modell/Rolle, relevante Dateien und alles, was der nächste Reviewer wissen muss. Keine Secrets. -->
