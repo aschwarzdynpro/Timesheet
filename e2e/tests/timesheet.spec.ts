@@ -27,8 +27,9 @@ test('validiert und speichert einen Schnelleintrag', async ({ page }) => {
   await page.getByRole('button', { name: 'Speichern' }).click()
   await expect(page.getByText('Dauer nicht verstanden')).toBeVisible()
 
-  await page.getByLabel('Dauer').fill('1:30')
-  await page.getByLabel('Beschreibung').fill('E2E Testeintrag')
+  const dialog = page.getByRole('dialog', { name: 'Zeit erfassen' })
+  await dialog.getByLabel('Dauer').fill('1:30')
+  await dialog.getByLabel('Beschreibung').fill('E2E Testeintrag')
   await page.getByRole('button', { name: 'Speichern' }).click()
 
   await expect(page.getByRole('heading', { name: 'Zeit erfassen' })).toBeHidden()
