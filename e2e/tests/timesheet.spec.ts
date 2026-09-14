@@ -9,7 +9,8 @@ test('lädt die Zeiterfassung authentifiziert und wechselt die Woche', async ({ 
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Zeiten' })).toBeVisible()
-  await expect(page.getByDisplayValue('Bestehender E2E-Eintrag')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Beschreibung, 1,00 h' }))
+    .toHaveValue('Bestehender E2E-Eintrag')
 
   const before = await page.getByText(/KW \d+ \/ \d+/).first().textContent()
   await page.getByRole('button', { name: 'Nächste Woche' }).click()
@@ -33,7 +34,8 @@ test('validiert und speichert einen Schnelleintrag', async ({ page }) => {
   await page.getByRole('button', { name: 'Speichern' }).click()
 
   await expect(page.getByRole('heading', { name: 'Zeit erfassen' })).toBeHidden()
-  await expect(page.getByDisplayValue('E2E Testeintrag')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Beschreibung, 1,50 h' }))
+    .toHaveValue('E2E Testeintrag')
 })
 
 test('mobile Ansicht bleibt ohne horizontalen Seiten-Overflow nutzbar', async ({ page }, testInfo) => {
