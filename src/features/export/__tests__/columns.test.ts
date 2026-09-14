@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COLUMN_BY_KEY, cellText, columnDefs } from '@/features/export/columns'
+import { COLUMN_BY_KEY, cellText, columnDefs, periodLabel } from '@/features/export/columns'
 import type { ColumnKey } from '@/features/export/columns'
 import type { TimeEntryFull } from '@/types/database'
 
@@ -36,6 +36,10 @@ const eintrag = (werte: Partial<TimeEntryFull> = {}): TimeEntryFull => ({
   week_start: '2026-09-07',
   month_start: '2026-09-01',
   year: 2026,
+  period_cycle: 'weekly',
+  period_start: '2026-09-07',
+  period_end: '2026-09-13',
+  period_status: 'open',
   ...werte,
 })
 
@@ -99,5 +103,52 @@ describe('Spaltenfolge', () => {
   it('laesst unbekannte Schluessel weg, statt eine leere Spalte zu erfinden', () => {
     expect(columnDefs(['work_date', 'gibt_es_nicht' as ColumnKey]).map((d) => d.key))
       .toEqual(['work_date'])
+  })
+})
+
+/**
+ * Die Periode kommt aus `reporting_periods`, nicht aus dem Monat des
+ * Leistungstages: eine Woche ueber den Monatswechsel haette sonst zwei Werte.
+ */
+describe('Spalte Periode', () => {
+  const periode = COLUMN_BY_KEY.get('period')!
+
+  it('beschriftet eine Woche mit ihren Grenzen, nicht mit dem Monat des Leistungstages', () => {
+    // Sonntagswoche 30.08.-05.09.2026 ueber den Monatswechsel: beide Eintraege
+    // liegen in derselben Periode. Aus month_start waeren es "2026-08" und
+    // "2026-09" geworden - zwei Werte fuer eine Periode.
+    const woche = { period_cycle: 'weekly', period_start: '2026-08-30', period_end: '2026-09-05' } as const
+    const august = eintrag({ ...woche, work_date: '2026-08-31', month_start: '2026-08-01' })
+    const september = eintrag({ ...woche, work_date: '2026-09-02', month_start: '2026-09-01' })
+
+    expect(cellText(periode.cell(august))).toBe('30.08.2026 – 05.09.2026')
+    expect(cellText(periode.cell(september))).toBe(cellText(periode.cell(august)))
+  })
+
+  it('nennt bei monatlicher Meldung den Monat der Periode', () => {
+    const monat = eintrag({
+      period_cycle: 'monthly', period_start: '2026-09-01', period_end: '2026-09-30',
+    })
+    expect(cellText(periode.cell(monat))).toBe('September 2026')
+  })
+
+  it('zeigt einen Gedankenstrich, solange die Sicht die Periodenspalten nicht fuehrt', () => {
+    // Die Migration ist vor dem Frontend auszurollen. Bis dahin fehlen die
+    // Spalten in der Antwort von PostgREST - und der Export darf dann keinen
+    // Wert aus month_start erfinden.
+    const alt: Partial<TimeEntryFull> = eintrag()
+    delete alt.period_cycle
+    delete alt.period_start
+    delete alt.period_end
+    delete alt.period_status
+
+    expect(periodLabel(alt as TimeEntryFull)).toBe('–')
+  })
+
+  it('bleibt leer, wenn dem Eintrag keine Periode zugeordnet ist', () => {
+    const ohne = eintrag({
+      period_id: null, period_cycle: null, period_start: null, period_end: null, period_status: null,
+    })
+    expect(periodLabel(ohne)).toBe('')
   })
 })

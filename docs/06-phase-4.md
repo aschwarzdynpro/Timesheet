@@ -57,3 +57,35 @@ Dabei ein Fehler **in meinem Prüfskript**, nicht in der Anwendung: Der regulär
 erfasste selbstschließende `<c …/>`-Zellen nicht und ordnete Werte dadurch falschen
 Spalten zu. Das sah zweimal nach einer verrutschten Summenzeile aus. Erst der Blick ins
 rohe XML zeigte, dass die Datei von Anfang an korrekt war.
+
+## Nachtrag: Spalte „Periode“ aus der Meldeperiode
+
+Stand: 2026-09-11
+
+Die Spalte „Periode“ nannte den Monat des Leistungstages (`month_start`), nicht die
+Meldeperiode. Bei monatlicher Meldung fällt beides zusammen; beim wöchentlich meldenden
+Hauptkunden mit Wochenbeginn Sonntag bekam die Woche 30.08.–05.09.2026 damit zwei Werte
+(„2026-08“ und „2026-09“) für dieselbe Periode.
+
+Die Ursache lag eine Schicht tiefer: `v_time_entries_full` führte nur `period_id`. Die
+Oberfläche kannte weder Zyklus noch Grenzen der Periode und riet. Jetzt führt die Sicht
+`period_cycle`, `period_start`, `period_end` und `period_status` aus `reporting_periods`
+mit (Migration `20260911120000_view_period_bounds.sql`, Spalten angehängt, `left join`,
+weil `period_id` leer sein darf), und der Export beschriftet daraus: bei wöchentlicher
+Meldung „30.08.2026 – 05.09.2026“, bei monatlicher „September 2026“. Der Wert ist für
+alle Einträge derselben Periode identisch, weil die Datenbank die Grenzen geschnitten
+hat und die Oberfläche sie nur zeigt. Bewusst keine Kalenderwoche: eine Sonntagswoche
+ist keine ISO-Woche, „KW 36“ hätte für den Hauptkunden den falschen Schnitt benannt.
+
+**Migration vor dem Frontend ausrollen.** Läuft das neue Frontend gegen die alte Sicht,
+fehlen die Spalten in der Antwort von PostgREST. Der Export zeigt dann einen
+Gedankenstrich statt eines geratenen Werts. Umgekehrt ist die neue Sicht für das alte
+Frontend unschädlich: die Spalten hängen am Ende an.
+
+**Beim Bauen gefunden.** Kein Test hätte den Fehler gezeigt: Der Schematest kannte die
+Sicht nur mit `period_id`, und der Export rechnete den Wert aus einer Spalte, die es
+gab. Warum es niemand bemerkt hat: Bei monatlicher Meldung stimmt der Monat des
+Leistungstages mit der Periode überein, die Spalte gehört nicht zur Voreinstellung, und
+bei wöchentlicher Meldung zeigt sich der Fehler nur in den vier bis fünf Wochen im Jahr,
+die über einen Monatswechsel laufen. Der Schematest hält jetzt genau diese Woche fest:
+zwei Einträge, 31.08. und 02.09., derselbe Periodenschnitt.

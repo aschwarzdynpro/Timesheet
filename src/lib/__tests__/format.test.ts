@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  formatDate, formatEuro, formatFactor, formatHours, formatPercent, formatRate, formatValidity,
-  parseDecimal, sumOrNull, today,
+  formatDate, formatEuro, formatFactor, formatHours, formatMonth, formatPercent, formatRate,
+  formatValidity, parseDecimal, sumOrNull, today,
 } from '@/lib/format'
 
 describe('Anzeigeformate', () => {
@@ -26,6 +26,13 @@ describe('Anzeigeformate', () => {
     expect(formatDate('2026-03-31')).toBe('31.03.2026')
     expect(formatDate('2026-01-01')).toBe('01.01.2026')
     expect(formatDate(null)).toBe('–')
+  })
+
+  it('schreibt den Monat einer Periode aus', () => {
+    // Der Monatserste darf in keiner Zeitzone in den Vormonat rutschen.
+    expect(formatMonth('2026-09-01')).toBe('September 2026')
+    expect(formatMonth('2026-01-01')).toBe('Januar 2026')
+    expect(formatMonth(null)).toBe('–')
   })
 
   it('liefert heute nach lokaler Zeit, nicht nach UTC', () => {
