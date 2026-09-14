@@ -1,21 +1,22 @@
 ---
 name: Agent implementation task
-about: Klar abgegrenzte Aufgabe fuer einen Coding-Agent
+about: Klar abgegrenzte Aufgabe für einen Coding-Agent
+title: '[Agent] '
 labels: ''
 assignees: ''
 ---
 
 ## Nutzerziel / Problem
 
-<!-- Was soll fuer den Nutzer besser oder anders werden? -->
+<!-- Was soll für den Nutzer besser oder anders werden? -->
 
 ## Scope
 
-<!-- Was gehoert konkret zu dieser Aufgabe? -->
+<!-- Was gehört konkret zu dieser Aufgabe? -->
 
 ## Nicht im Scope
 
-<!-- Was soll der Agent ausdruecklich nicht anfassen? -->
+<!-- Was soll der Agent ausdrücklich nicht anfassen? -->
 
 ## Acceptance Criteria
 
@@ -24,7 +25,7 @@ assignees: ''
 
 ## Architekturhinweise
 
-<!-- Relevante Dateien, bestehende Patterns oder Entscheidungen. AGENTS.md und docs/02-architektur.md gelten immer. -->
+<!-- Relevante Dateien, bestehende Patterns oder Entscheidungen. AGENTS.md, docs/02-architektur.md und docs/08-engineering-workflow.md gelten immer. -->
 
 ## Erwartete Tests
 
@@ -32,8 +33,8 @@ assignees: ''
 - [ ] Lint
 - [ ] Unit-/Komponententests
 - [ ] Build
-- [ ] Datenbanktests, falls relevant
-- [ ] Visuelle/mobile Pruefung, falls relevant
+- [ ] Datenbanktests
+- [ ] Visuelle/mobile Prüfung, falls relevant
 
 ## Review-Fokus
 
