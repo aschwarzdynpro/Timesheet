@@ -9,7 +9,7 @@ test('lädt die Zeiterfassung authentifiziert und wechselt die Woche', async ({ 
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Zeiten' })).toBeVisible()
-  await expect(page.getByText('ACME GmbH')).toBeVisible()
+  await expect(page.getByDisplayValue('Bestehender E2E-Eintrag')).toBeVisible()
 
   const before = await page.getByText(/KW \d+ \/ \d+/).first().textContent()
   await page.getByRole('button', { name: 'Nächste Woche' }).click()
@@ -20,7 +20,7 @@ test('lädt die Zeiterfassung authentifiziert und wechselt die Woche', async ({ 
 
 test('validiert und speichert einen Schnelleintrag', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Erfassen' }).click()
+  await page.getByRole('button', { name: 'Erfassen' }).first().click()
 
   await expect(page.getByRole('heading', { name: 'Zeit erfassen' })).toBeVisible()
 
@@ -33,7 +33,7 @@ test('validiert und speichert einen Schnelleintrag', async ({ page }) => {
   await page.getByRole('button', { name: 'Speichern' }).click()
 
   await expect(page.getByRole('heading', { name: 'Zeit erfassen' })).toBeHidden()
-  await expect(page.getByText('E2E Testeintrag')).toBeVisible()
+  await expect(page.getByDisplayValue('E2E Testeintrag')).toBeVisible()
 })
 
 test('mobile Ansicht bleibt ohne horizontalen Seiten-Overflow nutzbar', async ({ page }, testInfo) => {
@@ -45,8 +45,9 @@ test('mobile Ansicht bleibt ohne horizontalen Seiten-Overflow nutzbar', async ({
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
   expect(overflow).toBe(false)
 
-  await expect(page.getByRole('button', { name: 'Erfassen' })).toBeVisible()
-  await page.getByRole('button', { name: 'Erfassen' }).click()
+  const headerAction = page.getByRole('button', { name: 'Erfassen' }).first()
+  await expect(headerAction).toBeVisible()
+  await headerAction.click()
   await expect(page.getByRole('heading', { name: 'Zeit erfassen' })).toBeVisible()
 
   const dialogOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
