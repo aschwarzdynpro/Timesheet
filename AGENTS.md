@@ -198,6 +198,9 @@ sichtbaren Text gegen seinen tatsächlichen Grund und schlägt unter 4,5:1 an.
 
 ## Prüfen vor dem Abliefern
 
+Für Branch-, PR-, Review- und Handoff-Regeln gilt zusätzlich
+`docs/08-engineering-workflow.md`.
+
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
 ./scripts/test-db.sh
@@ -232,6 +235,7 @@ Diese Dinge sind Entscheidungen des Nutzers, keine Umsetzungsdetails:
 | `docs/01-fachkonzept.md` | Anforderungen, Kernentscheidungen, Auswertungen |
 | `docs/02-architektur.md` | Stack, Datenmodell, Funktionen, Phasenplan |
 | `docs/03-…` bis `07-…` | was je Phase entstand, inklusive der gefundenen Fehler |
+| `docs/08-engineering-workflow.md` | Rollen, Branch-/PR-/Review-/Merge-Regeln für Menschen und Agents |
 | `README.md` | Einrichtung, Befehle, Stand |
 
 Die Phasenberichte führen jeweils einen Abschnitt „Beim Bauen gefunden". Wer einen
