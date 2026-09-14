@@ -1,0 +1,40 @@
+name: E2E
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  playwright:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_SUPABASE_URL: https://e2e.supabase.co
+      VITE_SUPABASE_ANON_KEY: e2e-anon-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: App-Abhängigkeiten installieren
+        run: npm ci
+      - name: Playwright-Abhängigkeiten installieren
+        working-directory: e2e
+        run: npm ci
+      - name: Chromium installieren
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+      - name: E2E-Tests ausführen
+        working-directory: e2e
+        run: npm test
+      - name: Playwright-Report hochladen
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 14
