@@ -1,4 +1,5 @@
 import type { Page, Route } from '@playwright/test'
+import type { ReportingPeriod, ReportingPeriodStatus } from '../../src/types/database'
 import { AUTH_STORAGE_KEY, FIXED_NOW, SUPABASE_URL, TODAY } from '../testEnvironment'
 import { fromIsoDate, isoWeek, mondayOf, toIsoDate } from '../../src/lib/week'
 
@@ -60,13 +61,30 @@ function session(now: number) {
   }
 }
 
-export async function mockSupabase(page: Page) {
+type WriteMethod = 'POST' | 'PATCH' | 'DELETE'
+export type MockWrite = { method: WriteMethod; id: string | null; body: Record<string, unknown> | null }
+export type MockOptions = { periodStatus?: ReportingPeriodStatus }
+
+export async function mockSupabase(page: Page, options: MockOptions = {}) {
   await page.clock.setFixedTime(new Date(FIXED_NOW))
   const entries: Record<string, unknown>[] = [
-    timeEntry(),
+    timeEntry(options.periodStatus && options.periodStatus !== 'open' ? {
+      status: options.periodStatus === 'invoiced' ? 'invoiced' : 'submitted',
+      period_id: 'period-current', period_status: options.periodStatus,
+    } : {}),
     timeEntry({ id: 'te-previous', work_date: '2026-12-25', description: 'Vorwoche' }),
     timeEntry({ id: 'te-next', work_date: '2027-01-08', description: 'Folgewoche' }),
   ]
+
+  const periods: ReportingPeriod[] = options.periodStatus ? [{
+    id: 'period-current', customer_id: customer.id, cycle: 'weekly',
+    period_start: '2026-12-28', period_end: '2027-01-03', status: options.periodStatus,
+    submitted_at: null, total_minutes: 60, total_fees: 120, total_expenses: 0,
+    reopened_at: null, reopen_count: 0,
+  }] : []
+  const writes: MockWrite[] = []
+  let nextFailure: { method: WriteMethod; message: string; status: number } | undefined
+  let nextId = entries.length + 1
 
   await page.addInitScript(({ key, value }) => {
     localStorage.setItem(key, JSON.stringify(value))
@@ -90,35 +108,69 @@ export async function mockSupabase(page: Page) {
     }
 
     const table = url.pathname.slice('/rest/v1/'.length)
-    if (method === 'POST' && table === 'time_entries') {
-      const body = request.postDataJSON() as Record<string, unknown>
-      const entry = timeEntry({
-        ...body,
-        id: `te-${entries.length + 1}`,
-        billable_minutes: body.duration_minutes,
-        // Fixed response fixtures, not a reimplementation of database rules.
-        amount: 0,
-        net_amount: 0,
-      })
-      entries.push(entry)
-      return json(route, entry, 201)
+    if (table === 'time_entries' && ['POST', 'PATCH', 'DELETE'].includes(method)) {
+      const idFilter = url.searchParams.get('id')
+      if (method !== 'POST' && (!idFilter?.startsWith('eq.') || url.searchParams.getAll('id').length !== 1)) {
+        throw new Error(`Expected one id=eq filter for ${method}`)
+      }
+      const id = idFilter?.slice(3) ?? null
+      const body = method === 'DELETE' ? null : request.postDataJSON() as Record<string, unknown>
+      writes.push({ method: method as WriteMethod, id, body })
+      if (nextFailure?.method === method) {
+        const failure = nextFailure
+        nextFailure = undefined
+        return json(route, { code: 'P0001', message: failure.message }, failure.status)
+      }
+      if (method === 'POST') {
+        const entry = timeEntry({
+          ...body,
+          id: `te-${nextId++}`,
+          billable_minutes: body?.duration_minutes,
+          // Canned database outputs; these mocks do not validate rates/rounding/RLS.
+          amount: 0, net_amount: 0,
+        })
+        entries.push(entry)
+        return json(route, entry, 201)
+      }
+      const index = entries.findIndex((entry) => entry.id === id)
+      if (index < 0) throw new Error(`Unknown time entry: ${id}`)
+      if (method === 'DELETE') {
+        entries.splice(index, 1)
+        return route.fulfill({ status: 204 })
+      }
+      const updated = { ...entries[index], ...body, billable_minutes: body?.duration_minutes }
+      entries[index] = updated
+      return json(route, updated)
     }
     if (method !== 'GET') throw new Error(`Unmocked Supabase method: ${method} ${table}`)
 
     const single = request.headers()['accept']?.includes('application/vnd.pgrst.object+json')
-    const data = tableData(table, entries, url)
+    const data = tableData(table, entries, periods, url)
     return json(route, single ? (Array.isArray(data) ? data[0] ?? null : data) : data)
   })
+  return {
+    writes,
+    failNextWrite(method: WriteMethod, message: string, status = 500) {
+      nextFailure = { method, message, status }
+    },
+  }
 }
 
-function tableData(table: string, entries: Record<string, unknown>[], url: URL): unknown {
+function tableData(table: string, entries: Record<string, unknown>[], periods: ReportingPeriod[], url: URL): unknown {
   switch (table) {
     case 'customers': return [customer]
     case 'projects': return [project]
     case 'activity_types': return [activity]
     case 'v_work_package_budget': return []
     case 'work_packages': return []
-    case 'reporting_periods': return []
+    case 'reporting_periods': return periods.filter((period) => {
+      const start = url.searchParams.get('period_start')
+      const end = url.searchParams.get('period_end')
+      if (!start?.startsWith('lte.') || !end?.startsWith('gte.')) {
+        throw new Error('Expected reporting period overlap filters')
+      }
+      return period.period_start <= start.slice(4) && period.period_end >= end.slice(4)
+    })
     case 'v_time_entries_full': {
       const filters = url.searchParams.getAll('work_date')
       return entries.filter((entry) => filters.every((filter) => {

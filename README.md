@@ -107,7 +107,7 @@ Nach `npm ci` im Repository-Root:
 
 ```bash
 npm --prefix e2e ci
-npm --prefix e2e exec -- playwright install --with-deps chromium
+npm --prefix e2e exec -- playwright install --with-deps chromium webkit
 npm --prefix e2e run typecheck
 npm --prefix e2e test
 ```
@@ -118,12 +118,16 @@ nötig: Auth und die verwendeten Supabase-Endpunkte werden im Browser abgefangen
 `e2e/testEnvironment.ts` ist die gemeinsame Quelle für URL, Key und feste Testzeit
 (01.01.2027, Europe/Berlin). Die Suite prüft den Jahres-/Wochenwechsel einschließlich
 Abfragegrenzen und Datensätzen, Validierung und Speichern mit erneutem Laden sowie
-Seiten-/Dialog-Overflow bei **320, 390, 768 und 1400 px**.
+Seiten-/Dialog-Overflow bei **320, 390, 768 und 1400 px**. Dazu kommen
+Inline-Änderung, neue unvollständige Zeilen, Löschbestätigung, Fehler-/Retry-Verhalten
+und gemeldete Perioden einschließlich leerer Tage und Wochenwechsel.
 
-Alle Projekte nutzen Chromium; mobile Projekte aktivieren Touch und mobilen
-Viewport ohne Safari-User-Agent. **Safari/iOS, echte Anmeldung, RLS und
-Datenbankgeschäftslogik werden damit nicht geprüft.** Dafür bleiben die
-Datenbanktests verpflichtend; echte Backend-E2E-Tests sind ein späterer Ausbau.
+Die vier Chromium-Projekte werden durch **WebKit bei 390 px** (iPhone-13-Profil)
+ergänzt. Das prüft eine zweite Browser-Engine, ersetzt aber keinen physischen
+iPhone-/Safari-Test. Die reguläre Suite mockt weiterhin Auth und API; die
+Datenbanktests bleiben verpflichtend. Ein separater, manuell gestarteter
+`Auth Smoke` prüft echte Passwortanmeldung gegen ein dediziertes Testprojekt;
+Einrichtung und Abdeckungsgrenzen stehen in [docs/09-e2e-testing.md](docs/09-e2e-testing.md).
 Unbekannte Supabase-Endpunkte schlagen fehl, statt plausible Testwerte zu liefern.
 Mocks bilden nur die für diese Szenarien nötigen Verträge ab.
 
@@ -138,7 +142,7 @@ Browserdownloads werden gecacht, Systembibliotheken auf jedem Runner installiert
 docs/                     Fachkonzept und Architektur
 e2e/                      Playwright gegen den Produktionsbuild
   tests/                  Supabase-Mocks und Browser-Szenarien
-  playwright.config.ts    Chromium bei 320 / 390 / 768 / 1400 px
+  playwright.config.ts    Chromium 320/390/768/1400 und WebKit 390 px
 supabase/
   migrations/             versionierte SQL-Migrationen
   seed.sql                Beispielstammdaten
@@ -171,3 +175,5 @@ und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 | [docs/06-phase-4.md](docs/06-phase-4.md) | Excel-Export mit Spaltenprofilen |
 | [docs/07-phase-2b.md](docs/07-phase-2b.md) | Reisezeiten, Spesen und Belege |
 | [docs/08-engineering-workflow.md](docs/08-engineering-workflow.md) | Rollen, Branch-/PR-/Review-/Merge-Regeln für Menschen und Coding-Agents |
+
+| [docs/09-e2e-testing.md](docs/09-e2e-testing.md) | Browser-Testmatrix, Mock-Grenzen und Einrichtung echter Auth-Smoke-Tests |
