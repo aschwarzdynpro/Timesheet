@@ -48,7 +48,7 @@ test('validiert und speichert einen Schnelleintrag dauerhaft im Mock', async ({ 
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Speichern', exact: true }).click()
   await expect(dialog.getByText('Dauer nicht verstanden. Möglich sind etwa 1,5 · 1:30 · 90m.', { exact: true })).toBeVisible()
-  await dialog.getByLabel(/^Dauer\b/).fill('1:30')
+  await dialog.getByLabel('Dauer').fill('1:30')
   await dialog.getByLabel('Beschreibung', { exact: true }).fill('E2E Testeintrag')
   const saved = page.waitForRequest((request) => request.method() === 'POST'
     && new URL(request.url()).pathname === '/rest/v1/time_entries')
