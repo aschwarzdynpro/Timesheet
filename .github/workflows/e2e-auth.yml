@@ -1,0 +1,35 @@
+name: Auth Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth:
+    name: Real Supabase authentication
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: e2e-auth
+    env:
+      E2E_AUTH_SUPABASE_URL: ${{ vars.E2E_AUTH_SUPABASE_URL }}
+      E2E_AUTH_PUBLISHABLE_KEY: ${{ vars.E2E_AUTH_PUBLISHABLE_KEY }}
+      E2E_AUTH_EMAIL: ${{ secrets.E2E_AUTH_EMAIL }}
+      E2E_AUTH_PASSWORD: ${{ secrets.E2E_AUTH_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            e2e/package-lock.json
+      - run: npm ci
+      - run: npm --prefix e2e ci
+      - name: Configuration and test discovery
+        run: npm --prefix e2e run test:auth -- --list
+      - run: npm --prefix e2e exec -- playwright install --with-deps chromium webkit
+      - run: npm --prefix e2e run test:auth
+      # No report/trace/video upload: this workflow uses actual credentials.
