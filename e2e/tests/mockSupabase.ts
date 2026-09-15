@@ -115,6 +115,11 @@ export async function mockSupabase(page: Page, options: MockOptions = {}) {
       }
       const id = idFilter?.slice(3) ?? null
       const body = method === 'DELETE' ? null : request.postDataJSON() as Record<string, unknown>
+      // The trigger owns these; sending them from the browser would put the
+      // rounding and period rules into the interface a second time.
+      for (const owned of ['billable_minutes', 'period_id', 'rate_snapshot']) {
+        if (body && owned in body) throw new Error(`The database owns ${owned}; the interface must not send it`)
+      }
       writes.push({ method: method as WriteMethod, id, body })
       if (nextFailure?.method === method) {
         const failure = nextFailure
@@ -125,9 +130,8 @@ export async function mockSupabase(page: Page, options: MockOptions = {}) {
         const entry = timeEntry({
           ...body,
           id: `te-${nextId++}`,
-          billable_minutes: body?.duration_minutes,
           // Canned database outputs; these mocks do not validate rates/rounding/RLS.
-          amount: 0, net_amount: 0,
+          billable_minutes: body?.duration_minutes, amount: 0, net_amount: 0,
         })
         entries.push(entry)
         return json(route, entry, 201)
@@ -138,7 +142,10 @@ export async function mockSupabase(page: Page, options: MockOptions = {}) {
         entries.splice(index, 1)
         return route.fulfill({ status: 204 })
       }
-      const updated = { ...entries[index], ...body, billable_minutes: body?.duration_minutes }
+      // Same fixture as on insert, but a PATCH that leaves the duration alone
+      // must not blank the value the previous write established.
+      const updated = { ...entries[index], ...body }
+      if (body && 'duration_minutes' in body) updated.billable_minutes = body.duration_minutes
       entries[index] = updated
       return json(route, updated)
     }

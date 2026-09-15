@@ -2,10 +2,15 @@ import { expect, test } from '@playwright/test'
 
 test('echte Passwortanmeldung bleibt nach Reload bestehen; Abmelden beendet die Sitzung', async ({ page }) => {
   // No mocked responses or preloaded session. Guard against unintended data writes.
+  // Playwright swallows exceptions thrown inside a route handler, so the blocked
+  // attempts are collected here and asserted at the end of the test instead.
+  const blockedWrites: string[] = []
   await page.route('**/rest/v1/**', async (route) => {
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(route.request().method())) {
+    const request = route.request()
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method())) {
+      blockedWrites.push(`${request.method()} ${new URL(request.url()).pathname}`)
       await route.abort()
-      throw new Error('The authentication smoke test must not write business data')
+      return
     }
     await route.continue()
   })
@@ -25,4 +30,5 @@ test('echte Passwortanmeldung bleibt nach Reload bestehen; Abmelden beendet die 
   await expect(page.getByRole('button', { name: 'Anmelden', exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('button', { name: 'Anmelden', exact: true })).toBeVisible()
+  expect(blockedWrites, 'The authentication smoke test must not write business data').toEqual([])
 })

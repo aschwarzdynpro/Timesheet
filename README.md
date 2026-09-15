@@ -175,5 +175,4 @@ und keine dieser Regeln lässt sich durch einen direkten API-Aufruf umgehen.
 | [docs/06-phase-4.md](docs/06-phase-4.md) | Excel-Export mit Spaltenprofilen |
 | [docs/07-phase-2b.md](docs/07-phase-2b.md) | Reisezeiten, Spesen und Belege |
 | [docs/08-engineering-workflow.md](docs/08-engineering-workflow.md) | Rollen, Branch-/PR-/Review-/Merge-Regeln für Menschen und Coding-Agents |
-
 | [docs/09-e2e-testing.md](docs/09-e2e-testing.md) | Browser-Testmatrix, Mock-Grenzen und Einrichtung echter Auth-Smoke-Tests |
