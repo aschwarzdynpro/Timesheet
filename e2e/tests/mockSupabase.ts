@@ -1,4 +1,6 @@
 import type { Page, Route } from '@playwright/test'
+import { AUTH_STORAGE_KEY, FIXED_NOW, SUPABASE_URL, TODAY } from '../testEnvironment'
+import { fromIsoDate, isoWeek, mondayOf, toIsoDate } from '../../src/lib/week'
 
 const user = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -30,19 +32,13 @@ const activity = {
   created_at: '2026-01-01T00:00:00.000Z',
 }
 
-function isoToday() {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
 function timeEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  const today = isoToday()
+  const workDate = String(overrides.work_date ?? TODAY)
+  const date = fromIsoDate(workDate)
+  const week = isoWeek(date)
   return {
     id: 'te-existing', owner_id: user.id, project_id: project.id,
-    activity_type_id: activity.id, work_package_id: null, work_date: today,
+    activity_type_id: activity.id, work_package_id: null, work_date: workDate,
     start_time: null, end_time: null, duration_minutes: 60,
     billable_minutes: 60, is_billable: true,
     description: 'Bestehender E2E-Eintrag', rate_snapshot: 120, period_id: null, status: 'draft',
@@ -50,55 +46,64 @@ function timeEntry(overrides: Record<string, unknown> = {}): Record<string, unkn
     customer_code: customer.code, customer_name: customer.name, activity_code: activity.code,
     activity_name: activity.name, work_package_code: null, work_package_name: null,
     rate: 120, amount: 120, net_amount: 69.6, rate_is_frozen: false,
-    iso_year: new Date().getFullYear(), iso_week: 1, week_start: today,
-    month_start: today.slice(0, 7) + '-01', year: new Date().getFullYear(),
+    iso_year: week.year, iso_week: week.week, week_start: toIsoDate(mondayOf(date)),
+    month_start: workDate.slice(0, 7) + '-01', year: date.getFullYear(),
     period_cycle: null, period_start: null, period_end: null, period_status: null,
     ...overrides,
   }
 }
 
+function session(now: number) {
+  return {
+    access_token: 'e2e-access-token', refresh_token: 'e2e-refresh-token', token_type: 'bearer',
+    expires_in: 3600, expires_at: Math.floor(now / 1000) + 3600, user,
+  }
+}
+
 export async function mockSupabase(page: Page) {
-  const entries: Record<string, unknown>[] = [timeEntry()]
+  await page.clock.setFixedTime(new Date(FIXED_NOW))
+  const entries: Record<string, unknown>[] = [
+    timeEntry(),
+    timeEntry({ id: 'te-previous', work_date: '2026-12-25', description: 'Vorwoche' }),
+    timeEntry({ id: 'te-next', work_date: '2027-01-08', description: 'Folgewoche' }),
+  ]
 
-  await page.addInitScript(({ user }) => {
-    const now = Math.floor(Date.now() / 1000)
-    localStorage.setItem('sb-e2e-auth-token', JSON.stringify({
-      access_token: 'e2e-access-token', refresh_token: 'e2e-refresh-token', token_type: 'bearer',
-      expires_in: 3600, expires_at: now + 3600, user,
-    }))
-  }, { user })
+  await page.addInitScript(({ key, value }) => {
+    localStorage.setItem(key, JSON.stringify(value))
+  }, { key: AUTH_STORAGE_KEY, value: session(Date.parse(FIXED_NOW)) })
 
-  await page.route('https://e2e.supabase.co/**', async (route) => {
+  await page.route(`${SUPABASE_URL}/**`, async (route) => {
     const request = route.request()
     const url = new URL(request.url())
+    const method = request.method()
 
-    if (url.pathname.startsWith('/auth/v1/')) {
-      return json(route, user)
+    if (url.pathname === '/auth/v1/user' && method === 'GET') return json(route, user)
+    if (url.pathname === '/auth/v1/token' && method === 'POST'
+      && url.searchParams.get('grant_type') === 'refresh_token') {
+      return json(route, session(await page.evaluate(() => Date.now())))
     }
-
-    if (url.pathname.startsWith('/rest/v1/rpc/')) {
+    if (url.pathname === '/rest/v1/rpc/fn_rate_for' && method === 'POST') {
       return json(route, 120)
     }
-
-    if (!url.pathname.startsWith('/rest/v1/')) {
-      return json(route, {})
+    if (!url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/rest/v1/rpc/')) {
+      throw new Error(`Unmocked Supabase request: ${method} ${url.pathname}`)
     }
 
     const table = url.pathname.slice('/rest/v1/'.length)
-    if (request.method() === 'POST' && table === 'time_entries') {
+    if (method === 'POST' && table === 'time_entries') {
       const body = request.postDataJSON() as Record<string, unknown>
       const entry = timeEntry({
+        ...body,
         id: `te-${entries.length + 1}`,
-        work_date: body.work_date ?? isoToday(),
-        duration_minutes: body.duration_minutes ?? 0,
-        billable_minutes: body.duration_minutes ?? 0,
-        description: body.description ?? '',
+        billable_minutes: body.duration_minutes,
+        // Fixed response fixtures, not a reimplementation of database rules.
         amount: 0,
         net_amount: 0,
       })
       entries.push(entry)
       return json(route, entry, 201)
     }
+    if (method !== 'GET') throw new Error(`Unmocked Supabase method: ${method} ${table}`)
 
     const single = request.headers()['accept']?.includes('application/vnd.pgrst.object+json')
     const data = tableData(table, entries, url)
@@ -114,24 +119,29 @@ function tableData(table: string, entries: Record<string, unknown>[], url: URL):
     case 'v_work_package_budget': return []
     case 'work_packages': return []
     case 'reporting_periods': return []
-    case 'v_time_entries_full': return entries
-    case 'time_entries': return []
-    case 'app_settings': {
-      const key = url.searchParams.get('key') ?? ''
-      if (key.includes('show_timer')) return { value: false }
-      if (key.includes('income_tax_percent')) return { value: 42 }
-      if (key.includes('theme')) return { value: 'system' }
-      return null
+    case 'v_time_entries_full': {
+      const filters = url.searchParams.getAll('work_date')
+      return entries.filter((entry) => filters.every((filter) => {
+        const match = /^(gte|lte|eq)\.(\d{4}-\d{2}-\d{2})$/.exec(filter)
+        if (!match) throw new Error(`Unsupported work_date filter: ${filter}`)
+        const [, operator, date] = match
+        const value = String(entry.work_date)
+        if (!date) throw new Error('Missing work_date filter value')
+        return operator === 'gte' ? value >= date : operator === 'lte' ? value <= date : value === date
+      }))
     }
-    default: return []
+    case 'time_entries': return [] // recent-description suggestions
+    case 'app_settings': {
+      const key = url.searchParams.get('key')
+      if (key === 'eq.show_timer') return { value: false }
+      if (key === 'eq.income_tax_percent') return { value: 42 }
+      if (key === 'eq.theme') return { value: 'system' }
+      throw new Error(`Unmocked app setting: ${key}`)
+    }
+    default: throw new Error(`Unmocked Supabase table: ${table}`)
   }
 }
 
 async function json(route: Route, body: unknown, status = 200) {
-  await route.fulfill({
-    status,
-    contentType: 'application/json',
-    headers: { 'content-range': '0-0/1' },
-    body: JSON.stringify(body),
-  })
+  await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 }

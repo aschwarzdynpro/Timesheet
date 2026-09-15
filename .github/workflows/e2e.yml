@@ -11,21 +11,35 @@ jobs:
     name: Playwright E2E
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      VITE_SUPABASE_URL: https://e2e.supabase.co
-      VITE_SUPABASE_ANON_KEY: e2e-anon-key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            e2e/package-lock.json
       - name: App-Abhängigkeiten installieren
         run: npm ci
       - name: Playwright-Abhängigkeiten installieren
         working-directory: e2e
         run: npm ci
+      - name: E2E-Typen prüfen
+        working-directory: e2e
+        run: npm run typecheck
+      - name: Chromium-Cache laden
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('e2e/package-lock.json') }}
+      - name: Chromium-Systembibliotheken installieren
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        working-directory: e2e
+        run: npx playwright install-deps chromium
       - name: Chromium installieren
+        if: steps.browser-cache.outputs.cache-hit != 'true'
         working-directory: e2e
         run: npx playwright install --with-deps chromium
       - name: E2E-Tests ausführen

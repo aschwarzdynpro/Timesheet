@@ -204,7 +204,16 @@ Für Branch-, PR-, Review- und Handoff-Regeln gilt zusätzlich
 ```bash
 npm run typecheck && npm run lint && npm test && npm run build
 ./scripts/test-db.sh
+npm --prefix e2e ci
+npm --prefix e2e exec -- playwright install --with-deps chromium
+npm --prefix e2e run typecheck
+npm --prefix e2e test
 ```
+
+Playwright unter `e2e/` prüft den Produktionsbuild in Chromium auf 320, 390, 768
+und 1400 px. Setup, feste Testzeit, Mock-Grenzen und CI-Trigger stehen in
+`README.md` unter „Browser-Tests“. Die Suite gehört zur PR-Prüfung; sie belegt
+keine Safari/iOS- oder echte Backend-Abdeckung.
 
 Die Browsertests dieses Projekts fangen `/rest/v1/**` ab. **Vertragsfehler zwischen
 App und PostgREST sind darin unsichtbar** — eine Sortierspalte, die es nicht gibt,
