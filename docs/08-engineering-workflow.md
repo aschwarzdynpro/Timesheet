@@ -81,9 +81,19 @@ npm run lint
 npm test
 npm run build
 ./scripts/test-db.sh
+npm --prefix e2e ci
+npm --prefix e2e exec -- playwright install --with-deps chromium
+npm --prefix e2e run typecheck
+npm --prefix e2e test
 ```
 
 Die Datenbanktests laufen wie in `AGENTS.md` und CI bei jedem PR; lokale Aussagen wie „sollte funktionieren“ ersetzen diese Checks nicht.
+
+Der zusätzliche Workflow `E2E` prüft den Produktionsbuild mit Playwright in
+Chromium bei 320, 390, 768 und 1400 px. Er läuft bei PRs gegen `main` und Pushes
+auf `main`; Feature-Branches ohne PR sparen bewusst diesen Browserlauf.
+Browserinstallation und Mock-Grenzen sind im README unter „Browser-Tests“
+dokumentiert. Für den Merge müssen **CI und E2E** auf dem aktuellen PR-Stand grün sein.
 
 ## Pull Requests
 

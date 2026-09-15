@@ -1,0 +1,147 @@
+import type { Page, Route } from '@playwright/test'
+import { AUTH_STORAGE_KEY, FIXED_NOW, SUPABASE_URL, TODAY } from '../testEnvironment'
+import { fromIsoDate, isoWeek, mondayOf, toIsoDate } from '../../src/lib/week'
+
+const user = {
+  id: '00000000-0000-0000-0000-000000000001',
+  aud: 'authenticated',
+  role: 'authenticated',
+  email: 'e2e@example.test',
+  app_metadata: { provider: 'email', providers: ['email'] },
+  user_metadata: {},
+  created_at: '2026-01-01T00:00:00.000Z',
+}
+
+const customer = {
+  id: 'c1', owner_id: user.id, code: 'ACME', name: 'ACME GmbH', currency: 'EUR',
+  reporting_cycle: 'weekly', week_start_day: 'monday', rounding_minutes: 15,
+  rounding_mode: 'nearest', invoice_email: null, notes: null, finops_legal_entity: null,
+  finops_customer_id: null, is_active: true, created_at: '2026-01-01T00:00:00.000Z',
+}
+
+const project = {
+  id: 'p1', customer_id: customer.id, code: 'CONS', name: 'Consulting', description: null,
+  status: 'active', is_billable: true, start_date: null, end_date: null, budget_hours: null,
+  budget_amount: null, rounding_minutes: null, rounding_mode: null, reporting_cycle: null,
+  finops_project_id: null, finops_activity_number: null, created_at: '2026-01-01T00:00:00.000Z',
+}
+
+const activity = {
+  id: 'a1', owner_id: user.id, code: 'CONS', name: 'Consulting', is_billable_default: true,
+  is_default: true, rate_factor: 1, finops_category: null, sort_order: 10, is_active: true,
+  created_at: '2026-01-01T00:00:00.000Z',
+}
+
+function timeEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const workDate = String(overrides.work_date ?? TODAY)
+  const date = fromIsoDate(workDate)
+  const week = isoWeek(date)
+  return {
+    id: 'te-existing', owner_id: user.id, project_id: project.id,
+    activity_type_id: activity.id, work_package_id: null, work_date: workDate,
+    start_time: null, end_time: null, duration_minutes: 60,
+    billable_minutes: 60, is_billable: true,
+    description: 'Bestehender E2E-Eintrag', rate_snapshot: 120, period_id: null, status: 'draft',
+    project_code: project.code, project_name: project.name, customer_id: customer.id,
+    customer_code: customer.code, customer_name: customer.name, activity_code: activity.code,
+    activity_name: activity.name, work_package_code: null, work_package_name: null,
+    rate: 120, amount: 120, net_amount: 69.6, rate_is_frozen: false,
+    iso_year: week.year, iso_week: week.week, week_start: toIsoDate(mondayOf(date)),
+    month_start: workDate.slice(0, 7) + '-01', year: date.getFullYear(),
+    period_cycle: null, period_start: null, period_end: null, period_status: null,
+    ...overrides,
+  }
+}
+
+function session(now: number) {
+  return {
+    access_token: 'e2e-access-token', refresh_token: 'e2e-refresh-token', token_type: 'bearer',
+    expires_in: 3600, expires_at: Math.floor(now / 1000) + 3600, user,
+  }
+}
+
+export async function mockSupabase(page: Page) {
+  await page.clock.setFixedTime(new Date(FIXED_NOW))
+  const entries: Record<string, unknown>[] = [
+    timeEntry(),
+    timeEntry({ id: 'te-previous', work_date: '2026-12-25', description: 'Vorwoche' }),
+    timeEntry({ id: 'te-next', work_date: '2027-01-08', description: 'Folgewoche' }),
+  ]
+
+  await page.addInitScript(({ key, value }) => {
+    localStorage.setItem(key, JSON.stringify(value))
+  }, { key: AUTH_STORAGE_KEY, value: session(Date.parse(FIXED_NOW)) })
+
+  await page.route(`${SUPABASE_URL}/**`, async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const method = request.method()
+
+    if (url.pathname === '/auth/v1/user' && method === 'GET') return json(route, user)
+    if (url.pathname === '/auth/v1/token' && method === 'POST'
+      && url.searchParams.get('grant_type') === 'refresh_token') {
+      return json(route, session(await page.evaluate(() => Date.now())))
+    }
+    if (url.pathname === '/rest/v1/rpc/fn_rate_for' && method === 'POST') {
+      return json(route, 120)
+    }
+    if (!url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/rest/v1/rpc/')) {
+      throw new Error(`Unmocked Supabase request: ${method} ${url.pathname}`)
+    }
+
+    const table = url.pathname.slice('/rest/v1/'.length)
+    if (method === 'POST' && table === 'time_entries') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      const entry = timeEntry({
+        ...body,
+        id: `te-${entries.length + 1}`,
+        billable_minutes: body.duration_minutes,
+        // Fixed response fixtures, not a reimplementation of database rules.
+        amount: 0,
+        net_amount: 0,
+      })
+      entries.push(entry)
+      return json(route, entry, 201)
+    }
+    if (method !== 'GET') throw new Error(`Unmocked Supabase method: ${method} ${table}`)
+
+    const single = request.headers()['accept']?.includes('application/vnd.pgrst.object+json')
+    const data = tableData(table, entries, url)
+    return json(route, single ? (Array.isArray(data) ? data[0] ?? null : data) : data)
+  })
+}
+
+function tableData(table: string, entries: Record<string, unknown>[], url: URL): unknown {
+  switch (table) {
+    case 'customers': return [customer]
+    case 'projects': return [project]
+    case 'activity_types': return [activity]
+    case 'v_work_package_budget': return []
+    case 'work_packages': return []
+    case 'reporting_periods': return []
+    case 'v_time_entries_full': {
+      const filters = url.searchParams.getAll('work_date')
+      return entries.filter((entry) => filters.every((filter) => {
+        const match = /^(gte|lte|eq)\.(\d{4}-\d{2}-\d{2})$/.exec(filter)
+        if (!match) throw new Error(`Unsupported work_date filter: ${filter}`)
+        const [, operator, date] = match
+        const value = String(entry.work_date)
+        if (!date) throw new Error('Missing work_date filter value')
+        return operator === 'gte' ? value >= date : operator === 'lte' ? value <= date : value === date
+      }))
+    }
+    case 'time_entries': return [] // recent-description suggestions
+    case 'app_settings': {
+      const key = url.searchParams.get('key')
+      if (key === 'eq.show_timer') return { value: false }
+      if (key === 'eq.income_tax_percent') return { value: 42 }
+      if (key === 'eq.theme') return { value: 'system' }
+      throw new Error(`Unmocked app setting: ${key}`)
+    }
+    default: throw new Error(`Unmocked Supabase table: ${table}`)
+  }
+}
+
+async function json(route: Route, body: unknown, status = 200) {
+  await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+}
