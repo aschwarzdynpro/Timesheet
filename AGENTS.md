@@ -119,6 +119,13 @@ Der Nutzer erfasst unterwegs auf dem Telefon. Wiederkehrende Fallen aus diesem R
   zwar nicht quer, aber die Hälfte steht außerhalb, und dass da noch etwas
   kommt, sieht man nicht. Die Karte zeigt **jeden** Wert der Zeile — was dort
   fehlt, ist auf dem Telefon unerreichbar.
+- **Der Service Worker speichert keine Daten, nur die Hülle.** `public/sw.js` legt
+  `index.html`, Bundles und Symbole ab; alles Fremde — allen voran Supabase — läuft
+  unangetastet ans Netz. Eine zwischengespeicherte Antwort kennt weder RLS noch die
+  Periodensperre: eine gemeldete Woche sähe darin offen aus. Wer ihn anfasst, prüft
+  danach beides von Hand: Start ohne Netz und Übernahme einer neuen Fassung.
+- **Die Symbole der App entstehen aus `npm run icons`**, nicht aus einem Bildprogramm.
+  Geometrie ändern heißt `public/favicon.svg` *und* `scripts/icons.mjs` ändern.
 
 Neue Ansichten werden auf **320, 390, 768 und 1400 px** geprüft — kein seitliches
 Scrollen, keine Konsolenfehler.
