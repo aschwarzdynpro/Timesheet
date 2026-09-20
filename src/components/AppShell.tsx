@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Ellipsis, UserCog } from 'lucide-react'
 import { istAktiv, TAEGLICH, WEITER, type NavEintrag } from './navigation'
+import { AppHinweise } from './AppHinweise'
 import { cn } from '@/lib/utils'
 
 /**
@@ -73,7 +74,10 @@ export function AppShell({ children, email }: { children: ReactNode; email?: str
       {/* Unten Platz fuer die feste Leiste, sonst verdeckt sie die letzte Zeile.
           env(safe-area-inset-bottom) haelt sie ueber dem Home-Indikator. */}
       <main className="min-w-0 flex-1 px-5 py-6 pb-[calc(4.25rem+env(safe-area-inset-bottom))] sm:px-8 sm:py-8">
-        <div className="mx-auto max-w-5xl">{children}</div>
+        <div className="mx-auto max-w-5xl">
+          <AppHinweise />
+          {children}
+        </div>
       </main>
 
       <TabLeiste path={path} onMehr={() => setMehrOffen(true)} mehrOffen={mehrOffen} />
@@ -114,7 +118,9 @@ function TabLeiste({
       aria-label="Hauptbereiche"
       className={cn(
         'fixed inset-x-0 bottom-0 z-40 border-t border-ink-200 bg-surface sm:hidden',
-        'pb-[env(safe-area-inset-bottom)]',
+        // Quer gehalten liegt links oder rechts die Aussparung des Geraets -
+        // ohne die Einrueckung steht das erste Feld darunter.
+        'pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
       )}
     >
       <ul className="flex">

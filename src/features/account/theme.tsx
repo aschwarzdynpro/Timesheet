@@ -39,6 +39,23 @@ export function anwenden(wahl: ThemeChoice) {
   const dunkel = wahl === 'dark'
     || (wahl === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   document.documentElement.dataset.theme = dunkel ? 'dark' : 'light'
+  statusleisteFaerben()
+}
+
+/**
+ * Die Statusleiste der installierten App traegt die Farbe der Seite.
+ *
+ * Als Symbol auf dem Telefon gestartet, gibt es keine Adressleiste mehr - die
+ * Flaeche darueber gehoert zur App. Steht dort der helle Wert, waehrend die
+ * Seite dunkel ist, hat die App oben einen weissen Balken. Der Wert wird aus
+ * der Variablen gelesen und nicht hier notiert: die Farben stehen in
+ * index.css und sonst nirgends.
+ */
+function statusleisteFaerben() {
+  const marke = document.querySelector('meta[name="theme-color"]')
+  if (!marke) return
+  const flaeche = getComputedStyle(document.documentElement).getPropertyValue('--ink-50').trim()
+  if (flaeche) marke.setAttribute('content', flaeche)
 }
 
 type ThemeContextValue = {
@@ -62,6 +79,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       // solange die Seite offen ist. Kein Grund, hier abzubrechen.
     }
   }, [])
+
+  // Beim Start hat das kurze Skript in index.html data-theme bereits gesetzt.
+  // Die Farbe der Statusleiste kann es nicht kennen: zu dem Zeitpunkt ist noch
+  // kein Stil geladen, aus dem sich --ink-50 lesen liesse. Einmal nachziehen.
+  useEffect(() => { anwenden(choice) }, [choice])
 
   // Bei "Wie das Gerät" auf den Systemwechsel hoeren - sonst bliebe die Seite
   // hell, wenn das Telefon abends umschaltet.

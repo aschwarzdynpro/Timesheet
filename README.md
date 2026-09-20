@@ -90,6 +90,7 @@ Vercel-Adresse in Supabase als Redirect-URL nachtragen.
 | `npm run typecheck` | nur Typprüfung |
 | `npm run lint` | ESLint |
 | `npm test` | Unit-Tests (Vitest) |
+| `npm run icons` | die PNG-Symbole der installierten App neu zeichnen |
 | `./scripts/test-db.sh` | alle Migrationen in eine frische Datenbank einspielen und die Datenbanktests laufen lassen |
 | `npm run db:types` | `src/types/database.ts` aus dem verbundenen Schema erzeugen |
 
@@ -100,6 +101,44 @@ ISO-Wochen am Jahreswechsel, die Periodensperre und die RLS-Policies.
 
 Bevor die Auslastung eine Zahl zeigt, braucht sie unter **Arbeitszeit** ein
 Arbeitszeitmodell; Feiertage und Abwesenheiten gehören auf dieselbe Seite.
+
+## Als App installieren (PWA)
+
+Die App lässt sich auf dem Telefon zum Startbildschirm hinzufügen und startet dann
+ohne Adressleiste. Dafür sorgen vier Teile:
+
+| Datei | Zweck |
+|---|---|
+| `public/manifest.webmanifest` | Name, Startadresse, Farben, Symbole, Verknüpfungen |
+| `public/sw.js` | Service Worker: Hülle ohne Netz, neue Fassung ohne Verlaufslöschen |
+| `src/lib/pwa.ts` | Anmeldung des Workers, Hinweis auf eine neue Fassung |
+| `scripts/icons.mjs` | zeichnet die PNG-Symbole aus der Geometrie des Favicons |
+
+**Was offline geht und was nicht.** Der Worker legt die Hülle ab — `index.html`, die
+Bundles, die Symbole. Ohne Netz startet die App also und zeigt, was zuletzt geladen
+wurde. Antworten von Supabase speichert er **nicht**: sie kämen aus einem Speicher, den
+weder RLS noch die Periodensperre kennen, und eine gemeldete Woche sähe dort offen aus.
+Es gibt aus demselben Grund auch keine Warteschlange für Einträge ohne Netz — ob eine
+Buchung erlaubt ist, entscheidet die Datenbank. Ein Band über dem Inhalt sagt das an,
+sobald die Verbindung fehlt.
+
+**Aktualisieren.** `index.html` wird immer zuerst im Netz gesucht, die Bundles tragen
+ihren Inhalt im Namen. Liegt eine neue Fassung bereit, erscheint ein Band mit *Neu
+laden*; von selbst lädt die App nicht neu, weil die Zeilen des Rasters erst beim
+Verlassen speichern. Im Entwicklungsstand (`npm run dev`) meldet sich der Worker nicht
+an und ein früher angemeldeter wird abgemeldet.
+
+**Symbole.** `npm run icons` erzeugt `icon-192.png`, `icon-512.png`,
+`icon-maskable-512.png` und `apple-touch-icon.png`. Das Skript rechnet mit `zlib` aus
+Node und braucht keine Bildbibliothek; die Dateien liegen im Repo, der Build zeichnet
+sie nicht neu. Wer die Geometrie ändert, ändert sie in `public/favicon.svg` **und** in
+`scripts/icons.mjs`.
+
+**Geprüft wird** in `src/lib/__tests__/pwa.test.ts` (Manifest, Symbolgrößen, die
+Dateiliste des Workers) und in `e2e/tests/pwa.spec.ts` (der Build liefert die Dateien
+auch wirklich aus). Das Verhalten des Workers selbst — Start ohne Netz, Übernahme einer
+neuen Fassung — ist in der Suite nicht abgedeckt: sie schaltet Service Worker ab, damit
+die Supabase-Mocks greifen.
 
 ## Browser-Tests (Playwright)
 
@@ -143,7 +182,9 @@ supabase/
   migrations/             versionierte SQL-Migrationen
   seed.sql                Beispielstammdaten
   tests/                  Schema- und RLS-Tests
+public/                   Symbole, Manifest und Service Worker der installierbaren App
 scripts/test-db.sh        Testlauf gegen eine frische Datenbank
+scripts/icons.mjs         zeichnet die PNG-Symbole aus der Favicon-Geometrie
 src/
   features/               Schnitt nach Fachthema, nicht nach technischer Schicht
     time-entry/ expenses/ reporting/ periods/ export/

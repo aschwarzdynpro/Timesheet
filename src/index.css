@@ -148,6 +148,12 @@ body,
 body {
   @apply bg-ink-50 text-ink-800 antialiased;
   font-feature-settings: 'tnum' 0;
+  /* Mit viewport-fit=cover reicht die Seite bis unter die Aussparung des
+     Geraets. Quer gehalten stuende die erste Spalte sonst darunter. Die feste
+     Leiste am unteren Rand rueckt sich selbst ein - sie liegt ausserhalb des
+     Dokumentflusses und bekaeme von dieser Regel nichts ab. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Zahlenspalten laufen sonst optisch auseinander. */

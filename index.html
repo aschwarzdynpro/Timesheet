@@ -2,9 +2,28 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: erst damit liefert env(safe-area-inset-*) etwas
+         anderes als 0. Die feste Leiste am unteren Rand rechnet damit, sonst
+         liegt sie auf dem Home-Indikator des iPhones. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Zeiten und Spesen für Beratungsleistungen tageweise erfassen, wochenweise prüfen und periodenweise melden." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Als App installierbar. Der Startbildschirm von iOS kennt kein SVG,
+         deshalb das PNG daneben; beide entstehen aus `npm run icons`. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Zeiten" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- Der helle Wert von --ink-50. Sobald React laeuft, holt `anwenden()` in
+         features/account/theme.tsx den Wert aus der Variablen - hell wie
+         dunkel. Hier steht er ausgeschrieben, weil die Statusleiste schon
+         eine Farbe braucht, bevor irgendein Stil geladen ist. -->
+    <meta name="theme-color" content="#f4f6f8" />
+
     <title>Zeiterfassung</title>
     <!-- Vor dem ersten Anstrich: sonst blitzt die helle Fassung kurz auf, bevor
          React die Einstellung gelesen hat. Bewusst inline und winzig. -->

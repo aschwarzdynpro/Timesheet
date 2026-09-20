@@ -16,7 +16,7 @@ Stand: 2026-09-06 (Rev. 3) · Status: abgestimmt · Phase 1 umgesetzt
 | Dateiablage | Supabase Storage | **Spesenbelege** (Foto/PDF), privater Bucket mit RLS |
 | Serverlogik | Supabase Edge Functions (Deno) | FinOps-Sync: Secrets dürfen nicht ins Frontend |
 | Excel | SheetJS (`xlsx`) clientseitig | Bei diesen Datenmengen reicht der Browser |
-| Mobil | PWA, Service Worker | Installierbar, Offline-Puffer für Erfassung – keine zweite App |
+| Mobil | PWA, Service Worker | Installierbar, Hülle startet ohne Netz – keine zweite App. Ein Offline-Puffer für die Erfassung war vorgesehen, siehe 2.1 |
 | Hosting | Vercel oder Netlify (Static) | Preview-Deployments je Branch |
 | CI | GitHub Actions | Lint, Typecheck, Tests, Migrations-Check |
 
@@ -71,6 +71,26 @@ ab und teilt sich Code, Datenmodell und Deployment mit dem Laptop-Client.
 Die FinOps-Anbindung ist bewusst ausgelagert: Sie ist der einzige Teil, der Secrets
 braucht, externe Verfügbarkeit voraussetzt und fehlschlagen kann. Sie darf den Rest der
 App nicht mitreißen.
+
+### 2.1 Installierbar, aber nicht offline-fähig
+
+Die App ist als PWA installierbar: `public/manifest.webmanifest` beschreibt sie,
+`public/sw.js` meldet sich als Service Worker an, `src/lib/pwa.ts` hält die Seite des
+Fensters. Auf dem Telefon liegt sie damit als Symbol auf dem Startbildschirm und startet
+ohne Adressleiste — der Grund für den Aufwand, denn erfasst wird unterwegs.
+
+Der Worker speichert **nur die Hülle** zwischen: `index.html`, die Bundles, die Symbole.
+Antworten von Supabase bleiben ausdrücklich draußen. Sie kämen sonst aus einem Speicher,
+den weder RLS noch die Periodensperre kennt: eine gemeldete Woche sähe offen aus, ein
+zweites Gerät zeigte alte Sätze, und die Zahl auf dem Schirm hätte keine Entsprechung
+mehr in der Datenbank. Aus demselben Grund gibt es keine Warteschlange für Einträge ohne
+Netz — was erlaubt ist, entscheidet ein Trigger, nicht der Browser. Ohne Verbindung ist
+die App deshalb lesbar, aber nicht schreibbar, und sagt das an.
+
+Echte Offline-Erfassung wäre eine eigene Entscheidung mit eigenem Preis: sie braucht
+eine lokale Kopie der Stammdaten, eine Konfliktauflösung beim Nachtragen und eine
+Antwort auf die Frage, was mit Zeiten geschieht, deren Periode inzwischen gemeldet ist.
+Sie steht bei den späteren Erweiterungen, nicht hier.
 
 ## 3. Datenmodell
 
@@ -443,6 +463,9 @@ Zielumgebung zu verifizieren.
 - **Aufbewahrung:** Zeitaufzeichnungen und Belege sind Grundlage der Rechnungsstellung und
   aufbewahrungspflichtig. Kein physisches Löschen – Kunden und Projekte werden über
   `is_active` / `status = 'closed'` inaktiv gesetzt (`on delete restrict` erzwingt das).
+- **Service Worker:** Speichert ausschließlich gleiche Herkunft und nur statische
+  Dateien. Jede Anfrage an Supabase läuft unangetastet ans Netz — ein zwischengespeicherter
+  Datensatz wäre eine Kopie ohne RLS und ohne Sperre.
 - **Migrationen:** Ausschließlich versionierte SQL-Dateien unter `supabase/migrations/`,
   in CI gegen eine frische DB geprüft. Kein manuelles Klicken im Studio.
 

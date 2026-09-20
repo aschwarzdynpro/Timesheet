@@ -1,0 +1,38 @@
+{
+  "id": "/",
+  "name": "Zeiterfassung",
+  "short_name": "Zeiten",
+  "description": "Zeiten und Spesen für Beratungsleistungen tageweise erfassen, wochenweise prüfen und periodenweise melden.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#1e5a87",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Zeit erfassen",
+      "short_name": "Zeiten",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Spesen erfassen",
+      "short_name": "Spesen",
+      "url": "/spesen",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Perioden melden",
+      "short_name": "Perioden",
+      "url": "/perioden",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
