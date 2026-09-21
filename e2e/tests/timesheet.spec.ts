@@ -3,6 +3,8 @@ import { mockSupabase } from './mockSupabase'
 
 // Scope to the page-header actions: the empty day also has an Erfassen button.
 const headerActions = (page: Page) => page.getByRole('button', { name: 'Nächste Woche', exact: true }).locator('..')
+// Eine Kennzahl der Kopfzeile: die Zahl steht im selben Block wie ihr Titel.
+const kpi = (page: Page, label: string) => page.getByText(label, { exact: true }).locator('..')
 const entryDescription = (page: Page) => page.getByRole('combobox', { name: 'Beschreibung, 1,00 h', exact: true })
 
 async function expectNoOverflow(page: Page) {
@@ -58,6 +60,21 @@ test('validiert und speichert einen Schnelleintrag dauerhaft im Mock', async ({ 
   await expect(page.getByRole('combobox', { name: 'Beschreibung, 1,50 h', exact: true })).toHaveValue('E2E Testeintrag')
   await page.reload()
   await expect(page.getByRole('combobox', { name: 'Beschreibung, 1,50 h', exact: true })).toHaveValue('E2E Testeintrag')
+})
+
+test('zeigt neben der Woche das Honorar nach Steuern des Monats', async ({ page }) => {
+  await page.goto('/')
+  // Eine Kennzahl, zwei Zeitraeume in einer Zeile: Woche nur der 01.01.,
+  // Monat dazu der 08.01. - die zweite Zahl ist eine andere als die erste.
+  await expect(kpi(page, 'Nach Steuern')).toContainText('69,60')
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Monat 139,20')
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Januar 2027')
+
+  // Der Monat folgt der angezeigten Woche, nicht dem Kalender von heute.
+  await page.getByRole('button', { name: 'Vorherige Woche', exact: true }).click()
+  await expect(page.getByText('KW 52 / 2026', { exact: true })).toBeVisible()
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Dezember 2026')
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Monat 69,60')
 })
 
 test('Seite und Erfassungsdialog bleiben ohne horizontalen Overflow nutzbar', async ({ page }) => {

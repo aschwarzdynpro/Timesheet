@@ -189,6 +189,24 @@ function tableData(table: string, entries: Record<string, unknown>[], periods: R
         return operator === 'gte' ? value >= date : operator === 'lte' ? value <= date : value === date
       }))
     }
+    case 'v_report_month': {
+      // Die Zeitenansicht liest daraus das Honorar nach Steuern des Monats.
+      // Fixture wie oben: dieselben Eintraege, je Monat zu einer Zeile addiert.
+      const filter = url.searchParams.get('month_start')
+      const match = /^eq\.(\d{4}-\d{2}-\d{2})$/.exec(filter ?? '')
+      if (!match) throw new Error(`Unsupported month_start filter: ${filter}`)
+      const month = match[1] as string
+      const rows = entries.filter((entry) => entry.month_start === month)
+      if (rows.length === 0) return []
+      const sum = (feld: string) => rows.reduce((n, entry) => n + Number(entry[feld] ?? 0), 0)
+      return [{
+        owner_id: user.id, customer_id: customer.id, customer_name: customer.name,
+        project_id: project.id, project_name: project.name,
+        year: Number(month.slice(0, 4)), month_start: month,
+        minutes_tracked: sum('duration_minutes'), minutes_billable: sum('billable_minutes'),
+        minutes_internal: null, fees: sum('amount'), fees_net: sum('net_amount'),
+      }]
+    }
     case 'time_entries': return [] // recent-description suggestions
     case 'app_settings': {
       const key = url.searchParams.get('key')

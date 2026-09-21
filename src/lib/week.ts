@@ -39,6 +39,17 @@ export function mondayOf(date: Date): Date {
 }
 
 /**
+ * Erster Tag des Monats, in dem das Datum liegt - wie date_trunc('month', …).
+ *
+ * Rein auf der Zeichenkette, ohne Umweg ueber `Date`: der Monatserste eines
+ * Datums steht bereits darin, und jede Umrechnung ueber einen Zeitpunkt kann
+ * ihn in den Vormonat schieben.
+ */
+export function monthStartOf(iso: IsoDate): IsoDate {
+  return `${iso.slice(0, 7)}-01`
+}
+
+/**
  * ISO-Kalenderwoche und ISO-Jahr.
  *
  * Die Regel: Der Donnerstag entscheidet, zu welchem Jahr eine Woche gehoert.

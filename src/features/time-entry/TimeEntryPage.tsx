@@ -6,7 +6,9 @@ import {
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
-import { formatDate, formatEuro, formatPercent, sumOrNull, today } from '@/lib/format'
+import {
+  formatDate, formatEuro, formatMonth, formatPercent, sumOrNull, today,
+} from '@/lib/format'
 import { addDays, fromIsoDate, isoWeek, minutesToHours, mondayOf, toIsoDate } from '@/lib/week'
 import type { TimeEntryFull, WorkPackageBudget } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
@@ -19,7 +21,7 @@ import { DayList } from './DayList'
 import { DayView } from './DayView'
 import { Timer } from './Timer'
 import { QuickEntryDialog } from './QuickEntryDialog'
-import { useSaveTimeEntry, useWeekEntries, useWeekPeriods } from './api'
+import { useMonthNet, useSaveTimeEntry, useWeekEntries, useWeekPeriods } from './api'
 
 /** 0 = Montag. Aus einem ISO-Datum, ohne den Umweg ueber die Zeitzone. */
 function wochentagIndex(iso: string): number {
@@ -53,6 +55,11 @@ export function TimeEntryPage() {
   const { data: entries, isPending, error: loadError } = useWeekEntries(monday)
   const { data: periods, error: periodError } = useWeekPeriods(monday)
   const previousWeek = useWeekEntries(addDays(monday, -7))
+  // Der Monat haengt am gewaehlten Tag, nicht am Kalender: wer zurueckblaettert,
+  // liest den Monat der angezeigten Woche - sonst stuende neben einer fremden
+  // Woche die Zahl von heute. Eine Woche ueber den Monatswechsel folgt dem Tag,
+  // der in der Wochenleiste ausgewaehlt ist.
+  const monatNetto = useMonthNet(tag)
   // Nur fuer den Hinweis unter der Zahl - abgezogen hat die Sicht den Satz
   // schon.
   const steuersatz = useIncomeTaxPercent()
@@ -205,7 +212,10 @@ export function TimeEntryPage() {
             options={[{ value: 'tag', label: 'Tag' }, { value: 'woche', label: 'Woche' }]}
           />
         </div>
-        <dl className="flex flex-wrap gap-x-6 gap-y-2 text-right">
+        {/* Schmal nimmt die Kennzahlenzeile die volle Breite und verteilt
+            darin: sonst standen die drei Stunden- und Eurowerte versetzt
+            untereinander, jeder auf seiner eigenen Zeile. */}
+        <dl className="flex w-full flex-wrap justify-between gap-x-4 gap-y-2 text-right sm:w-auto sm:justify-end sm:gap-x-6">
           <div>
             <dt className="text-xs tracking-wide text-ink-400 uppercase">Erfasst</dt>
             <dd className="tabular text-lg font-semibold text-ink-800">
@@ -222,16 +232,30 @@ export function TimeEntryPage() {
             <dt className="text-xs tracking-wide text-ink-400 uppercase">Honorar</dt>
             <dd className="tabular text-lg font-semibold text-ink-800">{formatEuro(totals.fees)}</dd>
           </div>
-          <div>
+          {/* Woche und Monat teilen sich eine Kennzahl: es ist dieselbe
+              Rechnung, nur ueber zwei Zeitraeume. Als zwei Kennzahlen
+              nebeneinander stand auf dem Telefon jede davon allein auf einer
+              Zeile. Die Groesse ordnet sie: die Woche ist der Zeitraum dieser
+              Seite, der Monat der Rahmen darum. */}
+          <div className="w-full sm:w-auto">
             <dt className="text-xs tracking-wide text-ink-400 uppercase">Nach Steuern</dt>
-            <dd className="tabular text-lg font-semibold text-ink-800">{formatEuro(totals.net)}</dd>
-            {/* Der Hinweis erst, wenn beides steht: der Satz geladen und die
-                Zahl bekannt. Sonst erklaerte er einen Gedankenstrich. */}
-            {steuersatz.data !== undefined && totals.net !== null && (
-              <dd className="text-xs text-ink-400">
-                nach {formatPercent(steuersatz.data)} Einkommensteuer
-              </dd>
-            )}
+            <dd className="flex flex-wrap items-baseline justify-end gap-x-2">
+              <span className="tabular text-lg font-semibold text-ink-800">
+                {formatEuro(totals.net)}
+              </span>
+              <span className="tabular text-sm text-ink-500">
+                Monat {formatEuro(monatNetto.data ?? null)}
+              </span>
+            </dd>
+            {/* Der Monatsname sagt, worueber die zweite Zahl spricht, und steht
+                deshalb auch ueber einem Gedankenstrich. Der Steuersatz erklaert
+                eine Rechnung - ihn erst, wenn es eine Zahl zu erklaeren gibt. */}
+            <dd className="text-xs text-ink-400">
+              {formatMonth(tag)}
+              {steuersatz.data !== undefined
+                && (totals.net !== null || (monatNetto.data ?? null) !== null)
+                && ` · nach ${formatPercent(steuersatz.data)} Einkommensteuer`}
+            </dd>
           </div>
         </dl>
       </div>
@@ -256,6 +280,13 @@ export function TimeEntryPage() {
       {(loadError ?? periodError) && (
         <div className="mt-4">
           <ErrorNote message={`Die Woche konnte nicht geladen werden: ${describeError(loadError ?? periodError)}`} />
+        </div>
+      )}
+      {/* Auch der Monatswert schweigt nicht, wenn seine Abfrage scheitert: ein
+          Gedankenstrich sieht sonst aus wie ein Monat ohne Honorar. */}
+      {monatNetto.error && (
+        <div className="mt-4">
+          <ErrorNote message={`Das Honorar des Monats konnte nicht geladen werden: ${describeError(monatNetto.error)}`} />
         </div>
       )}
       {error && <div className="mt-4"><ErrorNote message={error} /></div>}
