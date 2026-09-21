@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays, fromIsoDate, isoWeek, minutesToClock, minutesToHours,
-  mondayOf, parseDuration, toIsoDate, weekDays,
+  mondayOf, monthStartOf, parseDuration, toIsoDate, weekDays,
 } from '@/lib/week'
 
 const d = (iso: string) => fromIsoDate(iso)
@@ -11,6 +11,14 @@ describe('Wochenberechnung', () => {
     expect(toIsoDate(mondayOf(d('2026-03-05')))).toBe('2026-03-02') // Donnerstag
     expect(toIsoDate(mondayOf(d('2026-03-02')))).toBe('2026-03-02') // Montag selbst
     expect(toIsoDate(mondayOf(d('2026-03-08')))).toBe('2026-03-02') // Sonntag gehoert zur Vorwoche
+  })
+
+  it('findet den Monatsersten zum Datum', () => {
+    expect(monthStartOf('2026-09-21')).toBe('2026-09-01')
+    expect(monthStartOf('2026-09-01')).toBe('2026-09-01')
+    // Eine Woche ueber den Monatswechsel: der Tag entscheidet, nicht die Woche.
+    expect(monthStartOf('2026-09-30')).toBe('2026-09-01')
+    expect(monthStartOf('2026-10-01')).toBe('2026-10-01')
   })
 
   it('ordnet den Jahreswechsel nach ISO-8601 zu', () => {

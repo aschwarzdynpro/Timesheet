@@ -759,3 +759,23 @@ zwölf Spalten: kein seitliches Scrollen der Seite, keine Konsolenmeldungen.
   es erst, wenn man ein Profil mit vielen Spalten wählt und hinsieht. Wer es stört, hat
   zwei Wege: die Karten bis zu einer größeren Breite zeigen, oder dem Kasten ansehen
   lassen, dass rechts noch etwas kommt.
+
+## Nachtrag: „Nach Steuern" auch für den Monat
+
+Die Woche sagt, wie es gerade läuft; was der Monat trägt, stand nirgends — dabei ist der
+Monat der Zeitraum, in dem Miete, Steuervorauszahlung und Rücklage fällig werden. Im
+Kopf der Zeiten steht neben „Nach Steuern" deshalb dieselbe Rechnung für den ganzen
+Monat, mit dem Monatsnamen darunter.
+
+Gerechnet wird wieder nichts in der Oberfläche: Die Zahl kommt aus `v_report_month`
+(`fees_net`) — derselben Sicht, aus der auch die Auswertung liest. Die Eintragsliste der
+Woche hätte es nicht beantworten können, sie kennt nur ihre sieben Tage.
+
+**Der Monat folgt der angezeigten Woche, nicht dem Kalender.** Wer zurückblättert, liest
+den Monat, den er ansieht — sonst stünde neben einer fremden Woche die Zahl von heute.
+Eine Woche über den Monatswechsel entscheidet über den in der Wochenleiste gewählten
+Tag; in der Voreinstellung ist das der heutige, und damit steht dort der laufende Monat.
+
+Zwei kleine Regeln aus dem Bestand gelten weiter: `sumOrNull()` macht aus einer fehlenden
+Spalte einen Gedankenstrich statt 0,00 €, und eine gescheiterte Abfrage sagt das als
+Fehlermeldung — ein Gedankenstrich allein sähe aus wie ein Monat ohne Honorar.

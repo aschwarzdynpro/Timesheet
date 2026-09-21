@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { addDays, toIsoDate } from '@/lib/week'
+import { sumOrNull } from '@/lib/format'
+import { addDays, monthStartOf, toIsoDate } from '@/lib/week'
 import type { ReportingPeriod, TimeEntryFull, TimeEntryInput } from '@/types/database'
 
 const weekKey = (monday: string) => ['time-entries', 'week', monday] as const
@@ -26,6 +27,34 @@ export function useWeekEntries(monday: Date) {
         .order('created_at')
       if (error) throw error
       return (data ?? []) as TimeEntryFull[]
+    },
+  })
+}
+
+/**
+ * Honorar nach Steuern des Monats, in dem der angezeigte Tag liegt.
+ *
+ * Kommt aus der Monatssicht, nicht aus den Eintraegen der Woche: gefragt ist
+ * der ganze Monat, und die Woche kennt nur ihre sieben Tage. Gerechnet hat die
+ * Datenbank - dieselbe Sicht, aus der auch die Auswertung liest, damit beide
+ * Stellen nicht um Cents auseinanderlaufen.
+ *
+ * `null` heisst: die Spalte fehlt (Migration nicht eingespielt). Dann bleibt
+ * die Zahl offen, statt 0,00 EUR zu behaupten.
+ */
+export function useMonthNet(workDate: string) {
+  const monthStart = monthStartOf(workDate)
+
+  return useQuery({
+    queryKey: ['time-entries', 'month-net', monthStart] as const,
+    queryFn: async (): Promise<number | null> => {
+      const { data, error } = await supabase
+        .from('v_report_month')
+        .select('*')
+        .eq('month_start', monthStart)
+      if (error) throw error
+      const rows = (data ?? []) as { fees_net?: number | null }[]
+      return sumOrNull(rows.map((r) => r.fees_net))
     },
   })
 }

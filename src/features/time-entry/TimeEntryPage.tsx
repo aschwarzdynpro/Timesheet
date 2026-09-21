@@ -6,7 +6,9 @@ import {
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
-import { formatDate, formatEuro, formatPercent, sumOrNull, today } from '@/lib/format'
+import {
+  formatDate, formatEuro, formatMonth, formatPercent, sumOrNull, today,
+} from '@/lib/format'
 import { addDays, fromIsoDate, isoWeek, minutesToHours, mondayOf, toIsoDate } from '@/lib/week'
 import type { TimeEntryFull, WorkPackageBudget } from '@/types/database'
 import { useCustomers } from '@/features/customers/api'
@@ -19,7 +21,7 @@ import { DayList } from './DayList'
 import { DayView } from './DayView'
 import { Timer } from './Timer'
 import { QuickEntryDialog } from './QuickEntryDialog'
-import { useSaveTimeEntry, useWeekEntries, useWeekPeriods } from './api'
+import { useMonthNet, useSaveTimeEntry, useWeekEntries, useWeekPeriods } from './api'
 
 /** 0 = Montag. Aus einem ISO-Datum, ohne den Umweg ueber die Zeitzone. */
 function wochentagIndex(iso: string): number {
@@ -53,6 +55,11 @@ export function TimeEntryPage() {
   const { data: entries, isPending, error: loadError } = useWeekEntries(monday)
   const { data: periods, error: periodError } = useWeekPeriods(monday)
   const previousWeek = useWeekEntries(addDays(monday, -7))
+  // Der Monat haengt am gewaehlten Tag, nicht am Kalender: wer zurueckblaettert,
+  // liest den Monat der angezeigten Woche - sonst stuende neben einer fremden
+  // Woche die Zahl von heute. Eine Woche ueber den Monatswechsel folgt dem Tag,
+  // der in der Wochenleiste ausgewaehlt ist.
+  const monatNetto = useMonthNet(tag)
   // Nur fuer den Hinweis unter der Zahl - abgezogen hat die Sicht den Satz
   // schon.
   const steuersatz = useIncomeTaxPercent()
@@ -233,6 +240,19 @@ export function TimeEntryPage() {
               </dd>
             )}
           </div>
+          {/* Dieselbe Rechnung ueber den ganzen Monat: die Woche sagt, wie der
+              Monat laeuft, erst der Monat sagt, was er tatsaechlich traegt. */}
+          <div>
+            <dt className="text-xs tracking-wide text-ink-400 uppercase">
+              Nach Steuern · Monat
+            </dt>
+            <dd className="tabular text-lg font-semibold text-ink-800">
+              {formatEuro(monatNetto.data ?? null)}
+            </dd>
+            {/* Der Monatsname steht auch ueber einem Gedankenstrich: er sagt
+                nicht, wie gerechnet wurde, sondern worueber. */}
+            <dd className="text-xs text-ink-400">{formatMonth(tag)}</dd>
+          </div>
         </dl>
       </div>
 
@@ -256,6 +276,13 @@ export function TimeEntryPage() {
       {(loadError ?? periodError) && (
         <div className="mt-4">
           <ErrorNote message={`Die Woche konnte nicht geladen werden: ${describeError(loadError ?? periodError)}`} />
+        </div>
+      )}
+      {/* Auch der Monatswert schweigt nicht, wenn seine Abfrage scheitert: ein
+          Gedankenstrich sieht sonst aus wie ein Monat ohne Honorar. */}
+      {monatNetto.error && (
+        <div className="mt-4">
+          <ErrorNote message={`Das Honorar des Monats konnte nicht geladen werden: ${describeError(monatNetto.error)}`} />
         </div>
       )}
       {error && <div className="mt-4"><ErrorNote message={error} /></div>}
