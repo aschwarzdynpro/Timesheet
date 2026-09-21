@@ -64,16 +64,17 @@ test('validiert und speichert einen Schnelleintrag dauerhaft im Mock', async ({ 
 
 test('zeigt neben der Woche das Honorar nach Steuern des Monats', async ({ page }) => {
   await page.goto('/')
-  // Woche: nur der 01.01.; Monat: dazu der 08.01. - die Zahl ist eine andere.
+  // Eine Kennzahl, zwei Zeitraeume in einer Zeile: Woche nur der 01.01.,
+  // Monat dazu der 08.01. - die zweite Zahl ist eine andere als die erste.
   await expect(kpi(page, 'Nach Steuern')).toContainText('69,60')
-  await expect(kpi(page, 'Nach Steuern · Monat')).toContainText('139,20')
-  await expect(kpi(page, 'Nach Steuern · Monat')).toContainText('Januar 2027')
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Monat 139,20')
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Januar 2027')
 
   // Der Monat folgt der angezeigten Woche, nicht dem Kalender von heute.
   await page.getByRole('button', { name: 'Vorherige Woche', exact: true }).click()
   await expect(page.getByText('KW 52 / 2026', { exact: true })).toBeVisible()
-  await expect(kpi(page, 'Nach Steuern · Monat')).toContainText('Dezember 2026')
-  await expect(kpi(page, 'Nach Steuern · Monat')).toContainText('69,60')
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Dezember 2026')
+  await expect(kpi(page, 'Nach Steuern')).toContainText('Monat 69,60')
 })
 
 test('Seite und Erfassungsdialog bleiben ohne horizontalen Overflow nutzbar', async ({ page }) => {

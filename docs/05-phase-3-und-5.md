@@ -764,8 +764,8 @@ zwölf Spalten: kein seitliches Scrollen der Seite, keine Konsolenmeldungen.
 
 Die Woche sagt, wie es gerade läuft; was der Monat trägt, stand nirgends — dabei ist der
 Monat der Zeitraum, in dem Miete, Steuervorauszahlung und Rücklage fällig werden. Im
-Kopf der Zeiten steht neben „Nach Steuern" deshalb dieselbe Rechnung für den ganzen
-Monat, mit dem Monatsnamen darunter.
+Kopf der Zeiten trägt „Nach Steuern" deshalb zwei Zahlen: die der Woche groß, daneben in
+derselben Zeile die des Monats, und darunter den Monatsnamen.
 
 Gerechnet wird wieder nichts in der Oberfläche: Die Zahl kommt aus `v_report_month`
 (`fees_net`) — derselben Sicht, aus der auch die Auswertung liest. Die Eintragsliste der
@@ -775,6 +775,18 @@ Woche hätte es nicht beantworten können, sie kennt nur ihre sieben Tage.
 den Monat, den er ansieht — sonst stünde neben einer fremden Woche die Zahl von heute.
 Eine Woche über den Monatswechsel entscheidet über den in der Wochenleiste gewählten
 Tag; in der Voreinstellung ist das der heutige, und damit steht dort der laufende Monat.
+
+**Eine Kennzahl, nicht zwei.** Zuerst stand der Monat als fünfte Kennzahl neben der
+Woche. Auf 1400 px sah das gut aus, auf 320 px fiel jede der beiden Steuerzahlen auf eine
+eigene Zeile, versetzt untereinander — drei Zeilen für eine Rechnung. Jetzt teilen sich
+beide eine Kennzahl und eine Zeile; die Schriftgröße ordnet sie: Die Woche ist der
+Zeitraum dieser Seite, der Monat der Rahmen darum. Der Steuersatz steht nur noch einmal
+darunter und erklärt beide Zahlen.
+
+Schmal nimmt die Kennzahlenzeile dafür die volle Breite und verteilt darin
+(`justify-between`, `w-full sm:w-auto`). Vorher rutschte das Honorar allein auf eine
+Zeile, weil vier rechtsbündige Blöcke nacheinander umbrachen; jetzt stehen Stunden und
+Honorar nebeneinander in einer Zeile und „Nach Steuern" mit beiden Zahlen in der zweiten.
 
 Zwei kleine Regeln aus dem Bestand gelten weiter: `sumOrNull()` macht aus einer fehlenden
 Spalte einen Gedankenstrich statt 0,00 €, und eine gescheiterte Abfrage sagt das als

@@ -212,7 +212,10 @@ export function TimeEntryPage() {
             options={[{ value: 'tag', label: 'Tag' }, { value: 'woche', label: 'Woche' }]}
           />
         </div>
-        <dl className="flex flex-wrap gap-x-6 gap-y-2 text-right">
+        {/* Schmal nimmt die Kennzahlenzeile die volle Breite und verteilt
+            darin: sonst standen die drei Stunden- und Eurowerte versetzt
+            untereinander, jeder auf seiner eigenen Zeile. */}
+        <dl className="flex w-full flex-wrap justify-between gap-x-4 gap-y-2 text-right sm:w-auto sm:justify-end sm:gap-x-6">
           <div>
             <dt className="text-xs tracking-wide text-ink-400 uppercase">Erfasst</dt>
             <dd className="tabular text-lg font-semibold text-ink-800">
@@ -229,29 +232,30 @@ export function TimeEntryPage() {
             <dt className="text-xs tracking-wide text-ink-400 uppercase">Honorar</dt>
             <dd className="tabular text-lg font-semibold text-ink-800">{formatEuro(totals.fees)}</dd>
           </div>
-          <div>
+          {/* Woche und Monat teilen sich eine Kennzahl: es ist dieselbe
+              Rechnung, nur ueber zwei Zeitraeume. Als zwei Kennzahlen
+              nebeneinander stand auf dem Telefon jede davon allein auf einer
+              Zeile. Die Groesse ordnet sie: die Woche ist der Zeitraum dieser
+              Seite, der Monat der Rahmen darum. */}
+          <div className="w-full sm:w-auto">
             <dt className="text-xs tracking-wide text-ink-400 uppercase">Nach Steuern</dt>
-            <dd className="tabular text-lg font-semibold text-ink-800">{formatEuro(totals.net)}</dd>
-            {/* Der Hinweis erst, wenn beides steht: der Satz geladen und die
-                Zahl bekannt. Sonst erklaerte er einen Gedankenstrich. */}
-            {steuersatz.data !== undefined && totals.net !== null && (
-              <dd className="text-xs text-ink-400">
-                nach {formatPercent(steuersatz.data)} Einkommensteuer
-              </dd>
-            )}
-          </div>
-          {/* Dieselbe Rechnung ueber den ganzen Monat: die Woche sagt, wie der
-              Monat laeuft, erst der Monat sagt, was er tatsaechlich traegt. */}
-          <div>
-            <dt className="text-xs tracking-wide text-ink-400 uppercase">
-              Nach Steuern · Monat
-            </dt>
-            <dd className="tabular text-lg font-semibold text-ink-800">
-              {formatEuro(monatNetto.data ?? null)}
+            <dd className="flex flex-wrap items-baseline justify-end gap-x-2">
+              <span className="tabular text-lg font-semibold text-ink-800">
+                {formatEuro(totals.net)}
+              </span>
+              <span className="tabular text-sm text-ink-500">
+                Monat {formatEuro(monatNetto.data ?? null)}
+              </span>
             </dd>
-            {/* Der Monatsname steht auch ueber einem Gedankenstrich: er sagt
-                nicht, wie gerechnet wurde, sondern worueber. */}
-            <dd className="text-xs text-ink-400">{formatMonth(tag)}</dd>
+            {/* Der Monatsname sagt, worueber die zweite Zahl spricht, und steht
+                deshalb auch ueber einem Gedankenstrich. Der Steuersatz erklaert
+                eine Rechnung - ihn erst, wenn es eine Zahl zu erklaeren gibt. */}
+            <dd className="text-xs text-ink-400">
+              {formatMonth(tag)}
+              {steuersatz.data !== undefined
+                && (totals.net !== null || (monatNetto.data ?? null) !== null)
+                && ` · nach ${formatPercent(steuersatz.data)} Einkommensteuer`}
+            </dd>
           </div>
         </dl>
       </div>
