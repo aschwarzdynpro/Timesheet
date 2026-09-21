@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 import { SUPABASE_KEY, SUPABASE_URL } from './testEnvironment'
 
 export default defineConfig({
@@ -16,12 +16,13 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     serviceWorkers: 'block',
   },
-  // Chromium touch/viewport coverage; this does not emulate Safari or iOS.
+  // WebKit uses its own engine; device emulation is not a physical iPhone test.
   projects: [
     { name: 'mobile-320', use: { viewport: { width: 320, height: 812 }, isMobile: true, hasTouch: true } },
     { name: 'mobile-390', use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
     { name: 'tablet-768', use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
     { name: 'desktop-1400', use: { viewport: { width: 1400, height: 900 } } },
+    { name: 'webkit-390', use: { ...devices['iPhone 13'], browserName: 'webkit' } },
   ],
   webServer: {
     command: 'npm --prefix .. run build && npm --prefix .. run preview -- --host 127.0.0.1 --port 4173 --strictPort',

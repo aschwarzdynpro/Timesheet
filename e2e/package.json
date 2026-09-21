@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:auth": "playwright test --config=playwright.auth.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1"

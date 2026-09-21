@@ -28,20 +28,20 @@ jobs:
       - name: E2E-Typen prüfen
         working-directory: e2e
         run: npm run typecheck
-      - name: Chromium-Cache laden
+      - name: Browser-Cache laden
         id: browser-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('e2e/package-lock.json') }}
-      - name: Chromium-Systembibliotheken installieren
+          key: playwright-chromium-webkit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('e2e/package-lock.json') }}
+      - name: Browser-Systembibliotheken installieren
         if: steps.browser-cache.outputs.cache-hit == 'true'
         working-directory: e2e
-        run: npx playwright install-deps chromium
-      - name: Chromium installieren
+        run: npx playwright install-deps chromium webkit
+      - name: Browser installieren
         if: steps.browser-cache.outputs.cache-hit != 'true'
         working-directory: e2e
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
       - name: E2E-Tests ausführen
         working-directory: e2e
         run: npm test

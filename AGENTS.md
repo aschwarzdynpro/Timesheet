@@ -212,15 +212,16 @@ Für Branch-, PR-, Review- und Handoff-Regeln gilt zusätzlich
 npm run typecheck && npm run lint && npm test && npm run build
 ./scripts/test-db.sh
 npm --prefix e2e ci
-npm --prefix e2e exec -- playwright install --with-deps chromium
+npm --prefix e2e exec -- playwright install --with-deps chromium webkit
 npm --prefix e2e run typecheck
 npm --prefix e2e test
 ```
 
 Playwright unter `e2e/` prüft den Produktionsbuild in Chromium auf 320, 390, 768
-und 1400 px. Setup, feste Testzeit, Mock-Grenzen und CI-Trigger stehen in
+und 1400 px sowie WebKit auf 390 px. Setup, feste Testzeit, Mock-Grenzen und CI-Trigger stehen in
 `README.md` unter „Browser-Tests“. Die Suite gehört zur PR-Prüfung; sie belegt
-keine Safari/iOS- oder echte Backend-Abdeckung.
+keinen physischen iPhone-Test oder echte Backend-Abdeckung. Der separate Auth-Smoke-Test
+und seine nötige Testumgebung sind in `docs/09-e2e-testing.md` beschrieben.
 
 Die Browsertests dieses Projekts fangen `/rest/v1/**` ab. **Vertragsfehler zwischen
 App und PostgREST sind darin unsichtbar** — eine Sortierspalte, die es nicht gibt,
@@ -253,6 +254,7 @@ Diese Dinge sind Entscheidungen des Nutzers, keine Umsetzungsdetails:
 | `docs/03-…` bis `07-…` | was je Phase entstand, inklusive der gefundenen Fehler |
 | `docs/08-engineering-workflow.md` | Rollen, Branch-/PR-/Review-/Merge-Regeln für Menschen und Agents |
 | `README.md` | Einrichtung, Befehle, Stand |
+| `docs/09-e2e-testing.md` | E2E-Testmatrix und separate echte Auth-Prüfung |
 
 Die Phasenberichte führen jeweils einen Abschnitt „Beim Bauen gefunden". Wer einen
 Fehler behebt, den ein Test nicht gefunden hätte, schreibt ihn dort auf — samt der
