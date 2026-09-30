@@ -43,7 +43,9 @@ function hinweise(summe: BillingRow): Row[] {
   return zeilen.length > 0 ? [[{}], ...zeilen] : []
 }
 
-function kundenBlatt(kunde: KundeImMonat, monat: string, name: string): Sheet<Blob> {
+function kundenBlatt(
+  kunde: KundeImMonat, monat: string, name: string, mitPaketen: boolean,
+): Sheet<Blob> {
   const { summe, projekte } = kunde
   const kopf: Row[] = [
     [{ value: summe.customer_name ?? '', fontWeight: 'bold' as const, fontSize: 14 }],
@@ -52,18 +54,32 @@ function kundenBlatt(kunde: KundeImMonat, monat: string, name: string): Sheet<Bl
     [{}],
   ]
   const spalten = [
-    { label: 'Projektkürzel', align: 'left' as const, width: 14 },
-    { label: 'Projekt', align: 'left' as const, width: 36 },
+    { label: mitPaketen ? 'Kürzel' : 'Projektkürzel', align: 'left' as const, width: 14 },
+    { label: mitPaketen ? 'Projekt / Arbeitspaket' : 'Projekt', align: 'left' as const, width: 40 },
     { label: 'Stunden', align: 'right' as const, width: 12 },
     { label: 'Ø Satz', align: 'right' as const, width: 14 },
     { label: 'Umsatz', align: 'right' as const, width: 16 },
   ]
-  const body: Row[] = projekte.map((p) => [
-    { ...rahmen, type: String, value: p.project_code ?? '' },
-    { ...rahmen, type: String, value: p.project_name ?? '' },
-    stunden(p.minutes_billable),
-    euro(p.avg_rate),
-    euro(p.fees),
+  // Pakete stehen eingerueckt und grau unter ihrem Projekt. Die Summenzeile
+  // bleibt die des Kunden aus der Sicht - wer die Spalte selbst aufaddiert,
+  // zaehlte mit Paketen jede Stunde doppelt.
+  const paket = { textColor: '#5b6673' }
+  const body: Row[] = projekte.flatMap(({ summe: p, pakete }): Row[] => [
+    [
+      { ...rahmen, type: String, value: p.project_code ?? '' },
+      { ...rahmen, type: String, value: p.project_name ?? '' },
+      stunden(p.minutes_billable),
+      euro(p.avg_rate),
+      euro(p.fees),
+    ],
+    ...(mitPaketen && pakete.some((ap) => ap.work_package_id !== null) ? pakete : []).map((ap): Row => [
+      { ...rahmen, ...paket, type: String, value: ap.work_package_code ?? '', indent: 1 },
+      { ...rahmen, ...paket, type: String, indent: 2,
+        value: ap.work_package_id === null ? 'ohne Arbeitspaket' : (ap.work_package_name ?? '') },
+      stunden(ap.minutes_billable, paket),
+      euro(ap.avg_rate, paket),
+      euro(ap.fees, paket),
+    ]),
   ])
   const summenZeile: Row = [
     { ...summenRand, type: String, value: `Summe ${summe.customer_name ?? ''}` },
@@ -127,14 +143,16 @@ function uebersichtBlatt(gliederung: Monatsgliederung, monat: string): Sheet<Blo
 }
 
 export async function exportBillingToExcel({
-  gliederung, monat, fileName,
+  gliederung, monat, mitPaketen = false, fileName,
 }: {
   gliederung: Monatsgliederung
   monat: string
+  /** Arbeitspakete eingerueckt unter jedem Projekt, das welche hat. */
+  mitPaketen?: boolean
   fileName: string
 }): Promise<void> {
   const namen = blattNamen(gliederung.kunden.map((k) => k.summe.customer_code ?? ''))
-  const kunden = gliederung.kunden.map((k, i) => kundenBlatt(k, monat, namen[i]!))
+  const kunden = gliederung.kunden.map((k, i) => kundenBlatt(k, monat, namen[i]!, mitPaketen))
   // Bei einem einzigen Kunden sagte die Uebersicht nur dasselbe noch einmal.
   const blaetter = kunden.length > 1 ? [uebersichtBlatt(gliederung, monat), ...kunden] : kunden
   await writeXlsxFile(blaetter).toFile(fileName)

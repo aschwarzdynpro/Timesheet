@@ -131,3 +131,19 @@ die Blätter als ungetippte Objekte in Variablen standen; dort greift die Prüfu
 überzählige Eigenschaften nicht. Warum es niemand bemerkt hat: Die Datei öffnet sich,
 Zahlen und Spalten stimmen, und den Reiter unten liest man nicht. Die Blätter sind jetzt
 als `Sheet<Blob>` getippt — ein falscher Schlüssel bricht den Typcheck.
+
+### Arbeitspakete aufschlüsseln
+
+Ein Schalter „Arbeitspakete aufschlüsseln“ in der Monatsübersicht macht jede
+Projektzeile, auf der ein Paket bebucht ist, aufklappbar: darunter stehen Stunden,
+Ø Satz und Umsatz je Arbeitspaket. Die Excel-Datei übernimmt die Wahl und schreibt
+die Pakete eingerückt unter ihr Projekt; die Summenzeile bleibt die des Kunden.
+
+Die Paketebene kommt wie die übrigen aus `v_billing_month`
+(Migration `20260930150000_billing_month_work_packages.sql`, `level = 'work_package'`,
+Spalten `work_package_*` angehängt). Zeit ohne Paket steht dort als eigene Zeile
+„ohne Arbeitspaket“ — so ergeben die Paketzeilen eines Projekts immer genau die
+Projektzeile. Die Ebene unterscheidet `grouping()`, nicht `work_package_id is null`:
+sonst hielte die Oberfläche die Zeile „ohne Arbeitspaket“ für eine zweite
+Projektzeile. Aufklappbar ist ein Projekt erst, wenn ein echtes Paket bebucht ist;
+nur „ohne Arbeitspaket“ darunter wiederholte die Zahlen des Projekts.

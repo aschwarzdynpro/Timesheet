@@ -109,13 +109,13 @@ export function useExportRows(filters: ExportFilters) {
 }
 
 /**
- * Eine Zeile der Monatsuebersicht: ein Projekt, die Summe eines Kunden oder
- * die Summe ueber alle Kunden. Alle drei Ebenen summiert die Datenbank - die
- * Oberflaeche ordnet sie nur an.
+ * Eine Zeile der Monatsuebersicht: ein Arbeitspaket, ein Projekt, die Summe
+ * eines Kunden oder die Summe ueber alle Kunden. Alle vier Ebenen summiert die
+ * Datenbank - die Oberflaeche ordnet sie nur an.
  */
 export interface BillingRow {
   month_start: string
-  level: 'project' | 'customer' | 'total'
+  level: 'work_package' | 'project' | 'customer' | 'total'
   customer_id: string | null
   customer_code: string | null
   customer_name: string | null
@@ -130,6 +130,10 @@ export interface BillingRow {
   minutes_without_rate: number
   /** Noch nicht gemeldete Perioden, in denen Zeiten dieses Monats liegen. */
   open_periods: number
+  /** Nur auf der Ebene 'work_package'; dort heisst null "ohne Arbeitspaket". */
+  work_package_id: string | null
+  work_package_code: string | null
+  work_package_name: string | null
 }
 
 /** Stunden und Honorar eines Leistungsmonats, je Projekt und je Kunde. */
