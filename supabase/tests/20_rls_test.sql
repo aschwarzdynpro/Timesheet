@@ -16,6 +16,7 @@ begin
   perform test_assert((select count(*) from project_rates) > 0, 'eigener Benutzer sieht seine Saetze');
   perform test_assert((select count(*) from time_entries) > 0, 'eigener Benutzer sieht seine Zeiten');
   perform test_assert((select count(*) from period_events) > 0, 'eigener Benutzer sieht sein Periodenprotokoll');
+  perform test_assert((select count(*) from v_billing_month) > 0, 'eigener Benutzer sieht seine Monatsuebersicht');
 end $$;
 
 -- Ein fremder Benutzer
@@ -31,6 +32,8 @@ begin
   perform test_assert((select count(*) from period_events)     = 0, 'fremder Benutzer sieht kein Periodenprotokoll');
   perform test_assert((select count(*) from v_time_entries_full) = 0,
                       'auch die Auswertungssicht bleibt leer (security_invoker greift)');
+  perform test_assert((select count(*) from v_billing_month) = 0,
+                      'auch die Monatsuebersicht fuer die Rechnung bleibt leer');
 end $$;
 
 reset role;

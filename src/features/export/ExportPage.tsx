@@ -1,7 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Download, Plus, Save, Trash2 } from 'lucide-react'
 import {
-  Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Input, Select,
+  Badge, Button, Card, Dialog, EmptyState, ErrorNote, Field, Input, Segmented, Select,
 } from '@/components/ui/primitives'
 import { PageHeader } from '@/components/PageHeader'
 import { describeError } from '@/lib/supabase'
@@ -18,6 +18,7 @@ import {
 import {
   COLUMNS, COLUMN_BY_KEY, DEFAULT_COLUMNS, cellText, columnDefs, type ColumnKey,
 } from './columns'
+import { Monatsuebersicht } from './Monatsuebersicht'
 
 const PREVIEW_ROWS = 50
 
@@ -30,7 +31,32 @@ function endOfMonth(offset = 0): string {
   return toIsoDate(new Date(now.getFullYear(), now.getMonth() + offset + 1, 0))
 }
 
+type Ansicht = 'nachweis' | 'monat'
+
+/**
+ * Zwei Ausgaben fuer denselben Monatsabschluss: der Einzelnachweis mit frei
+ * gewaehlten Spalten fuer den Kunden, die Monatsuebersicht je Projekt und
+ * Kunde fuer die eigene Rechnung.
+ */
 export function ExportPage() {
+  const [ansicht, setAnsicht] = useState<Ansicht>('nachweis')
+  const umschalter = (
+    <Segmented<Ansicht>
+      label="Art des Exports"
+      value={ansicht}
+      onChange={setAnsicht}
+      options={[
+        { value: 'nachweis', label: 'Einzelnachweis' },
+        { value: 'monat', label: 'Monatsübersicht' },
+      ]}
+    />
+  )
+  return ansicht === 'monat'
+    ? <Monatsuebersicht umschalter={umschalter} />
+    : <Einzelnachweis umschalter={umschalter} />
+}
+
+function Einzelnachweis({ umschalter }: { umschalter: ReactNode }) {
   const { data: profiles } = useExportProfiles()
   const { data: customers } = useCustomers()
   const { data: projects } = useProjects()
@@ -172,6 +198,8 @@ export function ExportPage() {
           </Button>
         }
       />
+
+      <div className="mt-4">{umschalter}</div>
 
       {error && <div className="mt-4"><ErrorNote message={error} /></div>}
       {(rows.error ?? expenses.error) && (
