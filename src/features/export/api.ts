@@ -107,3 +107,44 @@ export function useExportRows(filters: ExportFilters) {
     },
   })
 }
+
+/**
+ * Eine Zeile der Monatsuebersicht: ein Projekt, die Summe eines Kunden oder
+ * die Summe ueber alle Kunden. Alle drei Ebenen summiert die Datenbank - die
+ * Oberflaeche ordnet sie nur an.
+ */
+export interface BillingRow {
+  month_start: string
+  level: 'project' | 'customer' | 'total'
+  customer_id: string | null
+  customer_code: string | null
+  customer_name: string | null
+  project_id: string | null
+  project_code: string | null
+  project_name: string | null
+  minutes_billable: number
+  fees: number
+  /** Honorar je Stunde mit Satz - ein Quercheck, kein Rechnungsposten. */
+  avg_rate: number | null
+  /** Abrechenbare Zeit, fuer die kein Satz gilt; sie steht mit 0,00 EUR im Honorar. */
+  minutes_without_rate: number
+  /** Noch nicht gemeldete Perioden, in denen Zeiten dieses Monats liegen. */
+  open_periods: number
+}
+
+/** Stunden und Honorar eines Leistungsmonats, je Projekt und je Kunde. */
+export function useBillingMonth(monthStart: string) {
+  return useQuery({
+    // Unter 'report', damit Melden und Wiederoeffnen einer Periode die Zahl
+    // der offenen Perioden hier mit auffrischen.
+    queryKey: ['report', 'billing-month', monthStart],
+    queryFn: async (): Promise<BillingRow[]> => {
+      const { data, error } = await supabase
+        .from('v_billing_month')
+        .select('*')
+        .eq('month_start', monthStart)
+      if (error) throw error
+      return (data ?? []) as BillingRow[]
+    },
+  })
+}

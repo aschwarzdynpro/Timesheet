@@ -207,6 +207,34 @@ function tableData(table: string, entries: Record<string, unknown>[], periods: R
         minutes_internal: null, fees: sum('amount'), fees_net: sum('net_amount'),
       }]
     }
+    case 'v_billing_month': {
+      // Monatsuebersicht im Export: dieselben Eintraege, je Projekt, Kunde und
+      // gesamt summiert - im Mock gibt es von beidem nur eines.
+      const filter = url.searchParams.get('month_start')
+      const match = /^eq\.(\d{4}-\d{2}-\d{2})$/.exec(filter ?? '')
+      if (!match) throw new Error(`Unsupported month_start filter: ${filter}`)
+      const month = match[1] as string
+      const rows = entries.filter((entry) => entry.month_start === month && entry.is_billable)
+      if (rows.length === 0) return []
+      const minutes = rows.reduce((n, entry) => n + Number(entry.billable_minutes), 0)
+      const fees = rows.reduce((n, entry) => n + Number(entry.amount), 0)
+      const openPeriods = new Set(rows.filter((entry) => entry.period_status === 'open')
+                                      .map((entry) => entry.period_id)).size
+      const sums = { month_start: month, minutes_billable: minutes, fees,
+                     avg_rate: minutes > 0 ? fees / (minutes / 60) : null,
+                     minutes_without_rate: 0, open_periods: openPeriods }
+      const kunde = { customer_id: customer.id, customer_code: customer.code, customer_name: customer.name }
+      const ohneProjekt = { project_id: null, project_code: null, project_name: null }
+      return [
+        { ...sums, level: 'project', ...kunde,
+          project_id: project.id, project_code: project.code, project_name: project.name },
+        { ...sums, level: 'customer', ...kunde, ...ohneProjekt },
+        { ...sums, level: 'total', customer_id: null, customer_code: null, customer_name: null,
+          ...ohneProjekt },
+      ]
+    }
+    case 'export_profiles': return []
+    case 'v_expenses_full': return []
     case 'time_entries': return [] // recent-description suggestions
     case 'app_settings': {
       const key = url.searchParams.get('key')

@@ -183,6 +183,65 @@ begin
   delete from app_settings where owner_id = v_owner and key = 'income_tax_percent';
   perform test_assert(fn_income_tax_percent() = 42, 'ohne Eintrag gilt wieder der Standard');
 
+  raise notice 'Monatsuebersicht fuer die Rechnung';
+  -- Maerz: ACME/CRM 90 min zu 140 EUR, ACME/INTERN 120 min intern,
+  -- Nordwind/MIGR 61 min zu 125 EUR.
+  select * into r from v_billing_month
+  where month_start = date '2026-03-01' and level = 'project' and project_id = v_p_crm;
+  perform test_assert(r.minutes_billable = 90 and r.fees = 210.00,
+                      'je Projekt: abrechenbare Minuten und Honorar wie in der Eintragssicht');
+  perform test_assert(r.avg_rate = 140.00, 'der Durchschnittssatz ist der gueltige Satz');
+  perform test_assert(not exists (
+    select 1 from v_billing_month where month_start = date '2026-03-01' and project_id = v_p_intern),
+    'ein Projekt ohne abrechenbare Zeit erscheint nicht');
+
+  select * into r from v_billing_month
+  where month_start = date '2026-03-01' and level = 'customer' and customer_id = v_acme;
+  perform test_assert(r.project_id is null, 'die Kundenzeile hat kein Projekt');
+  perform test_assert(r.minutes_billable = 90 and r.fees = 210.00,
+                      'die Kundensumme laesst interne Zeit aussen vor');
+  perform test_assert(r.open_periods = 1, 'die offene Maerzperiode von ACME wird gezaehlt');
+
+  select * into r from v_billing_month
+  where month_start = date '2026-03-01' and level = 'total';
+  perform test_assert(r.customer_id is null, 'die Gesamtzeile hat keinen Kunden');
+  perform test_assert(r.minutes_billable = 151 and r.fees = 337.08,
+                      'die Gesamtsumme addiert die gerundeten Zeilenbetraege (210,00 + 127,08)');
+  perform test_assert(r.open_periods = 2, 'insgesamt zwei offene Perioden mit Maerzzeiten');
+
+  -- Eine offene Woche ueber den Monatswechsel mit nur Aprilzeiten betrifft
+  -- die Maerzrechnung nicht.
+  insert into time_entries (owner_id, project_id, activity_type_id, work_date, duration_minutes, description)
+  values (v_owner, v_p_migr, v_consult, date '2026-04-02', 30, 'Abstimmung');
+  perform test_assert((
+    select open_periods from v_billing_month
+    where month_start = date '2026-03-01' and level = 'customer' and customer_id = v_nord) = 1,
+    'eine Woche mit nur Aprilzeiten zaehlt im Maerz nicht als offen');
+  perform test_assert((
+    select open_periods from v_billing_month
+    where month_start = date '2026-04-01' and level = 'customer' and customer_id = v_nord) = 1,
+    'im April schon');
+  delete from time_entries where project_id = v_p_migr and work_date = date '2026-04-02';
+
+  -- Zeit ohne Satz steht mit 0,00 EUR im Honorar, wird aber gesondert
+  -- ausgewiesen und zieht den Durchschnitt nicht herunter.
+  insert into projects (customer_id, code, name) values (v_nord, 'OHNE', 'Ohne Satz')
+  returning id into v_fremd;
+  insert into time_entries (owner_id, project_id, activity_type_id, work_date, duration_minutes, description)
+  values (v_owner, v_fremd, v_consult, date '2026-03-06', 60, 'Ohne Vertrag');
+  select * into r from v_billing_month
+  where month_start = date '2026-03-01' and level = 'customer' and customer_id = v_nord;
+  perform test_assert(r.minutes_billable = 121 and r.fees = 127.08,
+                      'Zeit ohne Satz zaehlt bei den Stunden, nicht beim Honorar');
+  perform test_assert(r.minutes_without_rate = 60, 'und steht gesondert als Zeit ohne Satz');
+  perform test_assert(r.avg_rate = 125.00, 'der Durchschnitt rechnet nur ueber Zeit mit Satz');
+  select * into r from v_billing_month
+  where month_start = date '2026-03-01' and level = 'project' and project_id = v_fremd;
+  perform test_assert(r.avg_rate is null, 'ein Projekt ganz ohne Satz hat keinen Durchschnitt');
+  delete from time_entries where project_id = v_fremd;
+  delete from projects where id = v_fremd;
+  v_fremd := null;
+
   raise notice 'Satzfaktor der Taetigkeitsart';
   perform test_assert(
     (select count(*) from activity_types where owner_id = v_owner and rate_factor <> 1) = 0,
@@ -272,6 +331,10 @@ begin
   perform fn_submit_period(v_period);
   select * into r from reporting_periods where id = v_period;
   perform test_assert(r.status = 'submitted',   'Periode ist gemeldet');
+  perform test_assert((
+    select open_periods from v_billing_month
+    where month_start = date '2026-03-01' and level = 'customer' and customer_id = v_acme) = 0,
+    'die Monatsuebersicht zaehlt eine gemeldete Periode nicht mehr als offen');
   perform test_assert(r.total_minutes = 90,     'Summe der abrechenbaren Minuten');
   perform test_assert(r.total_fees = 210.00,    'Summe des Honorars');
   perform test_assert(
@@ -644,6 +707,19 @@ begin
                      where table_schema='public' and table_name='v_work_package_budget'
                        and column_name=v_spalte) then
         v_fehlend := v_fehlend || ('v_work_package_budget.' || v_spalte);
+      end if;
+    end loop;
+
+    -- Die Monatsuebersicht im Export filtert nach Monat und liest die drei Ebenen.
+    foreach v_spalte in array array[
+      'month_start','level','customer_id','customer_code','customer_name',
+      'project_id','project_code','project_name','minutes_billable','fees','avg_rate',
+      'minutes_without_rate','open_periods'
+    ] loop
+      if not exists (select 1 from information_schema.columns
+                     where table_schema='public' and table_name='v_billing_month'
+                       and column_name=v_spalte) then
+        v_fehlend := v_fehlend || ('v_billing_month.' || v_spalte);
       end if;
     end loop;
 

@@ -1,5 +1,5 @@
 import writeXlsxFile from 'write-excel-file/browser'
-import type { Row, SheetData } from 'write-excel-file/browser'
+import type { Row, Sheet, SheetData } from 'write-excel-file/browser'
 import type { ExpenseFull, TimeEntryFull } from '@/types/database'
 import { columnDefs, type ColumnKey } from './columns'
 
@@ -15,7 +15,7 @@ const EURO = '#,##0.00 "€"'
 const HOURS = '#,##0.00'
 
 /** Kopfzelle: fett, getoent, mit Rahmen - in beiden Blaettern gleich. */
-function headerCell(label: string, align: 'left' | 'right') {
+export function headerCell(label: string, align: 'left' | 'right') {
   return {
     value: label, fontWeight: 'bold' as const, backgroundColor: '#eaf2f8',
     borderColor: '#a9b4c0', borderStyle: 'thin' as const, align,
@@ -170,8 +170,11 @@ export async function exportToExcel({
     ...(rows.length > 0 ? [header, ...body, totals] : [header]),
   ]
 
-  const zeitenBlatt = {
-    name: (title.slice(0, 24) || 'Zeiten'),
+  // Als Sheet getippt, damit ein falscher Schluessel auffaellt: Bis Version 4
+  // hiess der Blattname `name`, jetzt `sheet` - ein uebrig gebliebenes `name`
+  // ignoriert die Bibliothek still, und die Blaetter hiessen Sheet1 und Sheet2.
+  const zeitenBlatt: Sheet<Blob> = {
+    sheet: (title.slice(0, 24) || 'Zeiten'),
     data,
     columns: defs.map((def) => ({ width: def.width })),
     // Mit Kopf bleibt auch er stehen: beim Blaettern durch hundert Positionen
@@ -179,8 +182,8 @@ export async function exportToExcel({
     stickyRowsCount: kopfZeilen.length + 1,
   }
 
-  const blaetter = expenses.length > 0
-    ? [zeitenBlatt, { name: 'Spesen', stickyRowsCount: 1, ...expenseSheet(expenses) }]
+  const blaetter: Sheet<Blob>[] = expenses.length > 0
+    ? [zeitenBlatt, { sheet: 'Spesen', stickyRowsCount: 1, ...expenseSheet(expenses) }]
     : [zeitenBlatt]
 
   // Seit Version 4 liefert writeXlsxFile ein Objekt mit toFile()/toBlob(),
