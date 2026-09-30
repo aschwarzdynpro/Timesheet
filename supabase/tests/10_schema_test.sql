@@ -525,6 +525,33 @@ begin
   perform test_assert(r.entry_count = 2,       'und wird gezaehlt');
   perform test_assert(r.fees = 420.00,         '180 min zu 140 EUR ergeben 420,00');
 
+  raise notice 'Monatsuebersicht je Arbeitspaket';
+  select * into r from v_billing_month
+  where month_start = date '2026-06-01' and level = 'work_package' and work_package_id = v_paket;
+  perform test_assert(r.minutes_billable = 180 and r.fees = 420.00,
+                      'die Paketzeile summiert die Eintraege des Pakets im Monat');
+  perform test_assert(r.project_id = v_p_crm and r.work_package_code = 'MIGR',
+                      'und haengt am Projekt, mit Kuerzel des Pakets');
+  perform test_assert((
+    select sum(minutes_billable) from v_billing_month
+    where month_start = date '2026-06-01' and level = 'work_package' and project_id = v_p_crm)
+    = (select minutes_billable from v_billing_month
+       where month_start = date '2026-06-01' and level = 'project' and project_id = v_p_crm),
+    'die Paketzeilen ergeben zusammen die Projektzeile');
+
+  -- Zeit ohne Paket faellt beim Aufklappen nicht heraus, sie steht als eigene Zeile.
+  insert into time_entries (owner_id, project_id, work_date, duration_minutes, description)
+  values (v_owner, v_p_crm, date '2026-06-10', 30, 'Ohne Paket');
+  select * into r from v_billing_month
+  where month_start = date '2026-06-01' and level = 'work_package'
+    and project_id = v_p_crm and work_package_id is null;
+  perform test_assert(r.minutes_billable = 30, 'Zeit ohne Paket steht als eigene Paketzeile');
+  perform test_assert((
+    select count(*) from v_billing_month
+    where month_start = date '2026-06-01' and level = 'project' and project_id = v_p_crm) = 1,
+    'und wird dabei nicht zur zweiten Projektzeile');
+  delete from time_entries where project_id = v_p_crm and work_date = date '2026-06-10';
+
   -- Ein Paket ohne Buchungen steht mit Nullen da, nicht mit NULL.
   select * into r from v_work_package_budget where work_package_id = v_fremd;
   perform test_assert(r.tracked_minutes = 0 and r.fees = 0 and r.entry_count = 0,
@@ -714,7 +741,7 @@ begin
     foreach v_spalte in array array[
       'month_start','level','customer_id','customer_code','customer_name',
       'project_id','project_code','project_name','minutes_billable','fees','avg_rate',
-      'minutes_without_rate','open_periods'
+      'minutes_without_rate','open_periods','work_package_id','work_package_code','work_package_name'
     ] loop
       if not exists (select 1 from information_schema.columns
                      where table_schema='public' and table_name='v_billing_month'

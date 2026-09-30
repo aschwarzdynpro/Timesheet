@@ -224,13 +224,17 @@ function tableData(table: string, entries: Record<string, unknown>[], periods: R
                      avg_rate: minutes > 0 ? fees / (minutes / 60) : null,
                      minutes_without_rate: 0, open_periods: openPeriods }
       const kunde = { customer_id: customer.id, customer_code: customer.code, customer_name: customer.name }
+      const projekt = { project_id: project.id, project_code: project.code, project_name: project.name }
       const ohneProjekt = { project_id: null, project_code: null, project_name: null }
+      const ohnePaket = { work_package_id: null, work_package_code: null, work_package_name: null }
+      // Die Eintraege des Mocks haben kein Arbeitspaket: eine Paketzeile
+      // "ohne Arbeitspaket", wie die Sicht sie dann liefert.
       return [
-        { ...sums, level: 'project', ...kunde,
-          project_id: project.id, project_code: project.code, project_name: project.name },
-        { ...sums, level: 'customer', ...kunde, ...ohneProjekt },
+        { ...sums, level: 'work_package', ...kunde, ...projekt, ...ohnePaket },
+        { ...sums, level: 'project', ...kunde, ...projekt, ...ohnePaket },
+        { ...sums, level: 'customer', ...kunde, ...ohneProjekt, ...ohnePaket },
         { ...sums, level: 'total', customer_id: null, customer_code: null, customer_name: null,
-          ...ohneProjekt },
+          ...ohneProjekt, ...ohnePaket },
       ]
     }
     case 'export_profiles': return []
